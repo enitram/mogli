@@ -12,20 +12,25 @@
 
 namespace mogli {
 
-  typedef std::set<unsigned short> ShortSet;
+  typedef std::vector<unsigned short> ShortVector;
   typedef std::vector<unsigned long> LongVector;
 
   class Canonization {
 
   public:
 
+    Canonization() {}
+
     Canonization(Molecule& mol) : _colors(), _canonization() {
       init(mol);
     }
 
+    Canonization(const ShortVector &_colors, const LongVector &_canonization) : _colors(_colors),
+                                                                             _canonization(_canonization) {}
+
     virtual ~Canonization() {}
 
-    const ShortSet &get_colors() const {
+    const ShortVector &get_colors() const {
       return _colors;
     }
 
@@ -35,22 +40,24 @@ namespace mogli {
 
   private:
 
+    typedef std::set<unsigned short> ShortSet;
     typedef typename Graph::template NodeMap<bool> NodeToBoolMap;
     typedef typename std::vector<Node> NodeVector;
     typedef typename std::map<unsigned short, NodeVector> ShortToNodeVectorMap;
 
-    ShortSet _colors;
+    ShortVector _colors;
     LongVector _canonization;
 
     void init(const Molecule& mol);
 
     void dfs(const Node& current, const Node& last,
-             const Molecule& mol, const Graph& g, NodeToBoolMap& visited,
-             ShortToNodeVectorMap& colorMap, bool& is_tree);
+             const Molecule& mol, NodeToBoolMap& visited,
+             ShortSet& colorSet, ShortToNodeVectorMap& colorMap,
+             bool& is_tree);
 
-    void canonTree(const Graph& g, const ShortToNodeVectorMap& colorMap);
+    void canonTree(const Molecule& mol, const ShortToNodeVectorMap& colorMap);
 
-    void canonNauty(const Graph& g, const ShortToNodeVectorMap &colorMap, const unsigned int atom_count);
+    void canonNauty(const Molecule& g, const ShortToNodeVectorMap &colorMap, const unsigned int atom_count);
 
   };
 

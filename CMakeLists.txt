@@ -20,12 +20,12 @@ set( CommonLibs
 )
 
 set(SOURCE_FILES
-        src/mogli.cpp
         src/canonization.h
         src/canonization.cpp
         src/isomorphism.h
         src/isomorphism.cpp
-        src/molecule.h)
+        src/molecule.h
+        src/iacm.h)
 
 set(NAUTY_SRC
         include/nauty/nauty.c
@@ -36,6 +36,3 @@ set(NAUTY_SRC
 
 include_directories( "src" "${LIBLEMON_ROOT}/include" "include/nauty" )
 link_directories( "${LIBLEMON_ROOT}/lib" )
-
-add_executable(mogli ${SOURCE_FILES} ${NAUTY_SRC})
-target_link_libraries( mogli ${CommonLibs} )

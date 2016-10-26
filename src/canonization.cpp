@@ -6,41 +6,45 @@
 
 void mogli::Canonization::init(const Molecule &mol) {
 
-  const Graph& g = mol.getGraph();
-
-  NodeToBoolMap visited(g, false);
-  ShortToNodeVectorMap colorMap;
-  NodeIt v(g);
-  bool is_tree = true;
-
+  Node v = mol.get_node_iter();
   assert(v != lemon::INVALID);
 
-  dfs(v, v, mol, g, visited, colorMap, is_tree);
+  NodeToBoolMap visited(mol.get_graph(), false);
+  ShortToNodeVectorMap colorMap;
+  ShortSet colorSet;
+  bool is_tree = true;
+
+  dfs(v, v, mol, visited, colorSet, colorMap, is_tree);
+
+  for (ShortSet::iterator it=colorSet.begin(), end = colorSet.end(); it != end; ++it) {
+    _colors.push_back(*it);
+  }
 
   if (!is_tree) {
     //canonTree(g, colorMap);
-    canonNauty(g, colorMap, mol.getAtomCount());
+    canonNauty(mol, colorMap, mol.get_atom_count());
   } else {
-    canonNauty(g, colorMap, mol.getAtomCount());
+    canonNauty(mol, colorMap, mol.get_atom_count());
   }
 }
 
 void mogli::Canonization::dfs(const Node& current, const Node& last,
-                              const Molecule& mol, const Graph& g, NodeToBoolMap& visited,
-                              ShortToNodeVectorMap& colorMap, bool& is_tree) {
+                              const Molecule& mol, NodeToBoolMap& visited,
+                              ShortSet& colorSet, ShortToNodeVectorMap& colorMap,
+                              bool& is_tree) {
   visited[current] = true;
-  unsigned short color = mol.getColor(current);
-  _colors.insert(color);
+  unsigned short color = mol.get_color(current);
+  colorSet.insert(color);
   if (colorMap.find(color) == colorMap.end()) {
     NodeVector vector;
     colorMap.insert(std::pair<int, NodeVector>(color, vector));
   }
   colorMap.at(color).push_back(current);
 
-  for (IncEdgeIt e(g, current); e != lemon::INVALID; ++e) {
-    Node w = g.oppositeNode(current, e);
+  for (IncEdgeIt e = mol.get_inc_edge_iter(current); e != lemon::INVALID; ++e) {
+    Node w = mol.get_opposite_node(current, e);
     if (!visited[w]) {
-      dfs(w, current, mol, g, visited, colorMap, is_tree);
+      dfs(w, current, mol, visited, colorSet, colorMap, is_tree);
     } else if (w != last) {
       is_tree = false;
     }
@@ -48,7 +52,7 @@ void mogli::Canonization::dfs(const Node& current, const Node& last,
 
 }
 
-void mogli::Canonization::canonNauty(const Graph& g, const ShortToNodeVectorMap &colorMap, const unsigned int atom_count) {
+void mogli::Canonization::canonNauty(const Molecule& mol, const ShortToNodeVectorMap &colorMap, const unsigned int atom_count) {
 
   DYNALLSTAT(int,lab,lab_sz);
   DYNALLSTAT(int,ptn,ptn_sz);
@@ -73,19 +77,19 @@ void mogli::Canonization::canonNauty(const Graph& g, const ShortToNodeVectorMap 
   EMPTYGRAPH(ng,m,atom_count);
 
   int i = 0;
-  for (ShortSet::iterator it=_colors.begin(), end = _colors.end(); it != end; ++it) {
+  for (ShortVector::iterator it=_colors.begin(), end = _colors.end(); it != end; ++it) {
     NodeVector vector = colorMap.at(*it);
     for (NodeVector::iterator it2 = vector.begin(), end2 = vector.end(); it2 != end2; ++it2) {
-      lab[i] = g.id(*it2);
+      lab[i] = mol.get_id(*it2);
       ptn[i] = 1;
       ++i;
     }
     ptn[i-1] = 0;
   }
 
-  for(Graph::EdgeIt e(g); e!=lemon::INVALID; ++e) {
-    int u = g.id(g.u(e));
-    int v = g.id(g.v(e));
+  for(EdgeIt e = mol.get_edge_iter(); e!=lemon::INVALID; ++e) {
+    int u = mol.get_id(mol.get_u(e));
+    int v = mol.get_id(mol.get_v(e));
     ADDONEEDGE(ng,u,v,m);
   }
 
@@ -97,6 +101,7 @@ void mogli::Canonization::canonNauty(const Graph& g, const ShortToNodeVectorMap 
 //    std::cout << lab[i] << std::endl;
 //  }
 
+  // TODO test with nodes > WORDSIZE
   // TODO in which order does nauty return the canonical graphs?
   // TODO if our tree alg has a different order, could we accidentally return the same canonization?
 //  std::cout << "cg" << std::endl;
@@ -110,6 +115,6 @@ void mogli::Canonization::canonNauty(const Graph& g, const ShortToNodeVectorMap 
 
 }
 
-void mogli::Canonization::canonTree(const Graph &g, const ShortToNodeVectorMap &colorMap) {
+void mogli::Canonization::canonTree(const Molecule &mol, const ShortToNodeVectorMap &colorMap) {
   // TODO write own canonization method
 }
