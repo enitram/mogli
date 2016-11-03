@@ -1,5 +1,5 @@
 //
-// Created by martin on 10/21/16.
+// Created by M. Engler on 10/21/16.
 //
 
 #ifndef MOGLI_ISOMORPHISM_H

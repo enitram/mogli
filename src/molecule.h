@@ -1,5 +1,5 @@
 //
-// Created by martin on 10/21/16.
+// Created by M. Engler on 10/21/16.
 //
 
 #ifndef MOGLI_MOLECULE_H
@@ -7,8 +7,10 @@
 
 #include <map>
 #include <istream>
+#include <ostream>
 #include <assert.h>
 #include <lemon/core.h>
+#include <lemon/adaptors.h>
 #include <lemon/lgf_reader.h>
 #include <lemon/list_graph.h>
 #include "iacm.h"
@@ -21,6 +23,8 @@ namespace mogli {
   typedef Graph::Edge Edge;
   typedef Graph::EdgeIt EdgeIt;
   typedef Graph::IncEdgeIt IncEdgeIt;
+  typedef std::vector<Node> NodeVector;
+  typedef typename Graph::template NodeMap<bool> NodeToBoolMap;
 
   class Molecule {
 
@@ -30,11 +34,14 @@ namespace mogli {
 
   private:
 
-    typedef typename Graph::template NodeMap<bool> NodeToBoolMap;
     typedef typename std::map<std::string, Node> StringToNodeMap;
     typedef typename Graph::template NodeMap<std::string> NodeToStringMap;
     typedef typename Graph::template NodeMap<double> NodeToDoubleMap;
     typedef typename Graph::template NodeMap<unsigned short> NodeToShortMap;
+    typedef typename lemon::FilterNodes<Graph> NodeFilter;
+    typedef typename lemon::GraphCopy<Graph, Graph> GraphCopy;
+    typedef typename lemon::GraphCopy<NodeFilter, Graph> FilterGraphCopy;
+    typedef typename Graph::NodeMap<Graph::Node> NodeToNodeMap;
 
     Graph _g;
 
@@ -66,8 +73,8 @@ namespace mogli {
                                          _node_to_partial_charge(_g),
                                          _is_connected(molecule._is_connected),
                                          _iacm(molecule._iacm) {
-      lemon::GraphCopy<Graph, Graph> copy(molecule._g, _g);
-      Graph::NodeMap<Graph::Node> nodeRef(molecule._g);
+      GraphCopy copy(molecule._g, _g);
+      NodeToNodeMap nodeRef(molecule._g);
       copy.nodeRef(nodeRef);
       copy.nodeMap(molecule._node_to_label, _node_to_label);
       copy.nodeMap(molecule._node_to_color, _node_to_color);
@@ -76,6 +83,30 @@ namespace mogli {
       for (StringToNodeMap::const_iterator it = molecule._label_to_node.begin(), end = molecule._label_to_node.end();
            it != end; ++it) {
         _label_to_node[it->first] = nodeRef[it->second];
+      }
+    }
+
+    Molecule(Molecule &molecule, const NodeVector &filter) : _g(),
+                                                                      _atom_count(static_cast<unsigned int>(filter.size())),
+                                                                      _label_to_node(),
+                                                                      _node_to_label(_g),
+                                                                      _node_to_color(_g),
+                                                                      _node_to_partial_charge(_g),
+                                                                      _is_connected(molecule._is_connected),
+                                                                      _iacm(molecule._iacm) {
+      NodeToBoolMap node_filter(molecule._g, false);
+      for (NodeVector::const_iterator it = filter.begin(), end = filter.end(); it != end; ++it) {
+        node_filter[*it] = true;
+      }
+      FilterGraphCopy copy = FilterGraphCopy(NodeFilter(molecule._g, node_filter), _g);
+      NodeToNodeMap nodeRef(molecule._g);
+      copy.nodeRef(nodeRef);
+      copy.nodeMap(molecule._node_to_label, _node_to_label);
+      copy.nodeMap(molecule._node_to_color, _node_to_color);
+      copy.nodeMap(molecule._node_to_partial_charge, _node_to_partial_charge);
+      copy.run();
+      for (NodeVector::const_iterator it = filter.begin(), end = filter.end(); it != end; ++it) {
+        _label_to_node[molecule._node_to_label[*it]] = nodeRef[*it];
       }
     }
 
@@ -227,6 +258,28 @@ namespace mogli {
         return 0;
     }
     return 1;
+  }
+
+  inline std::ostream& operator<<(std::ostream& outputStream, const Molecule& mol) {
+    outputStream << "nodes:[";
+    NodeIt v = mol.get_node_iter();
+    if (v != lemon::INVALID) {
+      outputStream << mol.get_label(v);
+      ++v;
+      for (; v != lemon::INVALID; ++v) {
+        outputStream << ", " << mol.get_label(v);
+      }
+    }
+    outputStream << "],edges:[";
+    EdgeIt e = mol.get_edge_iter();
+    if (e != lemon::INVALID) {
+      outputStream << "(" << mol.get_label(mol.get_u(e)) << "," << mol.get_label(mol.get_v(e)) << ")";
+      ++e;
+      for (; e != lemon::INVALID; ++e) {
+        outputStream << ", (" << mol.get_label(mol.get_u(e)) << "," << mol.get_label(mol.get_v(e)) << ")";
+      }
+    }
+    outputStream << "]";
   }
 
 }
