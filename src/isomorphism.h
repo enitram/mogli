@@ -9,9 +9,9 @@
 
 namespace mogli {
 
-  bool are_isomorph(Molecule &mol1, Molecule &mol2);
+  bool are_isomorphic(Molecule &mol1, Molecule &mol2);
 
-  bool are_isomorph(Canonization &canon1, Canonization &canon2);
+  bool are_isomorphic(Canonization &canon1, Canonization &canon2);
 
 }
 

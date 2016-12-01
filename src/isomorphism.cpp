@@ -4,15 +4,15 @@
 
 #include "isomorphism.h"
 
-bool mogli::are_isomorph(Molecule &mol1, Molecule &mol2) {
+bool mogli::are_isomorphic(Molecule &mol1, Molecule &mol2) {
   if (mol1.get_atom_count() != mol2.get_atom_count())
     return false;
   Canonization c1(mol1);
   Canonization c2(mol2);
-  return are_isomorph(c1, c2);
+  return are_isomorphic(c1, c2);
 }
 
-bool mogli::are_isomorph(mogli::Canonization &canon1, mogli::Canonization &canon2) {
+bool mogli::are_isomorphic(mogli::Canonization &canon1, mogli::Canonization &canon2) {
   const ShortVector& colors1 = canon1.get_colors();
   const ShortVector& colors2 = canon2.get_colors();
 

@@ -15,13 +15,18 @@ public:
   std::map<std::string, unsigned short> CHEM_ELEMENTS;
   std::map<unsigned short, std::string> CHEM_ELEMENT_NUMBERS;
 
+  std::map<std::string, std::string> CPK_COLORS;
+
   std::map<std::string, unsigned short>::const_iterator IACM_ELEMENTS_END;
   std::map<unsigned short, std::string>::const_iterator IACM_ELEMENT_NUMBERS_END;
 
   std::map<std::string, unsigned short>::const_iterator CHEM_ELEMENTS_END;
   std::map<unsigned short, std::string>::const_iterator CHEM_ELEMENT_NUMBERS_END;
 
+  std::map<std::string, std::string>::const_iterator CPK_COLORS_END;
+
   std::string UNKNOWN;
+  std::string UNKNOWN_COLOR;
   unsigned short UNKNOWN_NUMBER;
 
 private:
@@ -180,12 +185,20 @@ private:
      {static_cast<unsigned short>(21), "H"},
      {static_cast<unsigned short>(23), "S"},
      {static_cast<unsigned short>(42), "S"}
+   }), CPK_COLORS({
+     {"O", "red"},
+     {"N", "blue"},
+     {"C", "grey54"},
+     {"H", "white"},
+     {"S", "yellow"}
    }),
      IACM_ELEMENTS_END(IACM_ELEMENTS.end()),
      IACM_ELEMENT_NUMBERS_END(IACM_ELEMENT_NUMBERS.end()),
      CHEM_ELEMENTS_END(CHEM_ELEMENTS.end()),
      CHEM_ELEMENT_NUMBERS_END(CHEM_ELEMENT_NUMBERS.end()),
+     CPK_COLORS_END(CPK_COLORS.end()),
      UNKNOWN("?"),
+     UNKNOWN_COLOR("pink"),
      UNKNOWN_NUMBER(std::numeric_limits<unsigned short>::max())
   {}
 
@@ -203,6 +216,14 @@ public:
     if (it  != CHEM_ELEMENT_NUMBERS_END)
       return (*it).second;
     return UNKNOWN;
+  }
+
+  const std::string get_chem_color(unsigned short num) {
+    std::string element = get_chem_element(num);
+    auto it = CPK_COLORS.find(element);
+    if (it  != CPK_COLORS_END)
+      return (*it).second;
+    else return UNKNOWN_COLOR;
   }
 
   const unsigned short get_number(std::string element) {

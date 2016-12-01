@@ -16,19 +16,15 @@ void mogli::Canonization::init(const Molecule &mol) {
 
   dfs(v, v, mol, visited, colorSet, colorMap, is_tree);
 
-  for (ShortSet::iterator it=colorSet.begin(), end = colorSet.end(); it != end; ++it) {
-    _colors.push_back(*it);
-  }
-
   if (!is_tree) {
     //canonTree(g, colorMap);
-    canonNauty(mol, colorMap, mol.get_atom_count());
+    canonNauty(mol, colorSet, colorMap, mol.get_atom_count());
   } else {
-    canonNauty(mol, colorMap, mol.get_atom_count());
+    canonNauty(mol, colorSet, colorMap, mol.get_atom_count());
   }
 }
 
-void mogli::Canonization::init(const mogli::Molecule &mol, const mogli::Canonization::NodeToBoolMap &filter) {
+void mogli::Canonization::init(const mogli::Molecule &mol, const mogli::Canonization::NodeToBoolMap &filter, const Node& root) {
   const FilterNodes subgraph(mol.get_graph(), filter);
 
   Node v = FilteredNodeIt(subgraph);
@@ -38,18 +34,15 @@ void mogli::Canonization::init(const mogli::Molecule &mol, const mogli::Canoniza
   ShortToNodeVectorMap colorMap;
   ShortSet colorSet;
   bool is_tree = true;
+  unsigned int node_count = 0;
 
-  dfs(v, v, mol, visited, colorSet, colorMap, is_tree);
+  dfs(v, v, mol, subgraph, visited, colorSet, colorMap, is_tree, node_count);
 
-  for (ShortSet::iterator it=colorSet.begin(), end = colorSet.end(); it != end; ++it) {
-    _colors.push_back(*it);
-  }
-
-  if (!is_tree) {
+  if (is_tree) {
     //canonTree(g, colorMap);
-    canonNauty(mol, colorMap, mol.get_atom_count());
+    canonNauty(mol, subgraph, colorSet, colorMap, root, node_count);
   } else {
-    canonNauty(mol, colorMap, mol.get_atom_count());
+    canonNauty(mol, subgraph, colorSet, colorMap, root, node_count);
   }
 }
 
@@ -78,7 +71,8 @@ void mogli::Canonization::dfs(const Node& current, const Node& last, const Molec
 
 void mogli::Canonization::dfs(const Node& current, const Node& last, const Molecule& mol,
                               const FilterNodes& subgraph, NodeToBoolMap& visited, ShortSet& colorSet,
-                              ShortToNodeVectorMap& colorMap, bool& is_tree) {
+                              ShortToNodeVectorMap& colorMap, bool& is_tree, unsigned int& node_count) {
+  ++node_count;
   visited[current] = true;
   unsigned short color = mol.get_color(current);
   colorSet.insert(color);
@@ -91,7 +85,7 @@ void mogli::Canonization::dfs(const Node& current, const Node& last, const Molec
   for (FilteredIncEdgeIt e = FilteredIncEdgeIt(subgraph, current); e != lemon::INVALID; ++e) {
     Node w = subgraph.oppositeNode(current, e);
     if (!visited[w]) {
-      dfs(w, current, mol, subgraph, visited, colorSet, colorMap, is_tree);
+      dfs(w, current, mol, subgraph, visited, colorSet, colorMap, is_tree, node_count);
     } else if (w != last) {
       is_tree = false;
     }
@@ -99,7 +93,10 @@ void mogli::Canonization::dfs(const Node& current, const Node& last, const Molec
 
 }
 
-void mogli::Canonization::canonNauty(const Molecule& mol, const ShortToNodeVectorMap &colorMap, const unsigned int atom_count) {
+void mogli::Canonization::canonNauty(const Molecule& mol,
+                                     const ShortSet &colorSet,
+                                     const ShortToNodeVectorMap &colorMap,
+                                     const unsigned int atom_count) {
 
   DYNALLSTAT(int,lab,lab_sz);
   DYNALLSTAT(int,ptn,ptn_sz);
@@ -124,10 +121,13 @@ void mogli::Canonization::canonNauty(const Molecule& mol, const ShortToNodeVecto
   EMPTYGRAPH(ng,m,atom_count);
 
   int i = 0;
-  for (ShortVector::iterator it=_colors.begin(), end = _colors.end(); it != end; ++it) {
+  NodeToIntMap nodes(mol.get_graph());
+  for (ShortSet::iterator it=colorSet.begin(), end = colorSet.end(); it != end; ++it) {
     NodeVector vector = colorMap.at(*it);
     for (NodeVector::iterator it2 = vector.begin(), end2 = vector.end(); it2 != end2; ++it2) {
-      lab[i] = mol.get_id(*it2);
+      _colors.push_back(*it);
+      nodes[*it2] = i;
+      lab[i] = i;
       ptn[i] = 1;
       ++i;
     }
@@ -135,8 +135,8 @@ void mogli::Canonization::canonNauty(const Molecule& mol, const ShortToNodeVecto
   }
 
   for(EdgeIt e = mol.get_edge_iter(); e!=lemon::INVALID; ++e) {
-    int u = mol.get_id(mol.get_u(e));
-    int v = mol.get_id(mol.get_v(e));
+    int u = nodes[mol.get_u(e)];
+    int v = nodes[mol.get_v(e)];
     ADDONEEDGE(ng,u,v,m);
   }
 
@@ -162,8 +162,11 @@ void mogli::Canonization::canonNauty(const Molecule& mol, const ShortToNodeVecto
 
 }
 
-void mogli::Canonization::canonNauty(const mogli::Canonization::FilterNodes &subgraph,
-                                     const mogli::Canonization::ShortToNodeVectorMap &colorMap,
+void mogli::Canonization::canonNauty(const Molecule& mol,
+                                     const FilterNodes &subgraph,
+                                     const ShortSet &colorSet,
+                                     const ShortToNodeVectorMap &colorMap,
+                                     const Node& root,
                                      const unsigned int atom_count) {
   DYNALLSTAT(int,lab,lab_sz);
   DYNALLSTAT(int,ptn,ptn_sz);
@@ -187,11 +190,26 @@ void mogli::Canonization::canonNauty(const mogli::Canonization::FilterNodes &sub
   DYNALLOC2(graph,ng,g_sz,atom_count,m,"malloc");
   EMPTYGRAPH(ng,m,atom_count);
 
-  int i = 0;
-  for (ShortVector::iterator it=_colors.begin(), end = _colors.end(); it != end; ++it) {
+
+  NodeToIntMap nodes(mol.get_graph());
+  NodeVector first_order;
+
+  _colors.push_back(mol.get_color(root));
+  first_order.push_back(root);
+  nodes[root] = 0;
+  lab[0] = 0;
+  ptn[0] = 0;
+
+  int i = 1;
+  for (ShortSet::iterator it=colorSet.begin(), end = colorSet.end(); it != end; ++it) {
     NodeVector vector = colorMap.at(*it);
     for (NodeVector::iterator it2 = vector.begin(), end2 = vector.end(); it2 != end2; ++it2) {
-      lab[i] = subgraph.id(*it2);
+      if (*it2 == root)
+        continue;
+      _colors.push_back(*it);
+      first_order.push_back(*it2);
+      nodes[*it2] = i;
+      lab[i] = i;
       ptn[i] = 1;
       ++i;
     }
@@ -199,8 +217,8 @@ void mogli::Canonization::canonNauty(const mogli::Canonization::FilterNodes &sub
   }
 
   for(FilteredEdgeIt e = FilteredEdgeIt(subgraph); e!=lemon::INVALID; ++e) {
-    int u = subgraph.id(subgraph.u(e));
-    int v = subgraph.id(subgraph.v(e));
+    int u = nodes[subgraph.u(e)];
+    int v = nodes[subgraph.v(e)];
     ADDONEEDGE(ng,u,v,m);
   }
 
@@ -208,15 +226,19 @@ void mogli::Canonization::canonNauty(const mogli::Canonization::FilterNodes &sub
   densenauty(ng,lab,ptn,orbits,&options,&stats,m,atom_count,cg);
 
   for (i = 0; i < m*atom_count; ++i) {
+    _node_order.push_back(first_order[lab[i]]);
     _canonization.push_back(static_cast<unsigned long>(cg[i]));
   }
 }
 
+// TODO write own canonization method
+// TODO compare tree, nauty, saucy & bliss
+
 void mogli::Canonization::canonTree(const Molecule &mol, const ShortToNodeVectorMap &colorMap) {
-  // TODO write own canonization method
+  
 }
 
 void mogli::Canonization::canonTree(const FilterNodes &subgraph, const ShortToNodeVectorMap &colorMap) {
-  // TODO write own canonization method
+ 
 }
 
