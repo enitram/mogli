@@ -13,8 +13,10 @@
 #include "molecule.h"
 #include "canonization.h"
 #include "isomorphism.h"
+#include "orbits.h"
 #include <set>
 #include <vector>
+#include <deque>
 
 namespace mogli {
 
@@ -28,6 +30,9 @@ namespace mogli {
 
   public:
 
+    // TODO SUB rule without connection to root node -> check connection after matching to decide if shell or core!
+    // TODO SUB rule new implementation (slower, for correctness check only): build all product nodes, check against every other neighborhood
+
     enum GenerationType {
       NO_OPT = 0,
       DEG_1 = 1,
@@ -38,12 +43,21 @@ namespace mogli {
     typedef typename Graph::template EdgeMap<bool> EdgeToBoolMap;
     typedef typename Graph::template NodeMap<int> NodeToIntMap;
 
+    typedef std::deque<Node> NodeDeque;
+
+    typedef std::pair<NodeVector, NodeVector> NodeVectorPair;
+    typedef std::map<unsigned short, NodeVectorPair> ShortToNodeVectorPairMap;
+
     typedef std::multimap<int, Node> IntToNodeMap;
 
     typedef typename Graph::template NodeMap<NodePairVector> NodeToNodePairVectorMap;
     typedef typename Graph::template NodeMap<Canonization> NodeToCanonizationMap;
 
     typedef typename Graph::template NodeMap<BitSet> NodeToBitSetMap;
+
+    typedef std::vector<int> IntVector;
+    typedef std::pair<IntVector, IntVector> IntVectorPair;
+    typedef std::vector<IntVectorPair> IntVectorPairVector;
 
     const Molecule& _mol1;
     const Molecule& _mol2;
@@ -87,25 +101,12 @@ namespace mogli {
       return _mol2;
     }
 
-    const void get_node_mapping(const NodeVectorVector &cliques, NodePairVectorVector &mapping) const {
-      for (NodeVectorVector::const_iterator it = cliques.begin(), end = cliques.end(); it != end; ++it) {
-        NodePairVector pairs;
-        for (NodeVector::const_iterator it2 = it->begin(), end2 = it->end(); it2 != end2; ++it2) {
-          Node u = _g_to_mol1[*it2];
-          Node v = _g_to_mol2[*it2];
-          pairs.push_back(std::make_pair(u,v));
-          for (NodePairVector::const_iterator it3 = _reductions[*it2].begin(), end3 = _reductions[*it2].end();
-               it3 != end3; ++it3) {
-            pairs.push_back(*it3);
-          }
-        }
-        mapping.push_back(pairs);
-      }
-
-    }
-
     const Graph& get_graph() const {
       return _g;
+    }
+
+    const int get_shell() const {
+      return _shell;
     }
 
     const Node& get_mol1_node(const Node& uv) const {
@@ -114,6 +115,10 @@ namespace mogli {
 
     const Node& get_mol2_node(const Node& uv) const {
       return _g_to_mol2[uv];
+    }
+
+    const NodePairVector& get_reductions(const Node& uv) const {
+      return _reductions[uv];
     }
 
     bool is_connectivity_edge(Edge e) const {
@@ -202,6 +207,10 @@ namespace mogli {
 
       out << "}" << std::endl;
     }
+
+//    void get_node_mapping(const NodeVectorVector &cliques, NodePairVectorVector &mapping);
+//
+//    void prune_cliques(NodeVectorVector &cliques);
     
   private:
 
@@ -229,13 +238,13 @@ namespace mogli {
 
     void generate_subgraph(const Molecule &mol, const Node &v, NodeToBitSetMap &neighborhoods, IntToNodeMap &sizes);
 
-    void dfs(const Molecule &mol, const Node &v, int depth, NodeToBoolMap &visited, NodeToBoolMap &filter);
+    void bfs(const Molecule &mol, const Node &v, NodeToBoolMap &filter);
 
-    void dfs(const Molecule &mol, const Node &v, int depth, NodeToBoolMap &visited, BitSet &neighbors, int& size);
+    void bfs_neighbors(const Molecule &mol, const Node &v, BitSet &neighbors, int& size);
 
-    void dfs_sub(const Molecule &mol, const Node &product_node, const Node &v, int depth, const BitSet &root_neighbors,
-                 const NodeToBitSetMap &neighborhoods, const NodeVector &order1, const NodeVector &order2,
-                 NodeToBitSetMap &reduced_nodes, NodeToBoolMap &visited);
+    void bfs_subgraph(const Molecule &mol, const Node &product_node, const Node &root_node, const BitSet &root_neighbors,
+                      const NodeToBitSetMap &neighborhoods, const NodeVector &order1, const NodeVector &order2,
+                      ShortToNodeVectorPairMap &current_reductions);
 
   };
 

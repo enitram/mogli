@@ -11,6 +11,7 @@
 #define MOGLI_BRONKERBOSCH_H
 
 #include "product.h"
+#include "boost/graph/vf2_sub_graph_iso.hpp"
 
 namespace mogli {
 
