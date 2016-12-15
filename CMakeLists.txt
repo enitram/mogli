@@ -29,7 +29,8 @@ set(SOURCE_FILES
         src/product.h
         src/product.cpp
         src/bronkerbosch.cpp
-        src/bronkerbosch.h)
+        src/bronkerbosch.h
+        src/types.h)
 
 set(NAUTY_SRC
         include/nauty/nauty.c
