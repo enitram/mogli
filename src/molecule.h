@@ -15,24 +15,15 @@
 #include <lemon/list_graph.h>
 #include <boost/ptr_container/ptr_map.hpp>
 #include "iacm.h"
+#include "types.h"
 
 namespace mogli {
-
-  typedef lemon::ListGraph Graph;
-  typedef Graph::Node Node;
-  typedef Graph::NodeIt NodeIt;
-  typedef Graph::Edge Edge;
-  typedef Graph::EdgeIt EdgeIt;
-  typedef Graph::IncEdgeIt IncEdgeIt;
-  typedef std::vector<Node> NodeVector;
-  typedef std::vector<std::string> StringVector;
-  typedef typename Graph::template NodeMap<bool> NodeToBoolMap;
 
   class Molecule {
 
   public:
 
-  private:
+  protected:
 
     typedef typename Graph::template NodeMap<unsigned short> NodeToUShortMap;
     typedef typename Graph::template NodeMap<int> NodeToIntMap;
@@ -340,7 +331,7 @@ namespace mogli {
       out << "}" << std::endl;
     }
 
-  private:
+  protected:
 
     const void inline check_properties(const StringVector& from, const StringVector& keys, StringVector& to) const {
       for (std::vector<std::string>::const_iterator it = from.begin(), end = from.end(); it != end; ++it) {

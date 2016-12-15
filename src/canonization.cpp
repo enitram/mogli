@@ -122,10 +122,13 @@ void mogli::Canonization::canonNauty(const Molecule& mol,
 
   int i = 0;
   NodeToIntMap nodes(mol.get_graph());
+  NodeVector first_order;
+
   for (ShortSet::iterator it=colorSet.begin(), end = colorSet.end(); it != end; ++it) {
     NodeVector vector = colorMap.at(*it);
     for (NodeVector::iterator it2 = vector.begin(), end2 = vector.end(); it2 != end2; ++it2) {
       _colors.push_back(*it);
+      first_order.push_back(*it2);
       nodes[*it2] = i;
       lab[i] = i;
       ptn[i] = 1;
@@ -157,6 +160,7 @@ void mogli::Canonization::canonNauty(const Molecule& mol,
 //  }
 
   for (i = 0; i < m*atom_count; ++i) {
+    _node_order.push_back(first_order[lab[i]]);
     _canonization.push_back(static_cast<unsigned long>(cg[i]));
   }
 
