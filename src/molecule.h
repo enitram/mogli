@@ -30,14 +30,14 @@ namespace mogli {
     typedef typename Graph::template NodeMap<double> NodeToDoubleMap;
     typedef typename Graph::template NodeMap<std::string> NodeToStringMap;
 
-    typedef typename std::map<std::string, Node> StringToNodeMap;
+    typedef typename boost::ptr_map<std::string, Node> StringToNodeMap;
 
     typedef typename boost::ptr_map<std::string, NodeToBoolMap> BoolPropertiesMap;
     typedef typename boost::ptr_map<std::string, NodeToIntMap> IntPropertiesMap;
     typedef typename boost::ptr_map<std::string, NodeToDoubleMap> DoublePropertiesMap;
     typedef typename boost::ptr_map<std::string, NodeToStringMap> StringPropertiesMap;
 
-    typedef typename std::map<std::string, StringToNodeMap> InverseStringPropertiesMap;
+    typedef typename boost::ptr_map<std::string, StringToNodeMap> InverseStringPropertiesMap;
 
     Graph _g;
 
@@ -65,30 +65,26 @@ namespace mogli {
 
     // register properties
 
-    Molecule& add_bool_property(std::string property) {
+    void add_bool_property(std::string property) {
       _bool_prop.insert(property, new NodeToBoolMap(_g));
-      return *this;
     }
 
-    Molecule& add_int_property(std::string property) {
+    void add_int_property(std::string property) {
       _int_prop.insert(property, new NodeToIntMap(_g));
-      return *this;
     }
 
-    Molecule& add_double_property(std::string property) {
+    void add_double_property(std::string property) {
       _double_prop.insert(property, new NodeToDoubleMap(_g));
-      return *this;
     }
 
-    Molecule& add_string_property(std::string property) {
+    void add_string_property(std::string property) {
       _string_prop.insert(property, new NodeToStringMap(_g));
       _inv_string_prop[property] = StringToNodeMap();
-      return *this;
     }
 
     // get property keys
 
-    const void get_bool_properties(StringVector& keys) const {
+    void get_bool_properties(StringVector& keys) const {
       keys.clear();
       keys.reserve(_bool_prop.size());
       for (BoolPropertiesMap::const_iterator it = _bool_prop.begin(), end = _bool_prop.end(); it != end; ++it) {
@@ -96,7 +92,7 @@ namespace mogli {
       }
     }
 
-    const void get_int_properties(StringVector& keys) const {
+    void get_int_properties(StringVector& keys) const {
       keys.clear();
       keys.reserve(_int_prop.size());
       for (IntPropertiesMap::const_iterator it = _int_prop.begin(), end = _int_prop.end(); it != end; ++it) {
@@ -104,7 +100,7 @@ namespace mogli {
       }
     }
 
-    const void get_double_properties(StringVector& keys) const {
+    void get_double_properties(StringVector& keys) const {
       keys.clear();
       keys.reserve(_double_prop.size());
       for (DoublePropertiesMap::const_iterator it = _double_prop.begin(), end = _double_prop.end(); it != end; ++it) {
@@ -112,7 +108,7 @@ namespace mogli {
       }
     }
 
-    const void get_string_properties(StringVector& keys) const {
+    void get_string_properties(StringVector& keys) const {
       keys.clear();
       keys.reserve(_string_prop.size());
       for (StringPropertiesMap::const_iterator it = _string_prop.begin(), end = _string_prop.end(); it != end; ++it) {
@@ -122,26 +118,30 @@ namespace mogli {
 
     // set property for node
 
-    const void set_property(Node node, std::string property, bool value) {
+    void set_property(Node node, std::string property, bool value) {
       (&_bool_prop.at(property))->set(node, value);
     }
 
-    const void set_property(Node node, std::string property, int value) {
+    void set_property(Node node, std::string property, int value) {
       (&_int_prop.at(property))->set(node, value);
     }
 
-    const void set_property(Node node, std::string property, double value) {
+    void set_property(Node node, std::string property, double value) {
       (&_double_prop.at(property))->set(node, value);
     }
 
-    const void set_property(Node node, std::string property, char* value) {
+    void set_property(Node node, std::string property, char* value) {
       set_property(node, property, std::string(value));
     }
 
-    const void set_property(Node node, std::string property, std::string value) {
+    void set_property(Node node, std::string property, std::string value) {
       (&_string_prop.at(property))->set(node, value);
-      if (_inv_string_prop.find(property) != _inv_string_prop.end())
-        _inv_string_prop[property][value] = node;
+      if (_inv_string_prop.find(property) != _inv_string_prop.end()) {
+        _inv_string_prop.at(property)[value] = node;
+//        StringToNodeMap map = _inv_string_prop.at(property);
+//        map[value] = node;
+      }
+//        _inv_string_prop[property][value] = node;
     }
 
     // get property for node
@@ -163,9 +163,9 @@ namespace mogli {
     }
 
     // get node for string property
-
-    const Node get_node_by_string_property(std::string property, std::string value) {
-      return _inv_string_prop[property][value];
+    // TODO get node_by_int_property -> FDB lbl as int property
+    const Node get_node_by_string_property(const std::string property, const std::string value) const {
+      return (&_inv_string_prop.at(property))->at(value);
     }
 
     // add atoms & edges

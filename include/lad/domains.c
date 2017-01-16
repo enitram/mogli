@@ -268,21 +268,6 @@ c_bool compatibleVertices(c_bool induced, int u, int v, Tgraph* Gp, Tgraph* Gt){
 	return c_true;
 }
 
-Tdomain* createDomains(Tgraph* Gp, Tgraph* Gt){
-	Tdomain* D = (Tdomain*)malloc(sizeof(Tdomain));
-	D->globalMatchingP = (int*)malloc(sizeof(int)*Gp->nbVertices);
-	memset(D->globalMatchingP,-1,sizeof(int)*Gp->nbVertices);
-	D->globalMatchingT = (int*)malloc(sizeof(int)*Gt->nbVertices);
-	memset(D->globalMatchingT,-1,sizeof(int)*Gt->nbVertices);
-	D->nbVal = (int*)malloc(sizeof(int)*Gp->nbVertices);
-	D->firstVal = (int*)malloc(sizeof(int)*Gp->nbVertices);
-	D->posInVal = (int**)malloc(sizeof(int*)*Gp->nbVertices);  
-	D->firstMatch = (int**)malloc(sizeof(int*)*Gp->nbVertices);  
-	D->markedToFilter = (c_bool*)calloc(Gp->nbVertices,sizeof(c_bool));  
-	D->toFilter = (int*)malloc(sizeof(int)*Gp->nbVertices);  
-	return D;
-}	
-
 c_bool initDomains(c_bool induced, Tdomain* D, Tgraph* Gp, Tgraph* Gt){
 	// for every pattern node u, initialize D(u) with every vertex v 
 	// such that for every neighbor u' of u there exists a different 

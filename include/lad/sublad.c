@@ -131,7 +131,6 @@ int printStats(c_bool timeout, int verbose){
   return timeout;
 }
 
-// TODO free memory
 int sub_iso(Tgraph *Gp, Tgraph *Gt, c_bool *iso, int *map, int verbose, int timeLimit, c_bool induced, c_bool firstSol) {
 	// Parameters
 //	int timeLimit=60;      // Default: CPU time limit set to 60 seconds
@@ -154,8 +153,19 @@ int sub_iso(Tgraph *Gp, Tgraph *Gt, c_bool *iso, int *map, int verbose, int time
   listU  = (int*)malloc(Gp->nbVertices*sizeof(int));
   listDU  = (int*)malloc(Gp->nbVertices*sizeof(int));
 
-	// Initialize domains                                                                                                                           
-	Tdomain *D = createDomains(Gp, Gt);
+	// Initialize domains
+	Tdomain* D = (Tdomain*)malloc(sizeof(Tdomain));
+	D->globalMatchingP = (int*)malloc(sizeof(int)*Gp->nbVertices);
+	memset(D->globalMatchingP,-1,sizeof(int)*Gp->nbVertices);
+	D->globalMatchingT = (int*)malloc(sizeof(int)*Gt->nbVertices);
+	memset(D->globalMatchingT,-1,sizeof(int)*Gt->nbVertices);
+	D->nbVal = (int*)malloc(sizeof(int)*Gp->nbVertices);
+	D->firstVal = (int*)malloc(sizeof(int)*Gp->nbVertices);
+	D->posInVal = (int**)malloc(sizeof(int*)*Gp->nbVertices);
+	D->firstMatch = (int**)malloc(sizeof(int*)*Gp->nbVertices);
+	D->markedToFilter = (c_bool*)calloc(Gp->nbVertices,sizeof(c_bool));
+	D->toFilter = (int*)malloc(sizeof(int)*Gp->nbVertices);
+
 	if (!initDomains(induced, D, Gp, Gt)) return printStats(c_false, verbose);
 	if (verbose >= 2) printDomains(D, Gp->nbVertices);
 
@@ -185,6 +195,32 @@ int sub_iso(Tgraph *Gp, Tgraph *Gt, c_bool *iso, int *map, int verbose, int time
   if (nbSol > 0) {
     *iso = c_true;
   }
-	return printStats(timeout, verbose);
+	int ret = printStats(timeout, verbose);
+
+	free(matchedWithV);
+	free(nbPred);
+	for (int i=0; i<Gt->nbVertices; i++){
+		free(pred[i]);
+		free(succ[i]);
+	}
+	free(pred);
+	free(succ);
+	free(nbSucc);
+	free(listV);
+	free(listDV);
+	free(listU);
+	free(listDU);
+
+	free(D->globalMatchingP);
+	free(D->globalMatchingT);
+	free(D->nbVal);
+	free(D->firstVal);
+	free(D->posInVal);
+	free(D->firstMatch);
+	free(D->markedToFilter);
+	free(D->toFilter);
+	free(D);
+
+	return ret;
 }
 

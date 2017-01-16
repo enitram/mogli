@@ -31,7 +31,7 @@ namespace mogli {
       init(mol, filter, root);
     }
 
-    Canonization(const ShortVector &_colors, const LongVector &_canonization, const NodeVector &_node_order) :
+    Canonization(const ShortVector &_colors, const LongVector &_canonization, const ShortVector &_node_order) :
         _colors(_colors), _canonization(_canonization), _node_order(_node_order) {}
 
     const ShortVector &get_colors() const {
@@ -42,7 +42,7 @@ namespace mogli {
       return _canonization;
     }
 
-    const NodeVector &get_node_order() const {
+    const ShortVector &get_node_order() const {
       return _node_order;
     }
 
@@ -61,7 +61,7 @@ namespace mogli {
 
     ShortVector _colors;
     LongVector _canonization;
-    NodeVector _node_order;
+    ShortVector _node_order;
 
     void init(const Molecule& mol);
 

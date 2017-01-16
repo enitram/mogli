@@ -186,15 +186,15 @@ void Product::generate_nodes_deg1() {
           // generate product node uv
           const Node& uv = add_node(u, v);
           // apply degree-1 rule to neighbors of u and v
-          const NodeVector& order1 = canon1.get_node_order();
-          const NodeVector& order2 = canon2.get_node_order();
+          const ShortVector& order1 = canon1.get_node_order();
+          const ShortVector& order2 = canon2.get_node_order();
 
           ShortToNodeVectorPairMap current_reductions;
           for (IncEdgeIt e(g1, u); e != lemon::INVALID; ++e) {
             Node w = g1.oppositeNode(u, e);
             if (deg1[w] == 1) {
-              int index = static_cast<int>(std::find(order1.begin(), order1.end(), w) - order1.begin());
-              Node x = order2[index];
+              int index = static_cast<int>(std::find(order1.begin(), order1.end(), g1.id(w)) - order1.begin());
+              Node x = g2.nodeFromId(order2[index]);
               unsigned short color = _mol1.get_color(w);
               if (current_reductions.find(color) == current_reductions.end()) {
                 current_reductions[color] = std::make_pair(NodeVector(), NodeVector());
@@ -263,8 +263,17 @@ void Product::generate_nodes_sub() {
           const Node& uv = add_node(u, v);
           // apply neighborhood subset rule to neighbors of u and v
           BitSet &neighbors_u = neighborhoods1[u];
-          const NodeVector& order1 = canon1.get_node_order();
-          const NodeVector& order2 = canon2.get_node_order();
+          const ShortVector& _order1 = canon1.get_node_order();
+          const ShortVector& _order2 = canon2.get_node_order();
+
+          NodeVector order1, order2;
+
+          for (ShortVector::const_iterator it3 = _order1.begin(), end3 = _order1.end(); it3 != end3; ++it3) {
+            order1.push_back(g1.nodeFromId(*it3));
+          }
+          for (ShortVector::const_iterator it3 = _order2.begin(), end3 = _order2.end(); it3 != end3; ++it3) {
+            order2.push_back(g2.nodeFromId(*it3));
+          }
 
           ShortToNodeVectorPairMap current_reductions;
           bfs_subgraph(_mol1, uv, u, neighbors_u, neighborhoods1, order1, order2, current_reductions);

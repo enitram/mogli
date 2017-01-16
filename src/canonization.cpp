@@ -160,7 +160,7 @@ void mogli::Canonization::canonNauty(const Molecule& mol,
 //  }
 
   for (i = 0; i < m*atom_count; ++i) {
-    _node_order.push_back(first_order[lab[i]]);
+    _node_order.push_back(mol.get_id(first_order[lab[i]]));
     _canonization.push_back(static_cast<unsigned long>(cg[i]));
   }
 
@@ -230,7 +230,7 @@ void mogli::Canonization::canonNauty(const Molecule& mol,
   densenauty(ng,lab,ptn,orbits,&options,&stats,m,atom_count,cg);
 
   for (i = 0; i < m*atom_count; ++i) {
-    _node_order.push_back(first_order[lab[i]]);
+    _node_order.push_back(mol.get_id(first_order[lab[i]]));
     _canonization.push_back(static_cast<unsigned long>(cg[i]));
   }
 }
