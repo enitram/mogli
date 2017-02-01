@@ -19,6 +19,8 @@
 
 namespace mogli {
 
+  typedef typename Graph::template NodeMap<int> NodeToIntMap;
+
   class Molecule {
 
   public:
@@ -26,31 +28,29 @@ namespace mogli {
   protected:
 
     typedef typename Graph::template NodeMap<unsigned short> NodeToUShortMap;
-    typedef typename Graph::template NodeMap<int> NodeToIntMap;
     typedef typename Graph::template NodeMap<double> NodeToDoubleMap;
     typedef typename Graph::template NodeMap<std::string> NodeToStringMap;
 
-    typedef typename boost::ptr_map<std::string, Node> StringToNodeMap;
+    typedef typename boost::ptr_map<int, Node> IntToNodeMap;
 
     typedef typename boost::ptr_map<std::string, NodeToBoolMap> BoolPropertiesMap;
     typedef typename boost::ptr_map<std::string, NodeToIntMap> IntPropertiesMap;
     typedef typename boost::ptr_map<std::string, NodeToDoubleMap> DoublePropertiesMap;
     typedef typename boost::ptr_map<std::string, NodeToStringMap> StringPropertiesMap;
 
-    typedef typename boost::ptr_map<std::string, StringToNodeMap> InverseStringPropertiesMap;
-
     Graph _g;
 
     unsigned int _atom_count;
 
     NodeToUShortMap _colors;
+    NodeToIntMap _node_to_id;
+    IntToNodeMap _id_to_node;
+    int _max_uid;
 
     BoolPropertiesMap _bool_prop;
     IntPropertiesMap _int_prop;
     DoublePropertiesMap _double_prop;
     StringPropertiesMap _string_prop;
-
-    InverseStringPropertiesMap _inv_string_prop;
 
     IACM &_iacm;
 
@@ -59,6 +59,8 @@ namespace mogli {
   public:
     Molecule() : _g(),
                  _colors(_g),
+                 _node_to_id(_g),
+                 _max_uid(0),
                  _atom_count(0),
                  _is_connected(-1),
                  _iacm(IACM::get_default()){}
@@ -79,7 +81,6 @@ namespace mogli {
 
     void add_string_property(std::string property) {
       _string_prop.insert(property, new NodeToStringMap(_g));
-      _inv_string_prop[property] = StringToNodeMap();
     }
 
     // get property keys
@@ -136,12 +137,6 @@ namespace mogli {
 
     void set_property(Node node, std::string property, std::string value) {
       (&_string_prop.at(property))->set(node, value);
-      if (_inv_string_prop.find(property) != _inv_string_prop.end()) {
-        _inv_string_prop.at(property)[value] = node;
-//        StringToNodeMap map = _inv_string_prop.at(property);
-//        map[value] = node;
-      }
-//        _inv_string_prop[property][value] = node;
     }
 
     // get property for node
@@ -162,20 +157,27 @@ namespace mogli {
       return (&_string_prop.at(property))->operator[](node);
     }
 
-    // get node for string property
-    // TODO get node_by_int_property -> FDB lbl as int property
-    const Node get_node_by_string_property(const std::string property, const std::string value) const {
-      return (&_inv_string_prop.at(property))->at(value);
-    }
-
     // add atoms & edges
 
     const Node add_atom(std::string element) {
       return add_atom(_iacm.get_number(element));
     }
 
+    const Node add_atom(int id, std::string element) {
+      return add_atom(id, _iacm.get_number(element));
+    }
+
     const Node add_atom(unsigned short color) {
+      return add_atom(_max_uid+1, color);
+    }
+
+    const Node add_atom(int id, unsigned short color) {
       Node n = _g.addNode();
+      _node_to_id[n] = id;
+      _id_to_node[id] = n;
+      if (id > _max_uid) {
+        _max_uid = id;
+      }
       _atom_count++;
       _colors[n] = color;
       _is_connected = -1;
@@ -222,11 +224,11 @@ namespace mogli {
     }
 
     const Node get_node_by_id(int id) const {
-      return _g.nodeFromId(id);
+      return _id_to_node.at(id);
     }
 
     const int get_id(const Node &node) const {
-      return _g.id(node);
+      return _node_to_id[node];
     }
 
     const unsigned short get_color(const Node &node) const {
@@ -249,7 +251,15 @@ namespace mogli {
 
     virtual void read_lgf_stream(std::istream &in);
 
+    virtual void read_lgf_stream(std::istream &in,
+                                 const std::string id_property,
+                                 const std::string atom_type_property);
+
     virtual void read_lgf(const std::string &in);
+
+    virtual void read_lgf(const std::string &in,
+                          const std::string id_property,
+                          const std::string atom_type_property);
 
     // connected?
 
@@ -258,6 +268,14 @@ namespace mogli {
         _is_connected = is_connected0();
       }
       return _is_connected == 1;
+    }
+
+    const bool is_isomorphic(Molecule &other) const;
+
+    const std::string print_dot(const StringVector& properties = {}) const {
+      std::stringstream buffer;
+      print_dot(buffer, properties);
+      return buffer.str();
     }
 
     const void print_dot(std::ostream& out, const StringVector& properties = {}) const {
@@ -283,7 +301,7 @@ namespace mogli {
       for (NodeIt v(_g); v != lemon::INVALID; ++v) {
         out << "\t" << _g.id(v);
         if (properties.size() > 0) {
-          out << "[style=filled,fillcolor=" << _iacm.get_chem_color(_colors[v]);
+          out << "[style=\"filled\",fillcolor=" << _iacm.get_chem_color(_colors[v]);
           out << ",label=\"";
           bool first = true;
           for (std::vector<std::string>::const_iterator it = string_props.begin(), end = string_props.end(); it != end; ++it) {
@@ -319,6 +337,9 @@ namespace mogli {
             }
           }
           out << "\"]";
+        } else {
+          out << "[style=\"filled\",fillcolor=" << _iacm.get_chem_color(_colors[v]);
+          out << ",label=\"" << _node_to_id[v] << ", " << _colors[v] << "\"]";
         }
         out << std::endl;
       }
@@ -355,6 +376,14 @@ namespace mogli {
 
   };
 
+  inline void Molecule::read_lgf(const std::string &in,
+                                 const std::string id_property,
+                                 const std::string atom_type_property) {
+    std::stringstream buffer;
+    buffer.str(in);
+    read_lgf_stream(buffer, id_property, atom_type_property);
+  }
+
   inline void Molecule::read_lgf(const std::string &in) {
     std::stringstream buffer;
     buffer.str(in);
@@ -363,10 +392,26 @@ namespace mogli {
 
   inline void Molecule::read_lgf_stream(std::istream &in) {
     assert(in.good());
-    _g.clear();
+
+    add_double_property("partial_charge");
+    add_string_property("label2");
+    add_double_property("coordX");
+    add_double_property("coordY");
+    add_double_property("coordZ");
+    add_int_property("initColor");
+
+    read_lgf_stream(in, "label", "atomType");
+  }
+
+  inline void Molecule::read_lgf_stream(std::istream &in,
+                                        const std::string id_property,
+                                        const std::string atom_type_property) {
+    assert(in.good());
 
     lemon::GraphReader<Graph> reader(_g, in);
-    reader.nodeMap("atomType", _colors);
+    reader.nodeMap(atom_type_property, _colors);
+    reader.nodeMap(id_property, _node_to_id);
+
     for (BoolPropertiesMap::iterator it = _bool_prop.begin(), end = _bool_prop.end(); it != end; ++it) {
       reader.nodeMap(it->first, *(it->second));
     }
@@ -382,9 +427,12 @@ namespace mogli {
     reader.run();
 
     _atom_count = 0;
+    _max_uid = 0;
     for (NodeIt n(_g); n != lemon::INVALID; ++n) {
-      for (StringPropertiesMap::const_iterator it = _string_prop.begin(), end = _string_prop.end(); it != end; ++it) {
-        _inv_string_prop[it->first][(&_string_prop.at(it->first))->operator[](n)] = n;
+      int id = _node_to_id[n];
+      _id_to_node[id] = n;
+      if (id > _max_uid) {
+        _max_uid = id;
       }
       _atom_count++;
     }

@@ -5,7 +5,7 @@
 #include <sublad.h>
 #include "subgraph_isomorphism.h"
 
-Tgraph* mogli::translate_graph(const Molecule &mol) {
+Tgraph* mogli::translate_graph(const Molecule &mol, IntVector &node_ids) {
   // reads data in fileName and create the corresponding graph
 
   int i, j;
@@ -37,20 +37,22 @@ Tgraph* mogli::translate_graph(const Molecule &mol) {
 
   }
 
-  Graph::NodeMap<int> node_ids(mol.get_graph());
+  IntToIntMap reverse_node_ids;
   i = 0;
   for (NodeIt u = mol.get_node_iter(); u != lemon::INVALID; ++u, ++i) {
-    node_ids[u] = i;
+    reverse_node_ids[mol.get_id(u)] = i;
+    node_ids.push_back(mol.get_id(u));
   }
+  assert(node_ids.size() == mol.get_atom_count());
 
   for (NodeIt u = mol.get_node_iter(); u != lemon::INVALID; ++u) {
-    const int _u = node_ids[u];
+    const int _u = reverse_node_ids[mol.get_id(u)];
     graph->vertexLabel[_u] = mol.get_color(u);
     int degree = 0;
     graph->isLoop[_u] = c_false;
     for (IncEdgeIt e = mol.get_inc_edge_iter(u); e != lemon::INVALID; ++e) {
       Node v = mol.get_opposite_node(u, e);
-      const int _v = node_ids[v];
+      const int _v = reverse_node_ids[mol.get_id(v)];
       graph->edgeLabel[_u][_v] = 0;
       graph->nbPred[_v]++;
       assert(graph->nbAdj[_u] < graph->nbVertices);
@@ -90,24 +92,55 @@ void mogli::free_graph(Tgraph *graph) {
   free(graph);
 }
 
-bool mogli::are_subgraph_isomorphic(const Molecule &mol_small, const Molecule &mol_large, int map[]) {
-  Tgraph* gp = translate_graph(mol_small);
-  Tgraph* gt = translate_graph(mol_large);
+void mogli::translate_maps(const IntVector &node_ids_small, const IntVector &node_ids_large,
+                           const int in_iso_map[], IntToIntMap &out_iso_map) {
+  for (int i = 0; i < node_ids_small.size(); ++i) {
+    int _to = in_iso_map[i];
+    if (_to > -1) {
+      assert(_to < node_ids_large.size());
+      int to = node_ids_large.at(_to);
+      int from = node_ids_small.at(i);
+      out_iso_map[from] = to;
+    }
+  }
+}
 
-  assert(!gp->isDirected);
-  assert(!gt->isDirected);
+bool mogli::are_subgraph_isomorphic(const Molecule &mol_small, const Molecule &mol_large, IntToIntMap isomorphism_map) {
+  IntVector node_ids_small, node_ids_large;
+  Tgraph* gp = translate_graph(mol_small, node_ids_small);
+  Tgraph* gt = translate_graph(mol_large, node_ids_large);
+
+  assert(gp->isDirected == c_false);
+  assert(gt->isDirected == c_false);
+
+  assert(gp->nbVertices > 0);
+  assert(gt->nbVertices > 0);
 
   c_bool iso = c_false;
+  int n = mol_large.get_atom_count();
+  int map[n];
+  std::fill_n(map, n, -1);
   sub_iso(gp, gt, &iso, map, 0, 60, c_true, c_true);
 
   free_graph(gp);
   free_graph(gt);
 
-  return iso == c_true;
+  if (iso == c_true) {
+    translate_maps(node_ids_small, node_ids_large, map, isomorphism_map);
+    return true;
+  } else {
+    return false;
+  }
 }
 
-bool mogli::are_subgraph_isomorphic(Tgraph* graph_small, Tgraph* graph_large, int map[]) {
+bool mogli::are_subgraph_isomorphic(Tgraph* graph_small, Tgraph* graph_large, int isomorphism_map[]) {
+  assert(graph_large->isDirected == c_false);
+  assert(graph_small->isDirected == c_false);
+
+  assert(graph_large->nbVertices > 0);
+  assert(graph_small->nbVertices > 0);
+
   c_bool iso = c_false;
-  sub_iso(graph_small, graph_large, &iso, map, 0, 60, c_true, c_true);
+  sub_iso(graph_small, graph_large, &iso, isomorphism_map, 0, 60, c_true, c_true);
   return iso == c_true;
 }

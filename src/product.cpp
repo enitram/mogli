@@ -42,7 +42,7 @@ void Product::bfs(const Molecule &mol, const Node &v, NodeToBoolMap &filter) {
   }
 }
 
-void Product::bfs_neighbors(const Molecule &mol, const Node &v, BitSet &neighbors, int& size) {
+void Product::bfs_neighbors(const Molecule &mol, const Node &v, IntSet &neighbors, int& size) {
   NodeToBoolMap visited(mol.get_graph(), false);
   NodeToIntMap depth(mol.get_graph(), 0);
   NodeDeque queue;
@@ -51,7 +51,7 @@ void Product::bfs_neighbors(const Molecule &mol, const Node &v, BitSet &neighbor
   visited[v] = true;
   while (queue.size() > 0) {
     Node &current = queue.front();
-    neighbors[mol.get_id(current)] = true;
+    neighbors.insert(mol.get_id(current));
     ++size;
 
     if (depth[current] < _shell) {
@@ -68,8 +68,8 @@ void Product::bfs_neighbors(const Molecule &mol, const Node &v, BitSet &neighbor
   }
 }
 
-void Product::bfs_subgraph(const Molecule &mol, const Node &product_node, const Node &root_node, const BitSet &root_neighbors,
-                           const NodeToBitSetMap &neighborhoods, const NodeVector &order1, const NodeVector &order2,
+void Product::bfs_subgraph(const Molecule &mol, const Node &product_node, const Node &root_node, const IntSet &root_neighbors,
+                           const NodeToIntSetMap &neighborhoods, const NodeVector &order1, const NodeVector &order2,
                            ShortToNodeVectorPairMap &current_reductions) {
   NodeToBoolMap visited(mol.get_graph(), false);
   NodeToIntMap depth(mol.get_graph(), 0);
@@ -80,8 +80,9 @@ void Product::bfs_subgraph(const Molecule &mol, const Node &product_node, const 
   while (queue.size() > 0) {
     Node &current = queue.front();
 
-    const BitSet &neighbors_current = neighborhoods[current];
-    if (neighbors_current.is_subset_of(root_neighbors)) {
+    const IntSet &neighbors_current = neighborhoods[current];
+    if (std::includes(root_neighbors.begin(), root_neighbors.end(),
+                      neighbors_current.begin(), neighbors_current.end())) {
       if (current != root_node) {
         int index = static_cast<int>(std::find(order1.begin(), order1.end(), current) - order1.begin());
         Node w = order2[index];
@@ -115,7 +116,7 @@ void Product::generate_subgraph_canonization(const Molecule &mol, const Node &v,
   map[v] = Canonization(mol, filter, v);
 }
 
-void Product::generate_subgraph(const Molecule &mol, const Node &v, NodeToBitSetMap &neighborhoods, IntToNodeMap &sizes) {
+void Product::generate_subgraph(const Molecule &mol, const Node &v, NodeToIntSetMap &neighborhoods, IntToNodeMap &sizes) {
   int size = 0;
   bfs_neighbors(mol, v, neighborhoods[v], size);
   sizes.insert(std::make_pair(size, v));
@@ -139,7 +140,7 @@ void Product::generate_nodes() {
   for (NodeIt u = _mol1.get_node_iter(); u != lemon::INVALID; ++u) {
     for (NodeIt v = _mol2.get_node_iter(); v != lemon::INVALID; ++v) {
       if (_mol1.get_color(u) == _mol2.get_color(v) &&
-          are_isomorphic(subgraph_canons1[u], subgraph_canons2[v])) {
+          subgraph_canons1[u].is_isomorphic(subgraph_canons2[v])) {
         const Node& uv = add_node(u, v);
       }
     }
@@ -162,7 +163,7 @@ void Product::generate_nodes_deg1() {
   NodeToCanonizationMap subgraph_canons(g2);
   NodeToBoolMap has_canon(g2, false);
 
-  NodeToBitSetMap reduced_nodes(g1, BitSet(_mol2.get_atom_count()));
+  NodeToIntSetMap reduced_nodes(g1, IntSet());
 
   // iterate nodes u with decreasing degree
   for (IntToNodeMap::reverse_iterator it = deg_to_node1.rbegin(), end = deg_to_node1.rend(); it != end; ++it) {
@@ -173,7 +174,7 @@ void Product::generate_nodes_deg1() {
     // iterate nodes v with decreasing degree
     for (IntToNodeMap::reverse_iterator it2 = deg_to_node2.rbegin(), end2 = deg_to_node2.rend(); it2 != end2; ++it2) {
       Node v = it2->second;
-      if (reduced_nodes[u][_mol2.get_id(v)]) {
+      if (reduced_nodes[u].count(_mol2.get_id(v)) > 0) {
         continue;
       }
       if (_mol1.get_color(u) == _mol2.get_color(v)) {
@@ -182,7 +183,7 @@ void Product::generate_nodes_deg1() {
           has_canon[v] = true;
         }
         Canonization& canon2 = subgraph_canons[v];
-        if (are_isomorphic(canon1, canon2)) {
+        if (canon1.is_isomorphic(canon2)) {
           // generate product node uv
           const Node& uv = add_node(u, v);
           // apply degree-1 rule to neighbors of u and v
@@ -193,8 +194,8 @@ void Product::generate_nodes_deg1() {
           for (IncEdgeIt e(g1, u); e != lemon::INVALID; ++e) {
             Node w = g1.oppositeNode(u, e);
             if (deg1[w] == 1) {
-              int index = static_cast<int>(std::find(order1.begin(), order1.end(), g1.id(w)) - order1.begin());
-              Node x = g2.nodeFromId(order2[index]);
+              int index = static_cast<int>(std::find(order1.begin(), order1.end(), _mol1.get_id(w)) - order1.begin());
+              Node x = _mol2.get_node_by_id(order2[index]);
               unsigned short color = _mol1.get_color(w);
               if (current_reductions.find(color) == current_reductions.end()) {
                 current_reductions[color] = std::make_pair(NodeVector(), NodeVector());
@@ -205,9 +206,13 @@ void Product::generate_nodes_deg1() {
             }
           }
           for (ShortToNodeVectorPairMap::const_iterator it3 = current_reductions.begin(), end3 = current_reductions.end(); it3 != end3; ++it3) {
+            NodeVector foo = it3->second.first;
+            NodeVector bar = it3->second.second;
             for (int i = 0; i < it3->second.first.size(); ++i) {
               for (int j = 0; j < it3->second.second.size(); ++j) {
-                reduced_nodes[it3->second.first[i]][_mol2.get_id(it3->second.second[j])] = true;
+                Node u = it3->second.first[i];
+                Node v = it3->second.second[j];
+                reduced_nodes[it3->second.first[i]].insert(_mol2.get_id(it3->second.second[j]));
               }
             }
           }
@@ -225,8 +230,8 @@ void Product::generate_nodes_sub() {
   IntToNodeMap neighborhood_sizes1;
   IntToNodeMap neighborhood_sizes2;
 
-  NodeToBitSetMap neighborhoods1(g1, BitSet(_mol1.get_atom_count()));
-  NodeToBitSetMap neighborhoods2(g2, BitSet(_mol2.get_atom_count()));
+  NodeToIntSetMap neighborhoods1(g1, IntSet());
+  NodeToIntSetMap neighborhoods2(g2, IntSet());
 
   for (NodeIt v(g1); v != lemon::INVALID; ++v) {
     generate_subgraph(_mol1, v, neighborhoods1, neighborhood_sizes1);
@@ -239,7 +244,7 @@ void Product::generate_nodes_sub() {
   NodeToCanonizationMap subgraph_canons(g2);
   NodeToBoolMap has_canon(g2, false);
 
-  NodeToBitSetMap reduced_nodes(g1, BitSet(_mol2.get_atom_count()));
+  NodeToIntSetMap reduced_nodes(g1, IntSet());
 
   // iterate nodes u with decreasing neighborhood size
   for (IntToNodeMap::reverse_iterator it = neighborhood_sizes1.rbegin(), end = neighborhood_sizes1.rend(); it != end; ++it) {
@@ -250,29 +255,30 @@ void Product::generate_nodes_sub() {
     // iterate nodes v with decreasing neighborhood size
     for (IntToNodeMap::reverse_iterator it2 = neighborhood_sizes2.rbegin(), end2 = neighborhood_sizes2.rend(); it2 != end2; ++it2) {
       Node v = it2->second;
-      if (reduced_nodes[u][_mol2.get_id(v)])
+      if (reduced_nodes[u].count(_mol2.get_id(v)) > 0) {
         continue;
+      }
       if (_mol1.get_color(u) == _mol2.get_color(v)) {
         if (!has_canon[v]) {
           generate_subgraph_canonization(_mol2, v, subgraph_canons);
           has_canon[v] = true;
         }
         Canonization& canon2 = subgraph_canons[v];
-        if (are_isomorphic(canon1, canon2)) {
+        if (canon1.is_isomorphic(canon2)) {
           // generate product node uv
           const Node& uv = add_node(u, v);
           // apply neighborhood subset rule to neighbors of u and v
-          BitSet &neighbors_u = neighborhoods1[u];
+          IntSet &neighbors_u = neighborhoods1[u];
           const ShortVector& _order1 = canon1.get_node_order();
           const ShortVector& _order2 = canon2.get_node_order();
 
           NodeVector order1, order2;
 
           for (ShortVector::const_iterator it3 = _order1.begin(), end3 = _order1.end(); it3 != end3; ++it3) {
-            order1.push_back(g1.nodeFromId(*it3));
+            order1.push_back(_mol1.get_node_by_id(*it3));
           }
           for (ShortVector::const_iterator it3 = _order2.begin(), end3 = _order2.end(); it3 != end3; ++it3) {
-            order2.push_back(g2.nodeFromId(*it3));
+            order2.push_back(_mol2.get_node_by_id(*it3));
           }
 
           ShortToNodeVectorPairMap current_reductions;
@@ -280,7 +286,7 @@ void Product::generate_nodes_sub() {
           for (ShortToNodeVectorPairMap::const_iterator it3 = current_reductions.begin(), end3 = current_reductions.end(); it3 != end3; ++it3) {
             for (int i = 0; i < it3->second.first.size(); ++i) {
               for (int j = 0; j < it3->second.second.size(); ++j) {
-                reduced_nodes[it3->second.first[i]][_mol2.get_id(it3->second.second[j])] = true;
+                reduced_nodes[it3->second.first[i]].insert(_mol2.get_id(it3->second.second[j]));
               }
             }
           }

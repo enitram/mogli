@@ -6,14 +6,13 @@
 #define MOGLI_CANONIZATION_H
 
 #include "molecule.h"
+//#include "fragment.h"
 #include <nauty.h>
 #include <malloc.h>
 #include <boost/dynamic_bitset.hpp>
 
 namespace mogli {
 
-  typedef std::vector<unsigned short> ShortVector;
-  typedef std::vector<unsigned long> LongVector;
   typedef boost::dynamic_bitset<> BitSet;
 
   class Canonization {
@@ -46,7 +45,35 @@ namespace mogli {
       return _node_order;
     }
 
-  private:
+    const bool is_isomorphic(Canonization &other) const {
+      const ShortVector& colors2 = other.get_colors();
+
+      if (_colors.size() != colors2.size())
+        return false;
+
+      const LongVector& canonization2 = other.get_canonization();
+
+      if (_canonization.size() != canonization2.size())
+        return false;
+
+      for (ShortVector::const_iterator i1 = _colors.begin(), i2 = colors2.begin(),
+               ie1 = _colors.end(), ie2 = colors2.end();
+           i1 != ie1 && i2 != ie2; ++i1, ++i2) {
+        if (*i1 != *i2)
+          return false;
+      }
+
+      for (LongVector::const_iterator i1 = _canonization.begin(), i2 = canonization2.begin(),
+               ie1 = _canonization.end(), ie2 = canonization2.end();
+           i1 != ie1 && i2 != ie2; ++i1, ++i2) {
+        if (*i1 != *i2)
+          return false;
+      }
+
+      return true;
+    }
+
+  protected:
 
     typedef std::set<unsigned short> ShortSet;
     typedef typename Graph::template NodeMap<bool> NodeToBoolMap;
@@ -57,7 +84,6 @@ namespace mogli {
     typedef typename FilterNodes::EdgeIt FilteredEdgeIt;
     typedef typename FilterNodes::IncEdgeIt FilteredIncEdgeIt;
     typedef typename FilterNodes::NodeMap<bool> FilteredNodeToBoolMap;
-
 
     ShortVector _colors;
     LongVector _canonization;

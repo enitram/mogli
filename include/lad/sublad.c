@@ -139,6 +139,10 @@ int sub_iso(Tgraph *Gp, Tgraph *Gt, c_bool *iso, int *map, int verbose, int time
 //	c_bool firstSol = c_true; // Default: search for all solutions
   *iso = c_false;
 
+	nbNodes = 1;      // number of nodes in the search tree
+	nbFail = 0;       // number of failed nodes in the search tree
+	nbSol = 0;        // number of solutions found
+
   matchedWithV = (int*)malloc(Gt->nbVertices*sizeof(int));
   nbPred = (int*)malloc(Gt->nbVertices*sizeof(int));
   pred = (int**)malloc(Gt->nbVertices*sizeof(int*));

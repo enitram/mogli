@@ -12,7 +12,6 @@
 
 #include "molecule.h"
 #include "canonization.h"
-#include "isomorphism.h"
 #include "orbits.h"
 #include <set>
 #include <vector>
@@ -22,7 +21,6 @@ namespace mogli {
 
   typedef typename Graph::template NodeMap<Node> NodeToNodeMap;
   typedef std::vector<std::pair<Node, Node> > NodePairVector;
-  typedef std::vector<NodePairVector> NodePairVectorVector;
 
   typedef std::vector<NodeVector> NodeVectorVector;
 
@@ -53,11 +51,8 @@ namespace mogli {
     typedef typename Graph::template NodeMap<NodePairVector> NodeToNodePairVectorMap;
     typedef typename Graph::template NodeMap<Canonization> NodeToCanonizationMap;
 
-    typedef typename Graph::template NodeMap<BitSet> NodeToBitSetMap;
-
-    typedef std::vector<int> IntVector;
-    typedef std::pair<IntVector, IntVector> IntVectorPair;
-    typedef std::vector<IntVectorPair> IntVectorPairVector;
+    typedef typename std::set<int> IntSet;
+    typedef typename Graph::template NodeMap<IntSet> NodeToIntSetMap;
 
     const Molecule& _mol1;
     const Molecule& _mol2;
@@ -236,14 +231,14 @@ namespace mogli {
 
     void generate_subgraph_canonization(const Molecule &mol, const Node &v, NodeToCanonizationMap &map);
 
-    void generate_subgraph(const Molecule &mol, const Node &v, NodeToBitSetMap &neighborhoods, IntToNodeMap &sizes);
+    void generate_subgraph(const Molecule &mol, const Node &v, NodeToIntSetMap &neighborhoods, IntToNodeMap &sizes);
 
     void bfs(const Molecule &mol, const Node &v, NodeToBoolMap &filter);
 
-    void bfs_neighbors(const Molecule &mol, const Node &v, BitSet &neighbors, int& size);
+    void bfs_neighbors(const Molecule &mol, const Node &v, IntSet &neighbors, int& size);
 
-    void bfs_subgraph(const Molecule &mol, const Node &product_node, const Node &root_node, const BitSet &root_neighbors,
-                      const NodeToBitSetMap &neighborhoods, const NodeVector &order1, const NodeVector &order2,
+    void bfs_subgraph(const Molecule &mol, const Node &product_node, const Node &root_node, const IntSet &root_neighbors,
+                      const NodeToIntSetMap &neighborhoods, const NodeVector &order1, const NodeVector &order2,
                       ShortToNodeVectorPairMap &current_reductions);
 
   };

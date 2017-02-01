@@ -2,51 +2,133 @@
 // Created by M. Engler on 10/01/17.
 //
 
-# include "mcf.h"
+#include <sublad.h>
+#include "mcf.h"
 
-bool mogli::less(const std::pair<Fragment*, Tgraph*>& a,const std::pair<Fragment*, Tgraph*>& b) {
-  return a.first->get_atom_count() < b.first->get_atom_count();
+bool less(const std::pair<int, int>& a, const std::pair<int, int>& b) {
+  return a.second < b.second;
 }
 
-void mogli::maximal_common_fragments(Molecule &mol1, Molecule &mol2, FragmentVector &fragments,
-                                     int shell, Product::GenerationType prod_gen, std::string unique_node_property) {
+void mogli::maximal_common_fragments(Molecule &mol1, Molecule &mol2,
+                                     FragmentVector &fragments,
+                                     MatchVector &matches_mol1, MatchVector &matches_mol2,
+                                     int shell, int core_size_limit,
+                                     Product::GenerationType prod_gen, bool reduce_subgraphs) {
 
   Product product(mol1, mol2, shell, prod_gen);
 
   BronKerbosch bk(product);
   bk.run();
 
-  NodeVectorVector cliques = NodeVectorVector(bk.getMaxCliques());
+  NodeVectorVector cliques = bk.getMaxCliques();
+  if (!reduce_subgraphs) {
 
-  std::deque<std::pair<Fragment*, Tgraph*> > deque;
-  int i = 0;
-  for (NodeVectorVector::const_iterator it = cliques.begin(), end = cliques.end(); it != end; ++it) {
-    Fragment* fragment = new Fragment(product, *it, unique_node_property);
-    Tgraph* tgraph = translate_graph(*fragment);
-    deque.push_back(std::make_pair(fragment,tgraph));
-  }
+    for (NodeVectorVector::const_iterator it = cliques.begin(), end = cliques.end(); it != end; ++it) {
+      IntToIntMap g_to_mol1, g_to_mol2;
+      boost::shared_ptr<Fragment> fragment = boost::make_shared<Fragment>(product, *it, g_to_mol1, g_to_mol2);
 
-  std::sort(deque.begin(), deque.end(), less);
+      if (fragment->get_core_atom_count() > core_size_limit) {
+        Match match1(g_to_mol1);
+        Match match2(g_to_mol2);
+        IntVector _node_ids;
 
-  fragments.reserve(cliques.size());
-  while (deque.size() > 0) {
-    std::pair<Fragment*, Tgraph*>* current = &deque.front();
-    int map[current->first->get_atom_count()];
-    bool iso = false;
-    for (std::deque<std::pair<Fragment*, Tgraph*> >::reverse_iterator it = deque.rbegin(), end = deque.rend(); it < end-1; ++it) {
-      assert(current->first->get_atom_count() <= it->first->get_atom_count());
-      iso = are_subgraph_isomorphic(current->second, it->second, map);
-      if (iso) {
-        it->first->merge(*(current->first));
-        delete current->first;
-        break;
+        fragments.push_back(fragment);
+        matches_mol1.push_back(match1);
+        matches_mol2.push_back(match2);
       }
     }
-    if (!iso) {
-      fragments.push_back(current->first);
+
+  } else {
+
+    std::deque<std::pair<int, int> > deque;
+    FragmentVector frags;
+    MatchVector matches1;
+    MatchVector matches2;
+
+    int k = 0;
+    for (NodeVectorVector::const_iterator it = cliques.begin(), end = cliques.end(); it != end; ++it) {
+      IntToIntMap g_to_mol1, g_to_mol2;
+      boost::shared_ptr<Fragment> fragment = boost::make_shared<Fragment>(product, *it, g_to_mol1, g_to_mol2);
+
+      if (fragment->get_core_atom_count() > core_size_limit) {
+        Match match1(g_to_mol1);
+        Match match2(g_to_mol2);
+        IntVector _node_ids;
+
+        frags.push_back(fragment);
+        matches1.push_back(match1);
+        matches2.push_back(match2);
+        deque.push_back(std::make_pair(k, fragment->get_atom_count()));
+        ++k;
+      }
     }
-    free_graph(current->second);
-    deque.pop_front();
+
+    assert(k == deque.size());
+
+    std::sort(deque.begin(), deque.end(), less);
+
+    fragments.reserve(cliques.size());
+    matches_mol1.reserve(cliques.size());
+    matches_mol2.reserve(cliques.size());
+
+    while (deque.size() > 0) {
+
+      int current = deque.begin()->first;
+
+      assert(0 <= current);
+      assert(current <= frags.size());
+      assert(current <= matches1.size());
+      assert(current <= matches2.size());
+
+      IntVector node_ids_current;
+      node_ids_current.reserve(frags.at(current)->get_atom_count());
+      Tgraph* graph_small = translate_graph(*frags.at(current), node_ids_current);
+      int n = frags.at(current)->get_atom_count();
+      int map[n];
+      bool are_sub_iso = false;
+
+      for (std::deque<std::pair<int, int> >::reverse_iterator it = deque.rbegin(), end = deque.rend(); it < end-1; ++it) {
+
+        int other = it->first;
+
+        assert(0 <= other);
+        assert(other <= frags.size());
+        assert(other <= matches1.size());
+        assert(other <= matches2.size());
+
+        assert(current != other);
+        assert(current == deque.begin()->first);
+        assert(other == it->first);
+        assert(frags.at(current)->get_atom_count() <= frags.at(other)->get_atom_count());
+
+        IntVector node_ids_other;
+        node_ids_other.reserve(frags.at(other)->get_atom_count());
+        Tgraph* graph_large = translate_graph(*frags.at(other), node_ids_other);
+        std::fill_n(map, n, -1);
+
+        are_sub_iso = are_subgraph_isomorphic(graph_small, graph_large, map);
+        free_graph(graph_large);
+
+        if (are_sub_iso) {
+          IntToIntMap isomorphism_map;
+          translate_maps(node_ids_current, node_ids_other, map, isomorphism_map);
+          matches1.at(other).merge(matches1.at(current), isomorphism_map);
+          matches2.at(other).merge(matches2.at(current), isomorphism_map);
+          break;
+        }
+
+      }
+
+      if (!are_sub_iso) {
+        fragments.push_back(frags.at(current));
+        matches_mol1.push_back(matches1.at(current));
+        matches_mol2.push_back(matches2.at(current));
+      }
+
+      free_graph(graph_small);
+      deque.pop_front();
+
+    }
   }
 
 }

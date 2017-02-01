@@ -6,7 +6,6 @@
 #include <boost/python/suite/indexing/vector_indexing_suite.hpp>
 #include "canonization.h"
 #include "packing.h"
-#include "isomorphism.h"
 #include "mcf.h"
 
 using namespace boost::python;
@@ -39,17 +38,34 @@ struct iterator_wrappers {
 
 BOOST_PYTHON_MODULE(libmogli) {
 
+  std::string (*pack_fragment1)(const Fragment&) = &pack_fragment;
+  std::string (*pack_fragment2)(const boost::shared_ptr<Fragment>&) = &pack_fragment;
+
   def("pack_canonization", pack_canonization);
   def("unpack_canonization", unpack_canonization);
   def("hash_canonization", hash_canonization);
+  def("pack_fcanonization", pack_fcanonization);
+  def("unpack_fcanonization", unpack_fcanonization);
+  def("hash_fcanonization", hash_fcanonization);
   def("pack_molecule", pack_molecule);
   def("unpack_molecule", unpack_molecule);
-  def("pack_fragment", pack_fragment);
+  def("pack_fragment", pack_fragment1);
+  def("pack_fragment", pack_fragment2);
   def("unpack_fragment", unpack_fragment);
+  def("pack_match", pack_match);
+  def("unpack_match", unpack_match);
+
+  class_<BoolVector>("BoolVector")
+      .def("__iter__", iterator<BoolVector>())
+      .def(vector_indexing_suite<BoolVector>());
 
   class_<ShortVector>("ShortVector")
       .def("__iter__", iterator<ShortVector>())
       .def(vector_indexing_suite<ShortVector>());
+
+  class_<IntVector>("IntVector")
+      .def("__iter__", iterator<IntVector>())
+      .def(vector_indexing_suite<IntVector>());
 
   class_<LongVector>("LongVector")
       .def("__iter__", iterator<LongVector>())
@@ -67,10 +83,19 @@ BOOST_PYTHON_MODULE(libmogli) {
       .def("__iter__", iterator<FragmentVector, return_internal_reference<> >())
       .def("__len__", &FragmentVector::size);
 
+  class_<MatchVector, boost::noncopyable>("MatchVector")
+      .def("__iter__", iterator<MatchVector>())
+      .def("__len__", &MatchVector::size);
+
   class_<Canonization>("Canonization", init<const Molecule&>())
       .def("get_colors", &Canonization::get_colors, return_value_policy<return_by_value>())
       .def("get_canonization", &Canonization::get_canonization, return_value_policy<return_by_value>())
-      .def("get_node_order", &Canonization::get_node_order, return_value_policy<return_by_value>());
+      .def("get_node_order", &Canonization::get_node_order, return_value_policy<return_by_value>())
+      .def("is_isomorphic", &Canonization::is_isomorphic);
+
+  class_<FragmentCanonization, bases<Canonization>>("FragmentCanonization", init<const Fragment&>())
+      .def("get_core_nodes", &FragmentCanonization::get_core_nodes, return_value_policy<return_by_value>())
+      .def("is_isomorphic", &FragmentCanonization::is_isomorphic);
 
   enum_<Product::GenerationType>("GenerationType")
       .value("NO_OPT", Product::GenerationType::NO_OPT)
@@ -78,7 +103,9 @@ BOOST_PYTHON_MODULE(libmogli) {
       .value("SUB", Product::GenerationType::SUB);
 
   const Node (Molecule::*add_atom1)(std::string) = &Molecule::add_atom;
-  const Node (Molecule::*add_atom2)(unsigned short) = &Molecule::add_atom;
+  const Node (Molecule::*add_atom2)(int, std::string) = &Molecule::add_atom;
+  const Node (Molecule::*add_atom3)(unsigned short) = &Molecule::add_atom;
+  const Node (Molecule::*add_atom4)(int, unsigned short) = &Molecule::add_atom;
 
   void (Molecule::*set_property1)(Node, std::string, bool) = &Molecule::set_property;
   void (Molecule::*set_property2)(Node, std::string, int) = &Molecule::set_property;
@@ -86,9 +113,17 @@ BOOST_PYTHON_MODULE(libmogli) {
   void (Molecule::*set_property4)(Node, std::string, char*) = &Molecule::set_property;
   void (Molecule::*set_property5)(Node, std::string, std::string) = &Molecule::set_property;
 
-  class_<Molecule, boost::noncopyable>("Molecule")
+  void (Molecule::*read_lgf1)(const std::string &) = &Molecule::read_lgf;
+  void (Molecule::*read_lgf2)(const std::string &, const std::string, const std::string) = &Molecule::read_lgf;
+
+  const std::string (Molecule::*print_dot1)(const StringVector&) const = &Molecule::print_dot;
+  const std::string (Fragment::*print_dot2)() const = &Fragment::print_dot;
+
+  class_<Molecule, boost::noncopyable>("Molecule", init<>())
       .def("add_atom", add_atom1)
       .def("add_atom", add_atom2)
+      .def("add_atom", add_atom3)
+      .def("add_atom", add_atom4)
       .def("add_edge", &Molecule::add_edge)
       .def("get_node_iter", &Molecule::get_node_iter)
       .def("get_edge_iter", &Molecule::get_edge_iter)
@@ -103,7 +138,10 @@ BOOST_PYTHON_MODULE(libmogli) {
       .def("get_iacm_element", &Molecule::get_iacm_element)
       .def("get_chem_element", &Molecule::get_chem_element)
       .def("is_connected", &Molecule::is_connected)
-      .def("read_lgf", &Molecule::read_lgf)
+      .def("is_isomorphic", &Molecule::is_isomorphic)
+      .def("read_lgf", read_lgf1)
+      .def("read_lgf", read_lgf2)
+      .def("print_dot", print_dot1)
       .def("add_bool_property", &Molecule::add_bool_property)
       .def("add_int_property", &Molecule::add_int_property)
       .def("add_double_property", &Molecule::add_double_property)
@@ -120,26 +158,19 @@ BOOST_PYTHON_MODULE(libmogli) {
       .def("get_bool_property", &Molecule::get_bool_property)
       .def("get_int_property", &Molecule::get_int_property)
       .def("get_double_property", &Molecule::get_double_property)
-      .def("get_string_property", &Molecule::get_string_property)
-      .def("get_node_by_string_property", &Molecule::get_node_by_string_property);
+      .def("get_string_property", &Molecule::get_string_property);
 
-  class_<Fragment, bases<Molecule>, boost::noncopyable>("Fragment", init<const Molecule&, const Molecule&, const std::string>())
-      .def("get_core_node_iter", &Fragment::get_core_node_iter)
-      .def("get_shell_node_iter", &Fragment::get_shell_node_iter)
-      .def("get_core_edge_iter", &Fragment::get_core_edge_iter)
-      .def("get_shell_edge_iter", &Fragment::get_shell_edge_iter)
-      .def("get_core_inc_edge_iter", &Fragment::get_core_inc_edge_iter)
-      .def("get_shell_inc_edge_iter", &Fragment::get_shell_inc_edge_iter)
-//      .def("get_core_mol1_unp", &Fragment::get_core_mol1_unp)
-//      .def("get_core_mol2_unp", &Fragment::get_core_mol2_unp)
-      .def("get_core_mol1_node", &Fragment::get_core_mol1_node)
-      .def("get_core_mol2_node", &Fragment::get_core_mol2_node);
+  class_<Fragment, boost::shared_ptr<Fragment>, bases<Molecule>, boost::noncopyable>("Fragment", init<>())
+      .def("get_core_atom_count", &Fragment::get_core_atom_count)
+      .def("is_core", &Fragment::is_core)
+      .def("print_dot", print_dot2);
 
-  bool (*isomorph1)(Molecule&, Molecule&) = &are_isomorphic;
-  bool (*isomorph2)(Canonization&, Canonization&) = &are_isomorphic;
-
-  def("are_isomorphic", isomorph1);
-  def("are_isomorphic", isomorph2);
+  class_<Match>("Match", init<>())
+      .def("frag_to_mol", &Match::frag_to_mol)
+      .def("merged_frag_to_mol", &Match::merged_frag_to_mol)
+      .def("map_ids", &Match::map_ids)
+      .def(self == self)
+      .def(self != self);
 
   def("maximal_common_fragments", maximal_common_fragments);
 
@@ -156,9 +187,5 @@ BOOST_PYTHON_MODULE(libmogli) {
   iterator_wrappers<const Node, NodeIt>().wrap("NodeIt");
   iterator_wrappers<const Edge, EdgeIt>().wrap("EdgeIt");
   iterator_wrappers<const Edge, IncEdgeIt>().wrap("IncEdgeIt");
-
-  iterator_wrappers<const Node, FilteredNodeIt>().wrap("FilteredNodeIt");
-  iterator_wrappers<const Edge, FilteredEdgeIt>().wrap("FilteredEdgeIt");
-  iterator_wrappers<const Edge, FilteredIncEdgeIt>().wrap("FilteredIncEdgeIt");
 
 }

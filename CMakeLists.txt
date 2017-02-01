@@ -10,6 +10,9 @@ ENDIF(NOT CMAKE_BUILD_TYPE)
 set(CMAKE_CXX_FLAGS_DEBUG "-g -ggdb -O0 -DDEBUG -std=c++11")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG -std=c++11")
 
+set(CMAKE_C_FLAGS_DEBUG "-g -ggdb -O0 -DDEBUG -std=c99")
+set(CMAKE_C_FLAGS_RELEASE "-O3 -DNDEBUG -std=c99")
+
 find_package( Boost 1.60.0 REQUIRED COMPONENTS python)
 set( Boost_USE_STATIC_LIBS OFF )
 set( Boost_USE_MULTITHREADED ON )
@@ -28,9 +31,8 @@ set( CommonLibs
 set(SOURCE_FILES
         src/canonization.h
         src/canonization.cpp
-        src/isomorphism.h
-        src/isomorphism.cpp
         src/molecule.h
+        src/molecule.cpp
         src/iacm.h
         src/product.h
         src/product.cpp
@@ -44,7 +46,9 @@ set(SOURCE_FILES
         src/types.h
         src/util/packing.h
         src/mcf.cpp
-        src/mcf.h)
+        src/mcf.h
+        src/match.h
+        src/fcanonization.h)
 
 set(NAUTY_SRC
         include/nauty/nauty.c

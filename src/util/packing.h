@@ -7,8 +7,10 @@
 
 #include <msgpack.hpp>
 #include <sstream>
+#include "fcanonization.h"
 #include "canonization.h"
 #include "fragment.h"
+#include "match.h"
 
 namespace msgpack {
   MSGPACK_API_VERSION_NAMESPACE(MSGPACK_DEFAULT_API_NS) {
@@ -20,7 +22,10 @@ namespace msgpack {
       struct pack<Canonization> {
         template <typename Stream>
         packer<Stream>& operator()(msgpack::packer<Stream>& o, Canonization const& v) const {
-          return o.pack_array(2).pack(v.get_colors()).pack(v.get_canonization()).pack(v.get_node_order());
+          return o.pack_array(3)
+              .pack(v.get_colors())
+              .pack(v.get_canonization())
+              .pack(v.get_node_order());
         }
       };
 
@@ -28,11 +33,38 @@ namespace msgpack {
       struct convert<Canonization> {
         msgpack::object const& operator()(msgpack::object const& o, Canonization& v) const {
           if (o.type != msgpack::type::ARRAY) throw msgpack::type_error();
-          if (o.via.array.size != 2) throw msgpack::type_error();
+          if (o.via.array.size != 3) throw msgpack::type_error();
           v = Canonization(
               o.via.array.ptr[0].as<ShortVector>(),
               o.via.array.ptr[1].as<LongVector>(),
               o.via.array.ptr[2].as<ShortVector>()
+          );
+          return o;
+        }
+      };
+
+      template<>
+      struct pack<FragmentCanonization> {
+        template <typename Stream>
+        packer<Stream>& operator()(msgpack::packer<Stream>& o, FragmentCanonization const& v) const {
+          return o.pack_array(4)
+              .pack(v.get_colors())
+              .pack(v.get_canonization())
+              .pack(v.get_node_order())
+              .pack(v.get_core_nodes());
+        }
+      };
+
+      template<>
+      struct convert<FragmentCanonization> {
+        msgpack::object const& operator()(msgpack::object const& o, FragmentCanonization& v) const {
+          if (o.type != msgpack::type::ARRAY) throw msgpack::type_error();
+          if (o.via.array.size != 4) throw msgpack::type_error();
+          v = FragmentCanonization(
+              o.via.array.ptr[0].as<ShortVector>(),
+              o.via.array.ptr[1].as<LongVector>(),
+              o.via.array.ptr[2].as<ShortVector>(),
+              o.via.array.ptr[3].as<BoolVector>()
           );
           return o;
         }
@@ -48,18 +80,14 @@ namespace msgpack {
           o.pack_array(10);
           o.pack_array(n);
           for (NodeIt u = NodeIt(g); u != lemon::INVALID; ++u) {
-            o.pack_array(2).pack(g.id(u)).pack(v.get_color(u));
+            o.pack_array(2).pack(v.get_id(u)).pack(v.get_color(u));
           }
 
-          o.pack_map(n);
-          for (NodeIt u = NodeIt(g); u != lemon::INVALID; ++u) {
-            o.pack(g.id(u));
-            std::vector<int> edges;
-            for (IncEdgeIt e = IncEdgeIt(g, u); e != lemon::INVALID; ++e) {
-              edges.push_back(g.id(g.oppositeNode(u, e)));
-            }
-            o.pack(edges);
+          std::vector<std::pair<int, int> > edges;
+          for (EdgeIt e = EdgeIt(g); e != lemon::INVALID; ++e) {
+            edges.push_back(std::make_pair(v.get_id(g.v(e)), v.get_id(g.u(e))));
           }
+          o.pack(edges);
 
           StringVector bool_props, int_props, double_props, string_props;
           v.get_bool_properties(bool_props);
@@ -73,56 +101,55 @@ namespace msgpack {
           for (StringVector::const_iterator it = bool_props.begin(), end = bool_props.end(); it != end; ++it) {
             o.pack_array(n);
             for (NodeIt u = NodeIt(g); u != lemon::INVALID; ++u) {
-              o.pack_array(2).pack(g.id(u)).pack(v.get_bool_property(u, *it));
+              o.pack_array(2).pack(v.get_id(u)).pack(v.get_bool_property(u, *it));
             }
           }
           o.pack_array(int_props.size());
           for (StringVector::const_iterator it = int_props.begin(), end = int_props.end(); it != end; ++it) {
             o.pack_array(n);
             for (NodeIt u = NodeIt(g); u != lemon::INVALID; ++u) {
-              o.pack_array(2).pack(g.id(u)).pack(v.get_int_property(u, *it));
+              o.pack_array(2).pack(v.get_id(u)).pack(v.get_int_property(u, *it));
             }
           }
           o.pack_array(double_props.size());
           for (StringVector::const_iterator it = double_props.begin(), end = double_props.end(); it != end; ++it) {
             o.pack_array(n);
             for (NodeIt u = NodeIt(g); u != lemon::INVALID; ++u) {
-              o.pack_array(2).pack(g.id(u)).pack(v.get_double_property(u, *it));
+              o.pack_array(2).pack(v.get_id(u)).pack(v.get_double_property(u, *it));
             }
           }
           o.pack_array(string_props.size());
           for (StringVector::const_iterator it = string_props.begin(), end = string_props.end(); it != end; ++it) {
             o.pack_array(n);
             for (NodeIt u = NodeIt(g); u != lemon::INVALID; ++u) {
-              o.pack_array(2).pack(g.id(u)).pack(v.get_string_property(u, *it));
+              o.pack_array(2).pack(v.get_id(u)).pack(v.get_string_property(u, *it));
             }
           }
           return o;
         }
       };
 
-      msgpack::object const& convert_molecule(msgpack::object const& o, Molecule& v, std::map<int, Node> &nodes) {
+      msgpack::object const& convert_molecule(msgpack::object const& o, Molecule& mol) {
         if (o.type != msgpack::type::ARRAY) throw msgpack::type_error();
         if (o.via.array.size != 10) throw msgpack::type_error();
 
         msgpack::object *arr = o.via.array.ptr;
         if (arr[0].type != msgpack::type::ARRAY) throw msgpack::type_error();
-        if (arr[1].type != msgpack::type::MAP) throw msgpack::type_error();
+        if (arr[1].type != msgpack::type::ARRAY) throw msgpack::type_error();
         for (int i = 2; i < 10; ++i)
           if (arr[i].type != msgpack::type::ARRAY) throw msgpack::type_error();
 
         std::vector<std::pair<int, unsigned short> > atoms = arr[0].as<std::vector<std::pair<int, unsigned short> > >();
 
         for (std::vector<std::pair<int, unsigned short> >::const_iterator it = atoms.begin(), end = atoms.end(); it != end; ++it) {
-          nodes[it->first] = v.add_atom(it->second);
+          mol.add_atom(it->first, it->second);
         }
 
-        std::map<int, std::vector<int> > edges = arr[1].as<std::map<int, std::vector<int> > >();
-        for (std::map<int, std::vector<int> >::const_iterator it = edges.begin(), end = edges.end(); it != end; ++it) {
-          Node u = nodes[it->first];
-          for (std::vector<int>::const_iterator it2 = it->second.begin(), end2 = it->second.end(); it2 != end2; ++it2) {
-            v.add_edge(u, nodes[*it2]);
-          }
+        std::vector<std::pair<int, int> > edges = arr[1].as<std::vector<std::pair<int, int> > >();
+        for (std::vector<std::pair<int, int> >::const_iterator it = edges.begin(), end = edges.end(); it != end; ++it) {
+          Node u = mol.get_node_by_id(it->first);
+          Node v = mol.get_node_by_id(it->second);
+          mol.add_edge(u, v);
         }
 
         StringVector bool_props = arr[2].as<StringVector>();
@@ -131,51 +158,51 @@ namespace msgpack {
         StringVector string_props = arr[5].as<StringVector>();
 
         for (StringVector::const_iterator it = bool_props.begin(), end = bool_props.end(); it != end; ++it) {
-          v.add_bool_property(*it);
+          mol.add_bool_property(*it);
         }
         for (StringVector::const_iterator it = int_props.begin(), end = int_props.end(); it != end; ++it) {
-          v.add_int_property(*it);
+          mol.add_int_property(*it);
         }
         for (StringVector::const_iterator it = double_props.begin(), end = double_props.end(); it != end; ++it) {
-          v.add_double_property(*it);
+          mol.add_double_property(*it);
         }
         for (StringVector::const_iterator it = string_props.begin(), end = string_props.end(); it != end; ++it) {
-          v.add_string_property(*it);
+          mol.add_string_property(*it);
         }
 
         std::vector<std::vector<std::pair<int, bool> > > bool_properties = arr[6].as<std::vector<std::vector<std::pair<int, bool> > > >();
         if (bool_props.size() != bool_properties.size()) throw msgpack::type_error();
         for (int i = 0; i < bool_props.size(); ++i) {
-          v.add_bool_property(bool_props[i]);
+          mol.add_bool_property(bool_props[i]);
           for (std::vector<std::pair<int, bool> >::const_iterator it = bool_properties[i].begin(), end = bool_properties[i].end(); it != end; ++it) {
-            v.set_property(nodes[it->first], bool_props[i], it->second);
+            mol.set_property(mol.get_node_by_id(it->first), bool_props[i], it->second);
           }
         }
 
         std::vector<std::vector<std::pair<int, int> > > int_properties = arr[7].as<std::vector<std::vector<std::pair<int, int> > > >();
         if (int_props.size() != int_properties.size()) throw msgpack::type_error();
         for (int i = 0; i < int_props.size(); ++i) {
-          v.add_int_property(int_props[i]);
+          mol.add_int_property(int_props[i]);
           for (std::vector<std::pair<int, int> >::const_iterator it = int_properties[i].begin(), end = int_properties[i].end(); it != end; ++it) {
-            v.set_property(nodes[it->first], int_props[i], it->second);
+            mol.set_property(mol.get_node_by_id(it->first), int_props[i], it->second);
           }
         }
 
         std::vector<std::vector<std::pair<int, double> > > double_properties = arr[8].as<std::vector<std::vector<std::pair<int, double> > > >();
         if (double_props.size() != double_properties.size()) throw msgpack::type_error();
         for (int i = 0; i < double_props.size(); ++i) {
-          v.add_double_property(double_props[i]);
+          mol.add_double_property(double_props[i]);
           for (std::vector<std::pair<int, double> >::const_iterator it = double_properties[i].begin(), end = double_properties[i].end(); it != end; ++it) {
-            v.set_property(nodes[it->first], double_props[i], it->second);
+            mol.set_property(mol.get_node_by_id(it->first), double_props[i], it->second);
           }
         }
 
         std::vector<std::vector<std::pair<int, std::string> > > string_properties = arr[9].as<std::vector<std::vector<std::pair<int, std::string> > > >();
         if (string_props.size() != string_properties.size()) throw msgpack::type_error();
         for (int i = 0; i < string_props.size(); ++i) {
-          v.add_string_property(string_props[i]);
+          mol.add_string_property(string_props[i]);
           for (std::vector<std::pair<int, std::string> >::const_iterator it = string_properties[i].begin(), end = string_properties[i].end(); it != end; ++it) {
-            v.set_property(nodes[it->first], string_props[i], it->second);
+            mol.set_property(mol.get_node_by_id(it->first), string_props[i], it->second);
           }
         }
 
@@ -186,8 +213,7 @@ namespace msgpack {
       struct convert<Molecule> {
 
         msgpack::object const& operator()(msgpack::object const& o, Molecule& v) const {
-          std::map<int, Node> nodes;
-          return convert_molecule(o, v, nodes);
+          return convert_molecule(o, v);
         }
       };
 
@@ -196,7 +222,7 @@ namespace msgpack {
         template <typename Stream>
         packer<Stream>& operator()(msgpack::packer<Stream>& o, Fragment const& v) const {
           const Molecule &mol = v;
-          o.pack_array(5).pack(mol);
+          o.pack_array(3).pack(mol);
 
           const Graph& g = v.get_graph();
           int n = v.get_atom_count();
@@ -204,23 +230,7 @@ namespace msgpack {
           o.pack(v.get_shell_size());
           o.pack_array(n);
           for (NodeIt u = NodeIt(g); u != lemon::INVALID; ++u) {
-            o.pack_array(2).pack(g.id(u)).pack(v.is_shell(u));
-          }
-
-          const Molecule &mol1 = v.get_mol1();
-          o.pack_array(n);
-          for (NodeIt u = NodeIt(g); u != lemon::INVALID; ++u) {
-            StringVector unp;
-            v.get_core_mol1_unp(u, unp);
-            o.pack_array(2).pack(g.id(u)).pack(unp);
-          }
-
-          const Molecule &mol2 = v.get_mol2();
-          o.pack_array(n);
-          for (NodeIt u = NodeIt(g); u != lemon::INVALID; ++u) {
-            StringVector unp;
-            v.get_core_mol2_unp(u, unp);
-            o.pack_array(2).pack(g.id(u)).pack(unp);
+            o.pack_array(2).pack(v.get_id(u)).pack(v.is_core(u));
           }
 
           return o;
@@ -230,37 +240,53 @@ namespace msgpack {
       template<>
       struct convert<Fragment> {
         msgpack::object const &operator()(msgpack::object const &o, Fragment &v) const {
+
           if (o.type != msgpack::type::ARRAY) throw msgpack::type_error();
-          if (o.via.array.size != 5) throw msgpack::type_error();
+          if (o.via.array.size != 3) throw msgpack::type_error();
           msgpack::object *arr = o.via.array.ptr;
 
-          Molecule &mol = v;
-          std::map<int, Node> nodes;
-          convert_molecule(arr[0], mol, nodes);
+          convert_molecule(arr[0], v);
 
           v.set_shell_size(arr[1].as<int>());
 
           std::vector<std::pair<int, bool> > shell = arr[2].as<std::vector<std::pair<int, bool> > >();
           for (std::vector<std::pair<int, bool> >::const_iterator it = shell.begin(), end = shell.end(); it != end; ++it) {
-            v.set_shell(nodes[it->first], it->second);
+            v.set_core(v.get_node_by_id(it->first), it->second);
           }
 
-          const Molecule &mol1 = v.get_mol1();
-          std::vector<std::pair<int, std::vector<std::string> > > mol1_ids = arr[3].as<std::vector<std::pair<int, std::vector<std::string> > > >();
-          for (std::vector<std::pair<int, std::vector<std::string> > >::const_iterator it = mol1_ids.begin(), end = mol1_ids.end(); it != end; ++it) {
-            for (std::vector<std::string>::const_iterator it2 = it->second.begin(), end2 = it->second.end(); it2 != end2; ++it2) {
-              v.add_core_mol1_unp(nodes[it->first], *it2);
-            }
+          return o;
+        }
+      };
+
+      template<>
+      struct pack<Match> {
+        template<typename Stream>
+        packer<Stream> &operator()(msgpack::packer<Stream> &o, Match const &v) const {
+          o.pack_array(2).pack(v.get_frag_to_mol()).pack(v.get_merged_frag_to_mol());
+          return o;
+        }
+      };
+
+      template<>
+      struct convert<Match> {
+        msgpack::object const &operator()(msgpack::object const &o, Match &v) const {
+
+          if (o.type != msgpack::type::ARRAY) throw msgpack::type_error();
+          if (o.via.array.size != 2) throw msgpack::type_error();
+
+          msgpack::object *arr = o.via.array.ptr;
+
+          IntToIntMap ftm = arr[0].as<IntToIntMap>();
+          IntToIntMapVector mftm = arr[1].as<IntToIntMapVector>();
+
+          for (IntToIntMap::const_iterator it = ftm.begin(), end = ftm.end(); it != end; ++it) {
+            v.add_frag_to_mol(it->first, it->second);
+          }
+          for (IntToIntMapVector::iterator it = mftm.begin(), end = mftm.end(); it != end; ++it) {
+            v.add_merged_frag_to_mol(*it);
           }
 
-          const Molecule &mol2 = v.get_mol1();
-          std::vector<std::pair<int, std::vector<std::string> > > mol2_ids = arr[4].as<std::vector<std::pair<int, std::vector<std::string> > > >();
-          for (std::vector<std::pair<int, std::vector<std::string> > >::const_iterator it = mol2_ids.begin(), end = mol2_ids.end(); it != end; ++it) {
-            for (std::vector<std::string>::const_iterator it2 = it->second.begin(), end2 = it->second.end(); it2 != end2; ++it2) {
-              v.add_core_mol2_unp(nodes[it->first], *it2);
-            }
-          }
-
+          return o;
         }
       };
 
@@ -291,6 +317,25 @@ namespace mogli {
     return buffer.str();
   }
 
+  std::string pack_fcanonization(const FragmentCanonization &obj) {
+    std::stringstream buffer;
+    pack(buffer, obj);
+    return buffer.str();
+  }
+
+  void unpack_fcanonization(std::string str, FragmentCanonization &obj) {
+    unpacked msg_unpacked = unpack(str.data(), str.size());
+    object msg_object = msg_unpacked.get();
+    msg_object.convert(obj);
+  }
+
+  std::string hash_fcanonization(const FragmentCanonization &obj) {
+    std::stringstream buffer;
+    packer<std::stringstream> p(buffer);
+    p.pack_array(3).pack(obj.get_colors()).pack(obj.get_canonization()).pack(obj.get_core_nodes());
+    return buffer.str();
+  }
+
   std::string pack_molecule(const Molecule &obj) {
     std::stringstream buffer;
     pack(buffer, obj);
@@ -309,7 +354,23 @@ namespace mogli {
     return buffer.str();
   }
 
+  std::string pack_fragment(const boost::shared_ptr<Fragment> &obj) {
+    return pack_fragment(*obj);
+  }
+
   void unpack_fragment(std::string str, Fragment &obj) {
+    unpacked msg_unpacked = unpack(str.data(), str.size());
+    object msg_object = msg_unpacked.get();
+    msg_object.convert(obj);
+  }
+
+  std::string pack_match(const Match &obj) {
+    std::stringstream buffer;
+    pack(buffer, obj);
+    return buffer.str();
+  }
+
+  void unpack_match(std::string str, Match &obj) {
     unpacked msg_unpacked = unpack(str.data(), str.size());
     object msg_object = msg_unpacked.get();
     msg_object.convert(obj);
