@@ -2,6 +2,7 @@
 // Created by M. Engler on 10/20/16.
 //
 
+#include <bitset>
 #include "canonization.h"
 
 void mogli::Canonization::init(const Molecule &mol) {
@@ -146,21 +147,11 @@ void mogli::Canonization::canonNauty(const Molecule& mol,
   DYNALLOC2(graph,cg,cg_sz,atom_count,m,"malloc");
   densenauty(ng,lab,ptn,orbits,&options,&stats,m,atom_count,cg);
 
-//  std::cout << "lab" << std::endl;
-//  for (i = 0; i < atom_count; ++i) {
-//    std::cout << lab[i] << std::endl;
-//  }
-
-  // TODO test with nodes > WORDSIZE
-  // TODO in which order does nauty return the canonical graphs?
-  // TODO if our tree alg has a different order, could we accidentally return the same canonization?
-//  std::cout << "cg" << std::endl;
-//  for (i = 0; i < m*atom_count; ++i) {
-//    std::cout << std::bitset<WORDSIZE>(static_cast<unsigned long>(cg[i])) << std::endl;
-//  }
+  for (i = 0; i < atom_count; ++i) {
+    _node_order.push_back(mol.get_id(first_order[lab[i]]));
+  }
 
   for (i = 0; i < m*atom_count; ++i) {
-    _node_order.push_back(mol.get_id(first_order[lab[i]]));
     _canonization.push_back(static_cast<unsigned long>(cg[i]));
   }
 
@@ -229,17 +220,19 @@ void mogli::Canonization::canonNauty(const Molecule& mol,
   DYNALLOC2(graph,cg,cg_sz,atom_count,m,"malloc");
   densenauty(ng,lab,ptn,orbits,&options,&stats,m,atom_count,cg);
 
-  for (i = 0; i < m*atom_count; ++i) {
+  for (i = 0; i < atom_count; ++i) {
     _node_order.push_back(mol.get_id(first_order[lab[i]]));
+  }
+
+  for (i = 0; i < m*atom_count; ++i) {
     _canonization.push_back(static_cast<unsigned long>(cg[i]));
   }
 }
 
-// TODO write own canonization method
-// TODO compare tree, nauty, saucy & bliss
-
 void mogli::Canonization::canonTree(const Molecule &mol, const ShortToNodeVectorMap &colorMap) {
-  
+  // TODO write tree canonization method
+  // TODO in which order does nauty return the canonical graphs, if our tree alg has a different order, could we accidentally return the same canonization?
+  // TODO compare tree, nauty, saucy & bliss
 }
 
 void mogli::Canonization::canonTree(const FilterNodes &subgraph, const ShortToNodeVectorMap &colorMap) {
