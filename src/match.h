@@ -14,17 +14,24 @@ namespace mogli {
   private:
 
     IntToIntMap _frag_to_mol;
+    IntSet _target_set;
     IntToIntMapVector _merged_frag_to_mol;
 
   public:
 
     Match() :
         _frag_to_mol(),
+        _target_set(),
         _merged_frag_to_mol() {}
 
     Match(const IntToIntMap &frag_to_mol) :
         _frag_to_mol(frag_to_mol),
-        _merged_frag_to_mol() {}
+        _target_set(),
+        _merged_frag_to_mol() {
+      for (IntToIntMap::const_iterator it = _frag_to_mol.begin(), end = _frag_to_mol.end(); it != end; ++it) {
+        _target_set.insert(it->second);
+      }
+    }
 
     const int frag_to_mol(const int id) const {
       if (_frag_to_mol.count(id) > 0) {
@@ -46,12 +53,17 @@ namespace mogli {
       return _frag_to_mol;
     }
 
+    const IntSet& get_target_set() const {
+      return _target_set;
+    }
+
     const IntToIntMapVector& get_merged_frag_to_mol() const {
       return _merged_frag_to_mol;
     }
 
     void add_frag_to_mol(int from, int to) {
       _frag_to_mol[from] = to;
+      _target_set.insert(to);
     }
 
     void add_merged_frag_to_mol(IntToIntMap &ftm) {
@@ -82,15 +94,8 @@ namespace mogli {
     }
 
     bool operator==(const Match& rhs) {
-      const IntToIntMap other = rhs.get_frag_to_mol();
-      if (_frag_to_mol.size() != other.size()) {
-        return false;
-      }
-      for (IntToIntMap::const_iterator it = other.begin(), end = other.end(); it != end; ++it) {
-        if (it->second != frag_to_mol(it->first))
-          return false;
-      }
-      return true;
+      const IntSet other = rhs.get_target_set();
+      return _target_set == other;
     }
 
     bool operator!=(const Match& rhs) {

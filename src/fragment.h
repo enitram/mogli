@@ -21,7 +21,6 @@ namespace mogli {
   private:
     
     typedef std::deque<Node> NodeDeque;
-    typedef std::set<int> IntSet;
     
     NodeToBoolMap _is_core;
     int _shell_size;
@@ -44,8 +43,10 @@ namespace mogli {
       const Molecule &mol1 = product.get_mol1();
       const Molecule &mol2 = product.get_mol2();
 
-      NodeToNodeMap shell_nodes(_g);
+      NodeToNodeMap shell_g_to_mol(_g);
+      NodeToNodeMap shell_mol_to_g(mol1.get_graph());
       NodeToBoolMap mol1_core_nodes(mol1.get_graph(), false);
+      NodeToIntMap shell_min_depth(_g, 0);
 
       int core_nodes = 0;
       for (NodeVector::const_iterator it = clique.begin(), end = clique.end(); it != end; ++it) {
@@ -72,7 +73,8 @@ namespace mogli {
 
       IntSet shell_ids;
       for (NodeIt u(_g); u != lemon::INVALID; ++u) {
-        bfs_shell(mol1, mol1.get_node_by_id(g_to_mol1.at(_node_to_id[u])), shell_nodes, mol1_core_nodes, shell_ids);
+        bfs_shell(mol1, mol1.get_node_by_id(g_to_mol1.at(_node_to_id[u])), shell_g_to_mol, shell_mol_to_g,
+                  mol1_core_nodes, shell_ids, shell_min_depth);
       }
 
       lemon::ArcLookUp<Graph> arcLookUp(mol1.get_graph());
@@ -81,8 +83,12 @@ namespace mogli {
         for (NodeIt uv2 = uv1; uv2 != lemon::INVALID; ++uv2) {
           if (uv1 == uv2)
             continue;
-          Node u1 = _is_core[uv1] ? mol1.get_node_by_id(g_to_mol1.at(_node_to_id[uv1])) : shell_nodes[uv1];
-          Node u2 = _is_core[uv2] ? mol1.get_node_by_id(g_to_mol1.at(_node_to_id[uv2])) : shell_nodes[uv2];
+          // if both nodes are shell nodes with maximal depth, there can't be an edge between them
+          if (!_is_core[uv1] && !_is_core[uv2] &&
+              shell_min_depth[uv1] == _shell_size && shell_min_depth[uv2] == _shell_size)
+            continue;
+          Node u1 = _is_core[uv1] ? mol1.get_node_by_id(g_to_mol1.at(_node_to_id[uv1])) : shell_g_to_mol[uv1];
+          Node u2 = _is_core[uv2] ? mol1.get_node_by_id(g_to_mol1.at(_node_to_id[uv2])) : shell_g_to_mol[uv2];
           bool is_edge = arcLookUp(u1, u2) != lemon::INVALID;
           if (is_edge) {
             _g.addEdge(uv1, uv2);
@@ -154,7 +160,8 @@ namespace mogli {
 
   private:
     
-    void bfs_shell(const Molecule &mol, const Node &v, NodeToNodeMap &shell_nodes, NodeToBoolMap &core_nodes, IntSet &shell_ids) {
+    void bfs_shell(const Molecule &mol, const Node &v, NodeToNodeMap &shell_g_to_mol, NodeToNodeMap &shell_mol_to_g,
+                   NodeToBoolMap &core_nodes, IntSet &shell_ids, NodeToIntMap &shell_min_depth) {
       NodeToIntMap depth(mol.get_graph(), 0);
       NodeToBoolMap visited(mol.get_graph(), false);
       NodeDeque queue;
@@ -163,12 +170,25 @@ namespace mogli {
       visited[v] = true;
       while (queue.size() > 0) {
         Node &current = queue.front();
-        if (!core_nodes[current] && shell_ids.count(mol.get_id(current)) == 0) {
-          Node uv = add_atom(mol.get_color(current));
-          shell_nodes[uv] = current;
-          shell_ids.insert(mol.get_id(current));
+        // if current node is not a core
+        if (!core_nodes[current]) {
+          // have we seen the node before?
+          if (shell_ids.count(mol.get_id(current)) == 0) {
+            Node uv = add_atom(mol.get_color(current));
+            shell_g_to_mol[uv] = current;
+            shell_mol_to_g[current] = uv;
+            shell_ids.insert(mol.get_id(current));
+          }
+          // minimal distance of this shell node to the nearest core node
+          if (shell_min_depth[shell_mol_to_g[current]] > 0) {
+            shell_min_depth[shell_mol_to_g[current]] = std::min(shell_min_depth[shell_mol_to_g[current]], depth[current]);
+          } else {
+            shell_min_depth[shell_mol_to_g[current]] = depth[current];
+          }
+
         }
 
+        // breadth-first-search
         if (depth[current] < _shell_size) {
           for (IncEdgeIt e = mol.get_inc_edge_iter(current); e != lemon::INVALID; ++e) {
             Node w = mol.get_opposite_node(current, e);

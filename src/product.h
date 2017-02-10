@@ -51,7 +51,6 @@ namespace mogli {
     typedef typename Graph::template NodeMap<NodePairVector> NodeToNodePairVectorMap;
     typedef typename Graph::template NodeMap<Canonization> NodeToCanonizationMap;
 
-    typedef typename std::set<int> IntSet;
     typedef typename Graph::template NodeMap<IntSet> NodeToIntSetMap;
 
     const Molecule& _mol1;
