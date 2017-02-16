@@ -172,7 +172,11 @@ BOOST_PYTHON_MODULE(libmogli) {
       .def(self == self)
       .def(self != self);
 
-  def("maximal_common_fragments", maximal_common_fragments);
+  void (*mcf1)(Molecule&, Molecule&, FragmentVector&, MatchVector&, MatchVector&, int, int, int, Product::GenerationType, bool) = &maximal_common_fragments;
+  void (*mcf2)(Molecule&, Molecule&, FragmentVector&, MatchVector&, MatchVector&, int, int, Product::GenerationType, bool) = &maximal_common_fragments;
+
+  def("maximal_common_fragments", mcf1);
+  def("maximal_common_fragments", mcf2);
 
   class_<Node>("Node")
       .def(self == self)

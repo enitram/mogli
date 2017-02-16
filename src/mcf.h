@@ -16,12 +16,16 @@ namespace mogli {
   typedef std::vector<boost::shared_ptr<Fragment> > FragmentVector;
   typedef std::vector<Match> MatchVector;
 
-//  bool less(const std::pair<Fragment*, Tgraph*>& a, const std::pair<Fragment*, Tgraph*>& b);
+  void maximal_common_fragments(Molecule &mol1, Molecule &mol2,
+                                FragmentVector &fragments,
+                                MatchVector &matches_mol1, MatchVector &matches_mol2,
+                                int shell, int min_core_size, int max_core_size,
+                                Product::GenerationType prod_gen, bool reduce_subgraphs);
 
   void maximal_common_fragments(Molecule &mol1, Molecule &mol2,
                                 FragmentVector &fragments,
                                 MatchVector &matches_mol1, MatchVector &matches_mol2,
-                                int shell, int core_size_limit,
+                                int shell, int min_core_size,
                                 Product::GenerationType prod_gen, bool reduce_subgraphs);
 
 }
