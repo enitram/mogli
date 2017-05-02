@@ -25,11 +25,6 @@ void mogli::maximal_common_fragments(Molecule &mol1, Molecule &mol2,
                                      Product::GenerationType prod_gen, bool reduce_subgraphs, bool maximum) {
 
   Product product(mol1, mol2, shell, prod_gen, min_core_size, max_core_size);
-
-//  std::ofstream ofs("/home/martin/workspace/mogli/product.dot", std::ifstream::out);
-//  product.print_dot(ofs);
-//  ofs.close();
-
   BronKerbosch bk(product, min_core_size, max_core_size, maximum);
   bk.run();
 
