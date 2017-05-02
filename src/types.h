@@ -14,8 +14,18 @@ namespace mogli {
   typedef Graph::EdgeIt EdgeIt;
   typedef Graph::IncEdgeIt IncEdgeIt;
   typedef std::vector<Node> NodeVector;
+
+  typedef std::set<int> IntSet;
+  typedef std::map<int, int> IntToIntMap;
+  typedef std::vector<IntToIntMap> IntToIntMapVector;
   typedef std::vector<std::string> StringVector;
+  typedef std::set<std::string> StringSet;
   typedef typename Graph::template NodeMap<bool> NodeToBoolMap;
+
+  typedef std::vector<bool> BoolVector;
+  typedef std::vector<unsigned short> ShortVector;
+  typedef std::vector<int> IntVector;
+  typedef std::vector<unsigned long> LongVector;
 
 }
 

@@ -11,6 +11,7 @@
 #define MOGLI_BRONKERBOSCH_H
 
 #include "product.h"
+#include "boost/graph/vf2_sub_graph_iso.hpp"
 
 namespace mogli {
 
@@ -31,10 +32,16 @@ namespace mogli {
     NodeToBitSetMap _bitNeighborhood;
     NodeToBitSetMap _restrictedBitNeighborhood;
 
+    unsigned int _min_core_size;
+    unsigned int _max_core_size;
+
+    bool _maximum;
+    int _current_max;
+
     const Product &_product;
 
   public:
-    BronKerbosch(const Product& product)
+    BronKerbosch(const Product& product, unsigned int min_core_size, unsigned int max_core_size, bool maximum)
         : _g(product.get_graph())
         , _product(product)
         , _n(static_cast<size_t>(lemon::countNodes(_g)))
@@ -42,7 +49,11 @@ namespace mogli {
         , _bitToNode()
         , _nodeToBit(_g, std::numeric_limits<size_t>::max())
         , _bitNeighborhood(_g, BitSet(_n))
-        , _restrictedBitNeighborhood(_g, BitSet(_n)) {
+        , _restrictedBitNeighborhood(_g, BitSet(_n))
+        , _min_core_size(min_core_size)
+        , _max_core_size(max_core_size)
+        , _maximum(maximum)
+        , _current_max(0) {
       // initialize mappings
       _bitToNode.reserve(_n);
       size_t i = 0;
@@ -54,15 +65,10 @@ namespace mogli {
       // initialize neighborhoods
       for (NodeIt v(_g); v != lemon::INVALID; ++v, ++i) {
         BitSet& neighborhood = _bitNeighborhood[v];
-//        std::cout << _g.id(v) << " " << _product.get_mol1().get_string_property(_product.get_mol1_node(v), "label2") << "x"
-//                  << _product.get_mol2().get_string_property(_product.get_mol2_node(v), "label2") << ": ";
         for (IncEdgeIt e(_g, v); e != lemon::INVALID; ++e) {
           Node w = _g.oppositeNode(v, e);
           neighborhood[_nodeToBit[w]] = 1;
         }
-//        std::cout << std::endl;
-//        printBitSet(neighborhood, std::cout);
-//        std::cout << std::endl;
       }
 
       // initialize restricted neighborhood mapping
@@ -89,8 +95,6 @@ namespace mogli {
     void bkPivot(BitSet P, BitSet D, BitSet R, BitSet X, BitSet S);
 
     void report(const BitSet& R);
-
-    void printBitSet(const BitSet& S, std::ostream& out);
 
   };
 
