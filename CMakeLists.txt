@@ -28,53 +28,55 @@ set( CommonLibs
         emon
 )
 
+set(HEADER_FILES
+        include/canonization.h
+        include/molecule.h
+        include/periodictable.h
+        include/product.h
+        include/bronkerbosch.h
+        include/orbits.h
+        include/fragment.h
+        include/subgraph_isomorphism.h
+        include/types.h
+        include/util/packing.h
+        include/mcf.h
+        include/match.h
+        include/fcanonization.h)
+
 set(SOURCE_FILES
-        src/canonization.h
         src/canonization.cpp
-        src/molecule.h
         src/molecule.cpp
-        src/periodictable.h
-        src/product.h
         src/product.cpp
         src/bronkerbosch.cpp
-        src/bronkerbosch.h
         src/orbits.cpp
-        src/orbits.h
-        src/fragment.h
         src/subgraph_isomorphism.cpp
-        src/subgraph_isomorphism.h
-        src/types.h
-        src/util/packing.h
-        src/mcf.cpp
-        src/mcf.h
-        src/match.h
-        src/fcanonization.h)
+        src/mcf.cpp)
 
 set(NAUTY_SRC
-        include/nauty/nauty.c
-        include/nauty/nautil.c
-        include/nauty/naugraph.c
-        include/nauty/schreier.c
-        include/nauty/naurng.c
-        include/nauty/naugroup.c)
+        lib/nauty/nauty.c
+        lib/nauty/nautil.c
+        lib/nauty/naugraph.c
+        lib/nauty/schreier.c
+        lib/nauty/naurng.c
+        lib/nauty/naugroup.c)
 
 set(LAD_SRC
-        include/lad/allDiff.c
-        include/lad/domains.c
-        include/lad/graph.c
-        include/lad/lad.c
-        include/lad/sublad.c
-        include/lad/sublad.h
-        include/lad/compatibility.c)
+        lib/lad/allDiff.c
+        lib/lad/domains.c
+        lib/lad/graph.c
+        lib/lad/lad.c
+        lib/lad/sublad.c
+        lib/lad/sublad.h
+        lib/lad/compatibility.c)
 
 include_directories(
-        "src"
+        "include"
         "${LIBLEMON_ROOT}/include"
-        "include/nauty"
-        "include/lad"
-        "include/msgpack-c/include"
+        "lib/nauty"
+        "lib/lad"
+        "lib/msgpack-c/include"
 )
 link_directories( "${LIBLEMON_ROOT}/lib")
 
-add_library(mogli SHARED ${SOURCE_FILES} src/util/boosting.cpp ${NAUTY_SRC} ${LAD_SRC})
+add_library(mogli SHARED ${HEADER_FILES} ${SOURCE_FILES} src/util/boosting.cpp ${NAUTY_SRC} ${LAD_SRC})
 target_link_libraries(mogli ${Boost_LIBRARIES} ${CommonLibs})

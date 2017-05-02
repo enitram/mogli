@@ -3,7 +3,7 @@
 //
 
 #include <sublad.h>
-#include "mcf.h"
+#include "../include/mcf.h"
 
 bool less(const std::pair<int, int>& a, const std::pair<int, int>& b) {
   return a.second < b.second;

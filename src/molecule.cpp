@@ -1,6 +1,6 @@
 
-#include "molecule.h"
-#include "canonization.h"
+#include "../include/molecule.h"
+#include "../include/canonization.h"
 
 using namespace mogli;
 

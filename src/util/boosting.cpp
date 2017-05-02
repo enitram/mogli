@@ -4,10 +4,10 @@
 
 #include <boost/python.hpp>
 #include <boost/python/suite/indexing/vector_indexing_suite.hpp>
-#include "canonization.h"
-#include "packing.h"
-#include "mcf.h"
-#include "periodictable.h"
+#include "../../include/canonization.h"
+#include "../../include/util/packing.h"
+#include "../../include/mcf.h"
+#include "../../include/periodictable.h"
 
 using namespace boost::python;
 using namespace mogli;

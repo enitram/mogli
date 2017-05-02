@@ -2,7 +2,7 @@
 // Created by M. Engler on 02/12/16.
 //
 
-#include "orbits.h"
+#include "../include/orbits.h"
 
 using namespace mogli;
 

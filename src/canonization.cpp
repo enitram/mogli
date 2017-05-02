@@ -3,7 +3,7 @@
 //
 
 #include <bitset>
-#include "canonization.h"
+#include "../include/canonization.h"
 
 void mogli::Canonization::init(const Molecule &mol) {
 

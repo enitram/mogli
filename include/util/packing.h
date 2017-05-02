@@ -7,10 +7,10 @@
 
 #include <msgpack.hpp>
 #include <sstream>
-#include "fcanonization.h"
-#include "canonization.h"
-#include "fragment.h"
-#include "match.h"
+#include "../fcanonization.h"
+#include "../canonization.h"
+#include "../fragment.h"
+#include "../match.h"
 
 namespace msgpack {
   MSGPACK_API_VERSION_NAMESPACE(MSGPACK_DEFAULT_API_NS) {

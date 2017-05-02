@@ -3,7 +3,7 @@
 //
 
 #include <sublad.h>
-#include "subgraph_isomorphism.h"
+#include "../include/subgraph_isomorphism.h"
 
 Tgraph* mogli::translate_graph(const Molecule &mol, IntVector &node_ids) {
   // reads data in fileName and create the corresponding graph

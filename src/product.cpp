@@ -2,7 +2,7 @@
 // Created by M. Engler on 26/10/16.
 //
 
-#include "product.h"
+#include "../include/product.h"
 
 using namespace mogli;
 

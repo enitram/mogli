@@ -2,7 +2,7 @@
 // Created by M. Engler on 02/11/16.
 //
 
-#include "bronkerbosch.h"
+#include "../include/bronkerbosch.h"
 
 using namespace mogli;
 
