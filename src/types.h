@@ -19,6 +19,7 @@ namespace mogli {
   typedef std::map<int, int> IntToIntMap;
   typedef std::vector<IntToIntMap> IntToIntMapVector;
   typedef std::vector<std::string> StringVector;
+  typedef std::set<std::string> StringSet;
   typedef typename Graph::template NodeMap<bool> NodeToBoolMap;
 
   typedef std::vector<bool> BoolVector;

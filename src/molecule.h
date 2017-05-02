@@ -14,12 +14,103 @@
 #include <lemon/lgf_reader.h>
 #include <lemon/list_graph.h>
 #include <boost/ptr_container/ptr_map.hpp>
-#include "iacm.h"
+#include <boost/any.hpp>
+#include "periodictable.h"
 #include "types.h"
 
 namespace mogli {
 
   typedef typename Graph::template NodeMap<int> NodeToIntMap;
+
+  class LGFIOConfig {
+
+  public:
+
+    LGFIOConfig(std::string id_property, std::string color_property) :
+        _id_property(id_property),
+        _color_property(color_property),
+        _bool_node_props(),
+        _int_node_props(),
+        _double_node_props(),
+        _string_node_props() {}
+
+  private:
+
+    std::string _id_property;
+    std::string _color_property;
+    StringSet _bool_node_props;
+    StringSet _int_node_props;
+    StringSet _double_node_props;
+    StringSet _string_node_props;
+
+    LGFIOConfig() :
+      _id_property(std::string("label")),
+      _color_property(std::string("atomType")),
+      _bool_node_props(),
+      _int_node_props(),
+      _double_node_props(),
+      _string_node_props() {
+      add_double_node_prop("partial_charge");
+      add_string_node_prop("label2");
+      add_double_node_prop("coordX");
+      add_double_node_prop("coordY");
+      add_double_node_prop("coordZ");
+      add_int_node_prop("initColor");
+    }
+
+  public:
+
+    LGFIOConfig& add_bool_node_prop(std::string property) {
+      _bool_node_props.insert(property);
+      return *this;
+    }
+
+    LGFIOConfig& add_int_node_prop(std::string property) {
+      _int_node_props.insert(property);
+      return *this;
+    }
+
+    LGFIOConfig& add_double_node_prop(std::string property) {
+      _double_node_props.insert(property);
+      return *this;
+    }
+
+    LGFIOConfig& add_string_node_prop(std::string property) {
+      _string_node_props.insert(property);
+      return *this;
+    }
+
+    const std::string &get_id_property() const {
+      return _id_property;
+    }
+
+    const std::string &get_color_property() const {
+      return _color_property;
+    }
+
+    const StringSet &get_bool_node_props() const {
+      return _bool_node_props;
+    }
+
+    const StringSet &get_int_node_props() const {
+      return _int_node_props;
+    }
+
+    const StringSet &get_double_node_props() const {
+      return _double_node_props;
+    }
+
+    const StringSet &get_string_node_props() const {
+      return _string_node_props;
+    }
+
+    static LGFIOConfig &get_default() {
+      static LGFIOConfig instance;
+      return instance;
+    }
+
+  };
+
 
   class Molecule {
 
@@ -27,16 +118,15 @@ namespace mogli {
 
   protected:
 
+    typedef typename Graph::template NodeMap<boost::any> NodeToAnyMap;
+
+    typedef typename boost::ptr_map<std::string, NodeToAnyMap> StringToAnyTypeMapMap;
+
     typedef typename Graph::template NodeMap<unsigned short> NodeToUShortMap;
     typedef typename Graph::template NodeMap<double> NodeToDoubleMap;
     typedef typename Graph::template NodeMap<std::string> NodeToStringMap;
 
     typedef typename boost::ptr_map<int, Node> IntToNodeMap;
-
-    typedef typename boost::ptr_map<std::string, NodeToBoolMap> BoolPropertiesMap;
-    typedef typename boost::ptr_map<std::string, NodeToIntMap> IntPropertiesMap;
-    typedef typename boost::ptr_map<std::string, NodeToDoubleMap> DoublePropertiesMap;
-    typedef typename boost::ptr_map<std::string, NodeToStringMap> StringPropertiesMap;
 
     Graph _g;
 
@@ -47,12 +137,9 @@ namespace mogli {
     IntToNodeMap _id_to_node;
     int _max_uid;
 
-    BoolPropertiesMap _bool_prop;
-    IntPropertiesMap _int_prop;
-    DoublePropertiesMap _double_prop;
-    StringPropertiesMap _string_prop;
+    StringToAnyTypeMapMap _properties;
 
-    IACM &_iacm;
+    PeriodicTable &_perdiodic_table;
 
     short _is_connected;
 
@@ -63,108 +150,50 @@ namespace mogli {
                  _max_uid(0),
                  _atom_count(0),
                  _is_connected(-1),
-                 _iacm(IACM::get_default()){}
+                 _properties(),
+                 _perdiodic_table(PeriodicTable::get_default()) {}
 
-    // register properties
+    Molecule(PeriodicTable &periodic_table) : _g(),
+                                             _colors(_g),
+                                             _node_to_id(_g),
+                                             _max_uid(0),
+                                             _atom_count(0),
+                                             _is_connected(-1),
+                                             _properties(),
+                                             _perdiodic_table(periodic_table) {}
 
-    void add_bool_property(std::string property) {
-      _bool_prop.insert(property, new NodeToBoolMap(_g));
+    PeriodicTable &get_perdiodic_table() const {
+      return _perdiodic_table;
     }
 
-    void add_int_property(std::string property) {
-      _int_prop.insert(property, new NodeToIntMap(_g));
-    }
-
-    void add_double_property(std::string property) {
-      _double_prop.insert(property, new NodeToDoubleMap(_g));
-    }
-
-    void add_string_property(std::string property) {
-      _string_prop.insert(property, new NodeToStringMap(_g));
-    }
-
-    // get property keys
-
-    void get_bool_properties(StringVector& keys) const {
-      keys.clear();
-      keys.reserve(_bool_prop.size());
-      for (BoolPropertiesMap::const_iterator it = _bool_prop.begin(), end = _bool_prop.end(); it != end; ++it) {
-        keys.push_back(it->first);
+    const void get_properties(StringVector& properties) const {
+      for (StringToAnyTypeMapMap::const_iterator it = _properties.begin(), end = _properties.end(); it != end; ++it) {
+        properties.push_back(it->first);
       }
+
     }
 
-    void get_int_properties(StringVector& keys) const {
-      keys.clear();
-      keys.reserve(_int_prop.size());
-      for (IntPropertiesMap::const_iterator it = _int_prop.begin(), end = _int_prop.end(); it != end; ++it) {
-        keys.push_back(it->first);
+    // set properties
+
+    const boost::any get_property(Node node, std::string property) const {
+      return (&_properties.at(property))->operator[](node);
+    }
+
+    void set_property(Node node, std::string property, boost::any value) {
+      if (_properties.count(property) == 0) {
+        _properties.insert(property, new NodeToAnyMap(_g));
       }
-    }
-
-    void get_double_properties(StringVector& keys) const {
-      keys.clear();
-      keys.reserve(_double_prop.size());
-      for (DoublePropertiesMap::const_iterator it = _double_prop.begin(), end = _double_prop.end(); it != end; ++it) {
-        keys.push_back(it->first);
-      }
-    }
-
-    void get_string_properties(StringVector& keys) const {
-      keys.clear();
-      keys.reserve(_string_prop.size());
-      for (StringPropertiesMap::const_iterator it = _string_prop.begin(), end = _string_prop.end(); it != end; ++it) {
-        keys.push_back(it->first);
-      }
-    }
-
-    // set property for node
-
-    void set_property(Node node, std::string property, bool value) {
-      (&_bool_prop.at(property))->set(node, value);
-    }
-
-    void set_property(Node node, std::string property, int value) {
-      (&_int_prop.at(property))->set(node, value);
-    }
-
-    void set_property(Node node, std::string property, double value) {
-      (&_double_prop.at(property))->set(node, value);
-    }
-
-    void set_property(Node node, std::string property, char* value) {
-      set_property(node, property, std::string(value));
-    }
-
-    void set_property(Node node, std::string property, std::string value) {
-      (&_string_prop.at(property))->set(node, value);
-    }
-
-    // get property for node
-
-    const bool get_bool_property(Node node, std::string property) const {
-      return (&_bool_prop.at(property))->operator[](node);
-    }
-
-    const int get_int_property(Node node, std::string property) const {
-      return (&_int_prop.at(property))->operator[](node);
-    }
-
-    const double get_double_property(Node node, std::string property) const {
-      return (&_double_prop.at(property))->operator[](node);
-    }
-
-    const std::string get_string_property(Node node, std::string property) const {
-      return (&_string_prop.at(property))->operator[](node);
+      (&_properties.at(property))->set(node, value);
     }
 
     // add atoms & edges
 
     const Node add_atom(std::string element) {
-      return add_atom(_iacm.get_number(element));
+      return add_atom(_perdiodic_table.get_number(element));
     }
 
     const Node add_atom(int id, std::string element) {
-      return add_atom(id, _iacm.get_number(element));
+      return add_atom(id, _perdiodic_table.get_number(element));
     }
 
     const Node add_atom(unsigned short color) {
@@ -184,7 +213,7 @@ namespace mogli {
       return n;
     }
 
-    const Edge add_edge(Node &u, Node &v) {
+    const Edge add_edge(const Node &u, const Node &v) {
       _is_connected = -1;
       return _g.addEdge(u,v);
     }
@@ -235,31 +264,23 @@ namespace mogli {
       return _colors[node];
     }
 
-    const std::string get_iacm_element(const Node &node) const {
-      return _iacm.get_iacm_element(get_color(node));
+    const std::string get_element(const Node &node) const {
+      return _perdiodic_table.get_element(get_color(node));
     }
 
-    const std::string get_chem_element(const Node &node) const {
-      return _iacm.get_chem_element(get_color(node));
-    }
-
-    const std::string get_chem_color(const Node &node) const {
-      return _iacm.get_chem_color(get_color(node));
+    const std::string get_color_name(const Node &node) const {
+      return _perdiodic_table.get_color(get_color(node));
     }
 
     // lgf reading
 
     virtual void read_lgf_stream(std::istream &in);
 
-    virtual void read_lgf_stream(std::istream &in,
-                                 const std::string id_property,
-                                 const std::string atom_type_property);
+    virtual void read_lgf_stream(std::istream &in, const LGFIOConfig &config);
 
     virtual void read_lgf(const std::string &in);
 
-    virtual void read_lgf(const std::string &in,
-                          const std::string id_property,
-                          const std::string atom_type_property);
+    virtual void read_lgf(const std::string &in, const LGFIOConfig &config);
 
     // connected?
 
@@ -272,75 +293,68 @@ namespace mogli {
 
     const bool is_isomorphic(Molecule &other) const;
 
-    const std::string print_dot(const StringVector& properties = {}) const {
+    virtual const std::string print_dot() const {
+      std::stringstream buffer;
+      print_dot(buffer);
+      return buffer.str();
+    }
+
+    const std::string print_dot(const StringVector &properties) const {
       std::stringstream buffer;
       print_dot(buffer, properties);
       return buffer.str();
     }
 
-    const void print_dot(std::ostream& out, const StringVector& properties = {}) const {
+    virtual const void print_dot(std::ostream& out) const {
       // header
       out << "graph G {" << std::endl
-          << "\toverlap=scale" << std::endl
-          << "\tlayout=neato" << std::endl;
-
-      StringVector bool_props, int_props, double_props, string_props;
-      if (properties.size() > 0) {
-        StringVector keys;
-        get_bool_properties(keys);
-        check_properties(properties, keys, bool_props);
-        get_int_properties(keys);
-        check_properties(properties, keys, int_props);
-        get_double_properties(keys);
-        check_properties(properties, keys, double_props);
-        get_string_properties(keys);
-        check_properties(properties, keys, string_props);
-      }
+          << "\toverlap=scale" << std::endl;
 
       // nodes
       for (NodeIt v(_g); v != lemon::INVALID; ++v) {
         out << "\t" << _g.id(v);
-        if (properties.size() > 0) {
-          out << "[style=\"filled\",fillcolor=" << _iacm.get_chem_color(_colors[v]);
-          out << ",label=\"";
-          bool first = true;
-          for (std::vector<std::string>::const_iterator it = string_props.begin(), end = string_props.end(); it != end; ++it) {
-            if (first) {
-              out  << get_string_property(v, *it);
-              first = false;
-            } else {
-              out << "\\n" << "," << get_string_property(v, *it);
-            }
+        out << "[style=\"filled\",fillcolor=" << _perdiodic_table.get_color(_colors[v]);
+        out << ",label=\"" << _node_to_id[v] << "\"]";
+        out << std::endl;
+      }
+
+      // edges
+      for (EdgeIt e(_g); e != lemon::INVALID; ++e) {
+        out << _g.id(_g.u(e)) << " -- " << _g.id(_g.v(e)) << std::endl;
+      }
+
+      out << "}" << std::endl;
+    }
+
+    const void print_dot(std::ostream &out, const StringVector &properties) const {
+      // header
+      out << "graph G {" << std::endl
+          << "\toverlap=scale" << std::endl;
+
+      // nodes
+      for (NodeIt v(_g); v != lemon::INVALID; ++v) {
+        out << "\t" << _g.id(v);
+        out << "[style=\"filled\",fillcolor=" << _perdiodic_table.get_color(_colors[v]);
+        out << ",label=\"";
+        bool first = true;
+        for (std::string prop : properties) {
+          if (!first) {
+            out << ",";
+          } else {
+            first = false;
           }
-          for (std::vector<std::string>::const_iterator it = double_props.begin(), end = double_props.end(); it != end; ++it) {
-            if (first) {
-              out  << get_double_property(v, *it);
-              first = false;
-            } else {
-              out << "\\n" << "," << get_double_property(v, *it);
-            }
+          boost::any value = get_property(v, prop);
+          if (value.type() == typeid(bool)) {
+            out << boost::any_cast<bool>(value);
+          } else if (value.type() == typeid(int)) {
+            out << boost::any_cast<int>(value);
+          } else if (value.type() == typeid(double)) {
+            out << boost::any_cast<double>(value);
+          } else if (value.type() == typeid(std::string)) {
+            out << boost::any_cast<std::string>(value);
           }
-          for (std::vector<std::string>::const_iterator it = int_props.begin(), end = int_props.end(); it != end; ++it) {
-            if (first) {
-              out  << get_int_property(v, *it);
-              first = false;
-            } else {
-              out << "\\n" << "," << get_int_property(v, *it);
-            }
-          }
-          for (std::vector<std::string>::const_iterator it = bool_props.begin(), end = bool_props.end(); it != end; ++it) {
-            if (first) {
-              out  << get_bool_property(v, *it);
-              first = false;
-            } else {
-              out << "\\n" << "," << get_bool_property(v, *it);
-            }
-          }
-          out << "\"]";
-        } else {
-          out << "[style=\"filled\",fillcolor=" << _iacm.get_chem_color(_colors[v]);
-          out << ",label=\"" << _node_to_id[v] << ", " << _colors[v] << "\"]";
         }
+        out << "\"]";
         out << std::endl;
       }
 
@@ -353,14 +367,6 @@ namespace mogli {
     }
 
   protected:
-
-    const void inline check_properties(const StringVector& from, const StringVector& keys, StringVector& to) const {
-      for (std::vector<std::string>::const_iterator it = from.begin(), end = from.end(); it != end; ++it) {
-        if (std::find(keys.begin(), keys.end(), *it) != keys.end()) {
-          to.push_back(*it);
-        }
-      }
-    }
 
     virtual short is_connected0();
 
@@ -376,12 +382,12 @@ namespace mogli {
 
   };
 
-  inline void Molecule::read_lgf(const std::string &in,
-                                 const std::string id_property,
-                                 const std::string atom_type_property) {
+//  TODO LGF writer
+
+  inline void Molecule::read_lgf(const std::string &in, const LGFIOConfig &config) {
     std::stringstream buffer;
     buffer.str(in);
-    read_lgf_stream(buffer, id_property, atom_type_property);
+    read_lgf_stream(buffer, config);
   }
 
   inline void Molecule::read_lgf(const std::string &in) {
@@ -392,37 +398,36 @@ namespace mogli {
 
   inline void Molecule::read_lgf_stream(std::istream &in) {
     assert(in.good());
-
-    add_double_property("partial_charge");
-    add_string_property("label2");
-    add_double_property("coordX");
-    add_double_property("coordY");
-    add_double_property("coordZ");
-    add_int_property("initColor");
-
-    read_lgf_stream(in, "label", "atomType");
+    read_lgf_stream(in, LGFIOConfig::get_default());
   }
 
-  inline void Molecule::read_lgf_stream(std::istream &in,
-                                        const std::string id_property,
-                                        const std::string atom_type_property) {
+  inline void Molecule::read_lgf_stream(std::istream &in, const LGFIOConfig &config) {
     assert(in.good());
 
     lemon::GraphReader<Graph> reader(_g, in);
-    reader.nodeMap(atom_type_property, _colors);
-    reader.nodeMap(id_property, _node_to_id);
+    reader.nodeMap(config.get_color_property(), _colors);
+    reader.nodeMap(config.get_id_property(), _node_to_id);
 
-    for (BoolPropertiesMap::iterator it = _bool_prop.begin(), end = _bool_prop.end(); it != end; ++it) {
-      reader.nodeMap(it->first, *(it->second));
+    boost::ptr_map<std::string, NodeToBoolMap> bool_props;
+    boost::ptr_map<std::string, NodeToIntMap> int_props;
+    boost::ptr_map<std::string, NodeToDoubleMap> double_props;
+    boost::ptr_map<std::string, NodeToStringMap> string_props;
+
+    for (std::string prop : config.get_bool_node_props()) {
+      bool_props.insert(prop, new NodeToBoolMap(_g));
+      reader.nodeMap(prop, *(&bool_props.at(prop)));
     }
-    for (IntPropertiesMap::iterator it = _int_prop.begin(), end = _int_prop.end(); it != end; ++it) {
-      reader.nodeMap(it->first, *(it->second));
+    for (std::string prop : config.get_int_node_props()) {
+      int_props.insert(prop, new NodeToIntMap(_g));
+      reader.nodeMap(prop, *(&int_props.at(prop)));
     }
-    for (DoublePropertiesMap::iterator it = _double_prop.begin(), end = _double_prop.end(); it != end; ++it) {
-      reader.nodeMap(it->first, *(it->second));
+    for (std::string prop : config.get_double_node_props()) {
+      double_props.insert(prop, new NodeToDoubleMap(_g));
+      reader.nodeMap(prop, *(&double_props.at(prop)));
     }
-    for (StringPropertiesMap::iterator it = _string_prop.begin(), end = _string_prop.end(); it != end; ++it) {
-      reader.nodeMap(it->first, *(it->second));
+    for (std::string prop : config.get_string_node_props()) {
+      string_props.insert(prop, new NodeToStringMap(_g));
+      reader.nodeMap(prop, *(&string_props.at(prop)));
     }
     reader.run();
 
@@ -435,6 +440,31 @@ namespace mogli {
         _max_uid = id;
       }
       _atom_count++;
+    }
+
+    for (boost::ptr_map<std::string, NodeToBoolMap>::iterator it = bool_props.begin(), end = bool_props.end();
+         it != end; ++it) {
+      for (NodeIt n(_g); n != lemon::INVALID; ++n) {
+        set_property(n, it->first, it->second->operator[](n));
+      }
+    }
+    for (boost::ptr_map<std::string, NodeToIntMap>::iterator it = int_props.begin(), end = int_props.end();
+         it != end; ++it) {
+      for (NodeIt n(_g); n != lemon::INVALID; ++n) {
+        set_property(n, it->first, it->second->operator[](n));
+      }
+    }
+    for (boost::ptr_map<std::string, NodeToDoubleMap>::iterator it = double_props.begin(), end = double_props.end();
+         it != end; ++it) {
+      for (NodeIt n(_g); n != lemon::INVALID; ++n) {
+        set_property(n, it->first, it->second->operator[](n));
+      }
+    }
+    for (boost::ptr_map<std::string, NodeToStringMap>::iterator it = string_props.begin(), end = string_props.end();
+         it != end; ++it) {
+      for (NodeIt n(_g); n != lemon::INVALID; ++n) {
+        set_property(n, it->first, it->second->operator[](n));
+      }
     }
 
   }

@@ -71,13 +71,57 @@ namespace msgpack {
       };
 
       template<>
+      struct pack<boost::any> {
+        template <typename Stream>
+        packer<Stream>& operator()(msgpack::packer<Stream>& o, boost::any const& v) const {
+          if (v.type() == typeid(bool)) {
+            o.pack_array(2).pack(0).pack(boost::any_cast<bool>(v));
+          } else if (v.type() == typeid(int)) {
+            o.pack_array(2).pack(1).pack(boost::any_cast<int>(v));
+          } else if (v.type() == typeid(double)) {
+            o.pack_array(2).pack(2).pack(boost::any_cast<double>(v));
+          } else if (v.type() == typeid(std::string)) {
+            o.pack_array(2).pack(3).pack(boost::any_cast<std::string>(v));
+          } else {
+            throw msgpack::type_error();
+          }
+          return o;
+        }
+      };
+
+      template<>
+      struct convert<boost::any> {
+
+        msgpack::object const& operator()(msgpack::object const& o, boost::any& v) const {
+          if (o.type != msgpack::type::ARRAY) throw msgpack::type_error();
+          if (o.via.array.size != 2) throw msgpack::type_error();
+
+          msgpack::object *arr = o.via.array.ptr;
+          int type = arr[0].as<int>();
+          switch (type)  {
+            case 0: v = boost::any(arr[1].as<bool>());
+              break;
+            case 1: v = boost::any(arr[1].as<int>());
+              break;
+            case 2: v = boost::any(arr[1].as<double>());
+              break;
+            case 3: v = boost::any(arr[1].as<std::string>());
+              break;
+            default:
+              throw msgpack::type_error();
+          }
+          return o;
+        }
+      };
+
+      template<>
       struct pack<Molecule> {
         template <typename Stream>
         packer<Stream>& operator()(msgpack::packer<Stream>& o, Molecule const& v) const {
           const Graph &g = v.get_graph();
           const int n = v.get_atom_count();
 
-          o.pack_array(10);
+          o.pack_array(4);
           o.pack_array(n);
           for (NodeIt u = NodeIt(g); u != lemon::INVALID; ++u) {
             o.pack_array(2).pack(v.get_id(u)).pack(v.get_color(u));
@@ -89,40 +133,16 @@ namespace msgpack {
           }
           o.pack(edges);
 
-          StringVector bool_props, int_props, double_props, string_props;
-          v.get_bool_properties(bool_props);
-          v.get_int_properties(int_props);
-          v.get_double_properties(double_props);
-          v.get_string_properties(string_props);
 
-          o.pack(bool_props).pack(int_props).pack(double_props).pack(string_props);
+          StringVector properties;
+          v.get_properties(properties);
 
-          o.pack_array(bool_props.size());
-          for (StringVector::const_iterator it = bool_props.begin(), end = bool_props.end(); it != end; ++it) {
+          o.pack(properties);
+          o.pack_array(properties.size());
+          for (std::string& property : properties) {
             o.pack_array(n);
             for (NodeIt u = NodeIt(g); u != lemon::INVALID; ++u) {
-              o.pack_array(2).pack(v.get_id(u)).pack(v.get_bool_property(u, *it));
-            }
-          }
-          o.pack_array(int_props.size());
-          for (StringVector::const_iterator it = int_props.begin(), end = int_props.end(); it != end; ++it) {
-            o.pack_array(n);
-            for (NodeIt u = NodeIt(g); u != lemon::INVALID; ++u) {
-              o.pack_array(2).pack(v.get_id(u)).pack(v.get_int_property(u, *it));
-            }
-          }
-          o.pack_array(double_props.size());
-          for (StringVector::const_iterator it = double_props.begin(), end = double_props.end(); it != end; ++it) {
-            o.pack_array(n);
-            for (NodeIt u = NodeIt(g); u != lemon::INVALID; ++u) {
-              o.pack_array(2).pack(v.get_id(u)).pack(v.get_double_property(u, *it));
-            }
-          }
-          o.pack_array(string_props.size());
-          for (StringVector::const_iterator it = string_props.begin(), end = string_props.end(); it != end; ++it) {
-            o.pack_array(n);
-            for (NodeIt u = NodeIt(g); u != lemon::INVALID; ++u) {
-              o.pack_array(2).pack(v.get_id(u)).pack(v.get_string_property(u, *it));
+              o.pack_array(2).pack(v.get_id(u)).pack(v.get_property(u, property));
             }
           }
           return o;
@@ -131,12 +151,10 @@ namespace msgpack {
 
       msgpack::object const& convert_molecule(msgpack::object const& o, Molecule& mol) {
         if (o.type != msgpack::type::ARRAY) throw msgpack::type_error();
-        if (o.via.array.size != 10) throw msgpack::type_error();
+        if (o.via.array.size != 4) throw msgpack::type_error();
 
         msgpack::object *arr = o.via.array.ptr;
-        if (arr[0].type != msgpack::type::ARRAY) throw msgpack::type_error();
-        if (arr[1].type != msgpack::type::ARRAY) throw msgpack::type_error();
-        for (int i = 2; i < 10; ++i)
+        for (int i = 0; i < 4; ++i)
           if (arr[i].type != msgpack::type::ARRAY) throw msgpack::type_error();
 
         std::vector<std::pair<int, unsigned short> > atoms = arr[0].as<std::vector<std::pair<int, unsigned short> > >();
@@ -152,57 +170,13 @@ namespace msgpack {
           mol.add_edge(u, v);
         }
 
-        StringVector bool_props = arr[2].as<StringVector>();
-        StringVector int_props = arr[3].as<StringVector>();
-        StringVector double_props = arr[4].as<StringVector>();
-        StringVector string_props = arr[5].as<StringVector>();
+        StringVector props = arr[2].as<StringVector>();
 
-        for (StringVector::const_iterator it = bool_props.begin(), end = bool_props.end(); it != end; ++it) {
-          mol.add_bool_property(*it);
-        }
-        for (StringVector::const_iterator it = int_props.begin(), end = int_props.end(); it != end; ++it) {
-          mol.add_int_property(*it);
-        }
-        for (StringVector::const_iterator it = double_props.begin(), end = double_props.end(); it != end; ++it) {
-          mol.add_double_property(*it);
-        }
-        for (StringVector::const_iterator it = string_props.begin(), end = string_props.end(); it != end; ++it) {
-          mol.add_string_property(*it);
-        }
-
-        std::vector<std::vector<std::pair<int, bool> > > bool_properties = arr[6].as<std::vector<std::vector<std::pair<int, bool> > > >();
-        if (bool_props.size() != bool_properties.size()) throw msgpack::type_error();
-        for (int i = 0; i < bool_props.size(); ++i) {
-          mol.add_bool_property(bool_props[i]);
-          for (std::vector<std::pair<int, bool> >::const_iterator it = bool_properties[i].begin(), end = bool_properties[i].end(); it != end; ++it) {
-            mol.set_property(mol.get_node_by_id(it->first), bool_props[i], it->second);
-          }
-        }
-
-        std::vector<std::vector<std::pair<int, int> > > int_properties = arr[7].as<std::vector<std::vector<std::pair<int, int> > > >();
-        if (int_props.size() != int_properties.size()) throw msgpack::type_error();
-        for (int i = 0; i < int_props.size(); ++i) {
-          mol.add_int_property(int_props[i]);
-          for (std::vector<std::pair<int, int> >::const_iterator it = int_properties[i].begin(), end = int_properties[i].end(); it != end; ++it) {
-            mol.set_property(mol.get_node_by_id(it->first), int_props[i], it->second);
-          }
-        }
-
-        std::vector<std::vector<std::pair<int, double> > > double_properties = arr[8].as<std::vector<std::vector<std::pair<int, double> > > >();
-        if (double_props.size() != double_properties.size()) throw msgpack::type_error();
-        for (int i = 0; i < double_props.size(); ++i) {
-          mol.add_double_property(double_props[i]);
-          for (std::vector<std::pair<int, double> >::const_iterator it = double_properties[i].begin(), end = double_properties[i].end(); it != end; ++it) {
-            mol.set_property(mol.get_node_by_id(it->first), double_props[i], it->second);
-          }
-        }
-
-        std::vector<std::vector<std::pair<int, std::string> > > string_properties = arr[9].as<std::vector<std::vector<std::pair<int, std::string> > > >();
-        if (string_props.size() != string_properties.size()) throw msgpack::type_error();
-        for (int i = 0; i < string_props.size(); ++i) {
-          mol.add_string_property(string_props[i]);
-          for (std::vector<std::pair<int, std::string> >::const_iterator it = string_properties[i].begin(), end = string_properties[i].end(); it != end; ++it) {
-            mol.set_property(mol.get_node_by_id(it->first), string_props[i], it->second);
+        std::vector<std::vector<std::pair<int, boost::any> > > properties = arr[3].as<std::vector<std::vector<std::pair<int, boost::any> > > >();
+        if (props.size() != properties.size()) throw msgpack::type_error();
+        for (int i = 0; i < props.size(); ++i) {
+          for (auto& pair : properties[i]) {
+            mol.set_property(mol.get_node_by_id(pair.first), props[i], pair.second);
           }
         }
 

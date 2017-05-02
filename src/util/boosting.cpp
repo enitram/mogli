@@ -7,6 +7,7 @@
 #include "canonization.h"
 #include "packing.h"
 #include "mcf.h"
+#include "periodictable.h"
 
 using namespace boost::python;
 using namespace mogli;
@@ -37,6 +38,73 @@ struct iterator_wrappers {
 };
 
 BOOST_PYTHON_MODULE(libmogli) {
+
+  struct AnyToPython {
+    static PyObject* convert(boost::any const& obj) {
+      if (obj.type() == typeid(bool))
+        return incref(boost::python::object(boost::any_cast<bool>(obj)).ptr());
+      else if (obj.type() == typeid(int))
+        return incref(boost::python::object(boost::any_cast<int>(obj)).ptr());
+      else if (obj.type() == typeid(long))
+        return incref(boost::python::object(boost::any_cast<long>(obj)).ptr());
+      else if (obj.type() == typeid(double))
+        return incref(boost::python::object(boost::any_cast<double>(obj)).ptr());
+      else if (obj.type() == typeid(std::string))
+        return incref(boost::python::object(boost::any_cast<std::string>(obj)).ptr());
+    }
+  };
+
+  struct AnyFromPython {
+    AnyFromPython() {
+      converter::registry::push_back(&convertible, &construct, type_id<boost::any>());
+    }
+
+    static void* convertible(PyObject* object_ptr) {
+      if (PyBool_Check(object_ptr) || PyInt_Check(object_ptr) || PyLong_Check(object_ptr) || PyFloat_Check(object_ptr) || PyString_Check(object_ptr))
+        return object_ptr;
+      else
+        return 0;
+    }
+
+    static void construct(PyObject* obj_ptr, converter::rvalue_from_python_stage1_data* data) {
+      assert(obj_ptr != 0);
+      if (PyBool_Check(obj_ptr)) {
+        bool value = extract<bool>(obj_ptr);
+        void *storage = ((converter::rvalue_from_python_storage<boost::any> *) data)->storage.bytes;
+        new(storage) boost::any(value);
+        data->convertible = storage;
+      }
+      if (PyInt_Check(obj_ptr)) {
+        int value = extract<int>(obj_ptr);
+        void *storage = ((converter::rvalue_from_python_storage<boost::any> *) data)->storage.bytes;
+        new(storage) boost::any(value);
+        data->convertible = storage;
+      }
+      if (PyLong_Check(obj_ptr)) {
+        long value = extract<long>(obj_ptr);
+        void *storage = ((converter::rvalue_from_python_storage<boost::any> *) data)->storage.bytes;
+        new(storage) boost::any(value);
+        data->convertible = storage;
+      }
+      if (PyFloat_Check(obj_ptr)) {
+        double value = extract<double>(obj_ptr);
+        void *storage = ((converter::rvalue_from_python_storage<boost::any> *) data)->storage.bytes;
+        new(storage) boost::any(value);
+        data->convertible = storage;
+      }
+      if (PyString_Check(obj_ptr)) {
+        std::string value = extract<std::string>(obj_ptr);
+        void *storage = ((converter::rvalue_from_python_storage<boost::any> *) data)->storage.bytes;
+        new(storage) boost::any(value);
+        data->convertible = storage;
+      }
+    }
+  };
+
+  // register the to-python converter
+  to_python_converter<boost::any, AnyToPython>();
+  // register the from-python converter
+  AnyFromPython();
 
   std::string (*pack_fragment1)(const Fragment&) = &pack_fragment;
   std::string (*pack_fragment2)(const boost::shared_ptr<Fragment>&) = &pack_fragment;
@@ -99,27 +167,33 @@ BOOST_PYTHON_MODULE(libmogli) {
 
   enum_<Product::GenerationType>("GenerationType")
       .value("NO_OPT", Product::GenerationType::NO_OPT)
-      .value("DEG_1", Product::GenerationType::DEG_1)
-      .value("SUB", Product::GenerationType::SUB);
+      .value("UNCON", Product::GenerationType::UNCON)
+      .value("DEG_1", Product::GenerationType::DEG_1);
 
   const Node (Molecule::*add_atom1)(std::string) = &Molecule::add_atom;
   const Node (Molecule::*add_atom2)(int, std::string) = &Molecule::add_atom;
   const Node (Molecule::*add_atom3)(unsigned short) = &Molecule::add_atom;
   const Node (Molecule::*add_atom4)(int, unsigned short) = &Molecule::add_atom;
 
-  void (Molecule::*set_property1)(Node, std::string, bool) = &Molecule::set_property;
-  void (Molecule::*set_property2)(Node, std::string, int) = &Molecule::set_property;
-  void (Molecule::*set_property3)(Node, std::string, double) = &Molecule::set_property;
-  void (Molecule::*set_property4)(Node, std::string, char*) = &Molecule::set_property;
-  void (Molecule::*set_property5)(Node, std::string, std::string) = &Molecule::set_property;
-
   void (Molecule::*read_lgf1)(const std::string &) = &Molecule::read_lgf;
-  void (Molecule::*read_lgf2)(const std::string &, const std::string, const std::string) = &Molecule::read_lgf;
+  void (Molecule::*read_lgf2)(const std::string &, const LGFIOConfig&) = &Molecule::read_lgf;
 
-  const std::string (Molecule::*print_dot1)(const StringVector&) const = &Molecule::print_dot;
-  const std::string (Fragment::*print_dot2)() const = &Fragment::print_dot;
+  const std::string (Molecule::*print_dot1)() const = &Molecule::print_dot;
+  const std::string (Molecule::*print_dot2)(const StringVector&) const = &Molecule::print_dot;
+  const std::string (Fragment::*print_dot3)() const = &Fragment::print_dot;
+
+  class_<PeriodicTable, boost::noncopyable>("PeriodicTable", init<>())
+      .def("add_uncolored", &PeriodicTable::add_uncolored, return_internal_reference<>())
+      .def("add", &PeriodicTable::add, return_internal_reference<>());
+
+  class_<LGFIOConfig, boost::noncopyable>("LGFIOConfig", init<std::string, std::string>())
+      .def("add_bool_node_prop", &LGFIOConfig::add_bool_node_prop, return_internal_reference<>())
+      .def("add_int_node_prop", &LGFIOConfig::add_int_node_prop, return_internal_reference<>())
+      .def("add_double_node_prop", &LGFIOConfig::add_double_node_prop, return_internal_reference<>())
+      .def("add_string_node_prop", &LGFIOConfig::add_string_node_prop, return_internal_reference<>());
 
   class_<Molecule, boost::noncopyable>("Molecule", init<>())
+      .def(init<PeriodicTable&>())
       .def("add_atom", add_atom1)
       .def("add_atom", add_atom2)
       .def("add_atom", add_atom3)
@@ -135,45 +209,32 @@ BOOST_PYTHON_MODULE(libmogli) {
       .def("get_node_by_id", &Molecule::get_node_by_id)
       .def("get_id", &Molecule::get_id)
       .def("get_color", &Molecule::get_color)
-      .def("get_iacm_element", &Molecule::get_iacm_element)
-      .def("get_chem_element", &Molecule::get_chem_element)
+      .def("get_element", &Molecule::get_element)
       .def("is_connected", &Molecule::is_connected)
       .def("is_isomorphic", &Molecule::is_isomorphic)
       .def("read_lgf", read_lgf1)
       .def("read_lgf", read_lgf2)
       .def("print_dot", print_dot1)
-      .def("add_bool_property", &Molecule::add_bool_property)
-      .def("add_int_property", &Molecule::add_int_property)
-      .def("add_double_property", &Molecule::add_double_property)
-      .def("add_string_property", &Molecule::add_string_property)
-      .def("get_bool_properties", &Molecule::get_bool_properties)
-      .def("get_int_properties", &Molecule::get_int_properties)
-      .def("get_double_properties", &Molecule::get_double_properties)
-      .def("get_string_properties", &Molecule::get_string_properties)
-      .def("set_property", set_property1)
-      .def("set_property", set_property2)
-      .def("set_property", set_property3)
-      .def("set_property", set_property4)
-      .def("set_property", set_property5)
-      .def("get_bool_property", &Molecule::get_bool_property)
-      .def("get_int_property", &Molecule::get_int_property)
-      .def("get_double_property", &Molecule::get_double_property)
-      .def("get_string_property", &Molecule::get_string_property);
+      .def("print_dot", print_dot2)
+      .def("set_property", &Molecule::set_property)
+      .def("get_property", &Molecule::get_property);
 
   class_<Fragment, boost::shared_ptr<Fragment>, bases<Molecule>, boost::noncopyable>("Fragment", init<>())
       .def("get_core_atom_count", &Fragment::get_core_atom_count)
       .def("is_core", &Fragment::is_core)
-      .def("print_dot", print_dot2);
+      .def("print_dot", print_dot3);
 
-  class_<Match>("Match", init<>())
+  class_<Match, boost::shared_ptr<Match>>("Match", init<>())
       .def("frag_to_mol", &Match::frag_to_mol)
       .def("merged_frag_to_mol", &Match::merged_frag_to_mol)
       .def("map_ids", &Match::map_ids)
       .def(self == self)
       .def(self != self);
 
-  void (*mcf1)(Molecule&, Molecule&, FragmentVector&, MatchVector&, MatchVector&, int, int, int, Product::GenerationType, bool) = &maximal_common_fragments;
-  void (*mcf2)(Molecule&, Molecule&, FragmentVector&, MatchVector&, MatchVector&, int, int, Product::GenerationType, bool) = &maximal_common_fragments;
+  void (*mcf1)(Molecule&, Molecule&, FragmentVector&, MatchVector&, MatchVector&,
+               int, unsigned int, unsigned int, Product::GenerationType, bool, bool) = &maximal_common_fragments;
+  void (*mcf2)(Molecule&, Molecule&, FragmentVector&, MatchVector&, MatchVector&,
+               int, unsigned int, Product::GenerationType, bool, bool) = &maximal_common_fragments;
 
   def("maximal_common_fragments", mcf1);
   def("maximal_common_fragments", mcf2);

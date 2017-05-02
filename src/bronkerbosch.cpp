@@ -175,29 +175,22 @@ void BronKerbosch::bkPivot(BitSet P, BitSet D,
    */
 }
 
-void BronKerbosch::printBitSet(const BitSet& S, std::ostream& out) {
-  out << "{";
-  bool first = true;
-  for (size_t i = 0; i < S.size(); ++i) {
-    if (S[i]) {
-      if (!first) {
-        out << ", ";
-      } else {
-        first = false;
-      }
-      out << _product.get_mol1().get_string_property(_product.get_mol1_node(_bitToNode[i]), "label2");
-      out << "x";
-      out << _product.get_mol2().get_string_property(_product.get_mol2_node(_bitToNode[i]), "label2");
-    }
-  }
-  out << "}";
-}
-
 void BronKerbosch::report(const BitSet& R) {
   NodeVector clique;
   for (BitSet::size_type it = R.find_first(); it != BitSet::npos; it = R.find_next(it)) {
     clique.push_back(_bitToNode[static_cast<int>(it)]);
   }
-  _cliques.push_back(clique);
+  int size = _product.get_clique_size(clique);
+  if (_min_core_size <= size && size <= _max_core_size) {
+    if (!_maximum) {
+      _cliques.push_back(clique);
+    } else if (size > _current_max) {
+      _cliques.clear();
+      _current_max = size;
+      _cliques.push_back(clique);
+    } else if (size == _current_max) {
+      _cliques.push_back(clique);
+    }
+  }
 }
 

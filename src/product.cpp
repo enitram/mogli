@@ -142,6 +142,9 @@ void Product::generate_nodes() {
       if (_mol1.get_color(u) == _mol2.get_color(v) &&
           subgraph_canons1[u].is_isomorphic(subgraph_canons2[v])) {
         const Node& uv = add_node(u, v);
+        _node_sizes[uv] = 1;
+        _g_to_mol1_canons[uv] = subgraph_canons1[u];
+        _g_to_mol2_canons[uv] = subgraph_canons2[v];
       }
     }
   }
@@ -186,9 +189,14 @@ void Product::generate_nodes_deg1() {
         if (canon1.is_isomorphic(canon2)) {
           // generate product node uv
           const Node& uv = add_node(u, v);
+          _node_sizes[uv] = 1;
           // apply degree-1 rule to neighbors of u and v
           const ShortVector& order1 = canon1.get_node_order();
           const ShortVector& order2 = canon2.get_node_order();
+          int u_id = _mol1.get_id(u);
+          int v_id = _mol2.get_id(v);
+          _g_to_mol1_canons[uv] = canon1;
+          _g_to_mol2_canons[uv] = canon2;
 
           ShortToNodeVectorPairMap current_reductions;
           for (IncEdgeIt e(g1, u); e != lemon::INVALID; ++e) {
@@ -203,6 +211,7 @@ void Product::generate_nodes_deg1() {
               current_reductions[color].first.push_back(w);
               current_reductions[color].second.push_back(x);
               _reductions[uv].push_back(std::make_pair(w, x));
+              ++_node_sizes[uv];
             }
           }
           for (ShortToNodeVectorPairMap::const_iterator it3 = current_reductions.begin(), end3 = current_reductions.end(); it3 != end3; ++it3) {
@@ -223,6 +232,7 @@ void Product::generate_nodes_deg1() {
 
 }
 
+// FIXME missing: nodes sizes
 void Product::generate_nodes_sub() {
   const Graph& g1 = _mol1.get_graph();
   const Graph& g2 = _mol2.get_graph();
@@ -267,10 +277,13 @@ void Product::generate_nodes_sub() {
         if (canon1.is_isomorphic(canon2)) {
           // generate product node uv
           const Node& uv = add_node(u, v);
+          _node_sizes[uv] = 1;
           // apply neighborhood subset rule to neighbors of u and v
           IntSet &neighbors_u = neighborhoods1[u];
           const ShortVector& _order1 = canon1.get_node_order();
           const ShortVector& _order2 = canon2.get_node_order();
+          _g_to_mol1_canons[uv] = canon1;
+          _g_to_mol2_canons[uv] = canon2;
 
           NodeVector order1, order2;
 
@@ -329,6 +342,42 @@ void Product::generate_edges() {
 
 }
 
+void Product::generate_edges(NodeToBoolMap& connected_nodes) {
+  const Graph& g1 = _mol1.get_graph();
+  const Graph& g2 = _mol2.get_graph();
+
+  lemon::ArcLookUp<Graph> arcLookUp1(g1);
+  lemon::ArcLookUp<Graph> arcLookUp2(g2);
+
+  for (NodeIt u1v1(_g); u1v1 != lemon::INVALID; ++u1v1) {
+    Node u1 = _g_to_mol1[u1v1];
+    Node v1 = _g_to_mol2[u1v1];
+    for (NodeIt u2v2 = u1v1; u2v2 != lemon::INVALID; ++ u2v2) {
+      if (u1v1 == u2v2)
+        continue;
+
+      Node u2 = _g_to_mol1[u2v2];
+      Node v2 = _g_to_mol2[u2v2];
+
+      assert(_mol1.get_color(u1) == _mol2.get_color(v1));
+
+      if (u1 != u2 && v1 != v2) {
+        bool u1u2 = arcLookUp1(u1, u2) != lemon::INVALID;
+        bool v1v2 = arcLookUp2(v1, v2) != lemon::INVALID;
+
+        if (u1u2 == v1v2) {
+          _connectivity[_g.addEdge(u1v1, u2v2)] = u1u2;
+          if (u1u2) {
+            connected_nodes[u1v1] = true;
+            connected_nodes[u2v2] = true;
+          }
+        }
+      }
+    }
+  }
+
+}
+
 Node Product::add_node(const Node &u, const Node &v) {
   Node uv = _g.addNode();
   _g_to_mol1[uv] = u;
@@ -336,67 +385,18 @@ Node Product::add_node(const Node &u, const Node &v) {
   return uv;
 }
 
-//void Product::get_node_mapping(const NodeVectorVector &cliques, NodePairVectorVector &mapping) {
-//  for (NodeVectorVector::const_iterator it = cliques.begin(), end = cliques.end(); it != end; ++it) {
-//    NodePairVector pairs;
-//    for (NodeVector::const_iterator it2 = it->begin(), end2 = it->end(); it2 != end2; ++it2) {
-//      Node u = _g_to_mol1[*it2];
-//      Node v = _g_to_mol2[*it2];
-//      pairs.push_back(std::make_pair(u,v));
-//      for (NodePairVector::const_iterator it3 = _reductions[*it2].begin(), end3 = _reductions[*it2].end();
-//           it3 != end3; ++it3) {
-//        pairs.push_back(*it3);
-//      }
-//    }
-//    mapping.push_back(pairs);
-//  }
-//}
-//
-//void Product::prune_cliques(NodeVectorVector &cliques) {
-//
-//  Orbits orbits1(_mol1);
-//  Orbits orbits2(_mol2);
-//
-//  // is comparing the orbit sets enough? We might need to check for induced subgraph isomorphism (of fragments including shells)!
-//  IntVectorPairVector orbits;
-//  for (NodeVectorVector::const_iterator it = cliques.begin(), end = cliques.end(); it != end; ++it) {
-//    IntVectorPair pair = std::make_pair<IntVector, IntVector>(IntVector(), IntVector());
-//    for (NodeVector::const_iterator it2 = it->begin(), end2 = it->end(); it2 != end2; ++it2) {
-//      Node u = _g_to_mol1[*it2];
-//      Node v = _g_to_mol2[*it2];
-//      pair.first.push_back(orbits1.get_orbit_id(u));
-//      pair.second.push_back(orbits2.get_orbit_id(v));
-//    }
-//    orbits.push_back(pair);
-//  }
-//
-//  for (size_t i = 0; i < cliques.size(); ++i) {
-//    for (size_t j = cliques.size() - 1; j >= i; --j) {
-//      bool subset = false;
-//      bool superset = false;
-//      for (size_t k = 0, l = 0; k < cliques[i].size(), l < cliques[j].size();) {
-//        if (orbits[i].first[k] == orbits[j].first[l] && orbits[i].second[k] == orbits[j].second[l]) {
-//          ++k;
-//          ++l;
-//        }
-//        if (k == cliques[i].size()) {
-//          subset = true;
-//        } else if (l == cliques[j].size()) {
-//          superset = true;
-//        }
-//      }
-//
-//      if (subset) {
-//        cliques.erase(cliques.begin()+i);
-//        --i;
-//        break;
-//      } else if (superset) {
-//        cliques.erase(cliques.begin()+j);
-//        break;
-//      }
-//    }
-//  }
-//
-//}
+void Product::prune_nodes(NodeToBoolMap& connected_nodes, unsigned int min_core_size, unsigned int max_core_size) {
+  for (NodeIt u(_g); u != lemon::INVALID;) {
+    Node current = u;
+    ++u;
+    if (_gen_type == UNCON_DEG_1 && !connected_nodes[current]) {
+      if (_reductions[current].size() == 0 ||
+          _node_sizes[current] < min_core_size || _node_sizes[current] > max_core_size) {
+        // TODO mark erased nodes/edges instead of real erase?
+        _g.erase(current);
+      }
+    }
+  }
+}
 
 

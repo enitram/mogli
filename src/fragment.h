@@ -35,7 +35,7 @@ namespace mogli {
         _core_node_count(0) {}
 
     Fragment(const Product &product, const NodeVector &clique, IntToIntMap &g_to_mol1, IntToIntMap &g_to_mol2) :
-        Molecule(),
+        Molecule(product.get_mol1().get_perdiodic_table()),
         _is_core(_g, false),
         _shell_size(product.get_shell()),
         _core_node_count(0) {
@@ -45,6 +45,7 @@ namespace mogli {
 
       NodeToNodeMap shell_g_to_mol(_g);
       NodeToNodeMap shell_mol_to_g(mol1.get_graph());
+      NodeToNodeMap g_to_product(_g);
       NodeToBoolMap mol1_core_nodes(mol1.get_graph(), false);
       NodeToIntMap shell_min_depth(_g, 0);
 
@@ -53,6 +54,7 @@ namespace mogli {
         Node u = product.get_mol1_node(*it);
         Node uv = add_atom(mol1.get_color(u));
 
+        g_to_product[uv] = *it;
         g_to_mol1[_node_to_id[uv]] = mol1.get_id(u);
         g_to_mol2[_node_to_id[uv]] = mol2.get_id(product.get_mol2_node(*it));
         _is_core[uv] = true;
@@ -63,6 +65,8 @@ namespace mogli {
         for (NodePairVector::const_iterator it2 = reductions.begin(), end2 = reductions.end(); it2 != end2; ++it2) {
           Node _u = it2->first;
           Node _uv = add_atom(mol1.get_color(_u));
+
+          g_to_product[_uv] = *it;
           g_to_mol1[_node_to_id[_uv]] = mol1.get_id(_u);
           g_to_mol2[_node_to_id[_uv]] = mol2.get_id(it2->second);
           _is_core[_uv] = true;
@@ -74,7 +78,8 @@ namespace mogli {
       IntSet shell_ids;
       for (NodeIt u(_g); u != lemon::INVALID; ++u) {
         bfs_shell(mol1, mol1.get_node_by_id(g_to_mol1.at(_node_to_id[u])), shell_g_to_mol, shell_mol_to_g,
-                  mol1_core_nodes, shell_ids, shell_min_depth);
+                  mol1_core_nodes, shell_ids, shell_min_depth,
+                  product.get_mol1_canon(g_to_product[u]), product.get_mol2_canon(g_to_product[u]), g_to_mol1, g_to_mol2);
       }
 
       lemon::ArcLookUp<Graph> arcLookUp(mol1.get_graph());
@@ -132,22 +137,17 @@ namespace mogli {
     const void print_dot(std::ostream &out) const {
       // header
       out << "graph G {" << std::endl
-          << "\toverlap=scale" << std::endl
-          << "\tlayout=neato" << std::endl;
+          << "\toverlap=scale" << std::endl;
 
       // nodes
       for (NodeIt v(_g); v != lemon::INVALID; ++v) {
         out << "\t" << _g.id(v);
         if (_is_core[v]) {
-          out << "[style=\"filled,bold\",fillcolor=" << _iacm.get_chem_color(_colors[v]);
+          out << "[style=\"filled,bold\",fillcolor=" << _perdiodic_table.get_color(_colors[v]);
         } else {
-          out << "[style=\"filled,dashed\",fillcolor=" << _iacm.get_chem_color(_colors[v]);
+          out << "[style=\"filled,dashed\",fillcolor=" << _perdiodic_table.get_color(_colors[v]);
         }
-        std::string element = get_iacm_element(v);
-        if (std::strcmp(element.c_str(), "?") == 0) {
-          element = std::to_string(_colors[v]);
-        }
-        out << ",label=\"" << _node_to_id[v] << " (" << element << ")\"]" << std::endl;
+        out << ",label=\"" << _node_to_id[v] << "\"]" << std::endl;
       }
 
       // edges
@@ -161,7 +161,8 @@ namespace mogli {
   private:
     
     void bfs_shell(const Molecule &mol, const Node &v, NodeToNodeMap &shell_g_to_mol, NodeToNodeMap &shell_mol_to_g,
-                   NodeToBoolMap &core_nodes, IntSet &shell_ids, NodeToIntMap &shell_min_depth) {
+                   NodeToBoolMap &core_nodes, IntSet &shell_ids, NodeToIntMap &shell_min_depth,
+                   const Canonization &canon1, const Canonization &canon2, IntToIntMap &g_to_mol1, IntToIntMap &g_to_mol2) {
       NodeToIntMap depth(mol.get_graph(), 0);
       NodeToBoolMap visited(mol.get_graph(), false);
       NodeDeque queue;
@@ -177,7 +178,18 @@ namespace mogli {
             Node uv = add_atom(mol.get_color(current));
             shell_g_to_mol[uv] = current;
             shell_mol_to_g[current] = uv;
-            shell_ids.insert(mol.get_id(current));
+            int id = mol.get_id(current);
+            shell_ids.insert(id);
+            std::string current_label = boost::any_cast<std::string>(mol.get_property(current, "label2"));
+            const ShortVector &order1 = canon1.get_node_order();
+            const ShortVector &order2 = canon2.get_node_order();
+            for (int i = 0; i < order1.size(); ++i) {
+              std::string found_label = boost::any_cast<std::string>(mol.get_property(mol.get_node_by_id(order1[i]), "label2"));
+              if (order1[i] == id) {
+                g_to_mol1[_node_to_id[uv]] = id;
+                g_to_mol2[_node_to_id[uv]] = order2[i];
+              }
+            }
           }
           // minimal distance of this shell node to the nearest core node
           if (shell_min_depth[shell_mol_to_g[current]] > 0) {

@@ -12,20 +12,25 @@ bool less(const std::pair<int, int>& a, const std::pair<int, int>& b) {
 void mogli::maximal_common_fragments(Molecule &mol1, Molecule &mol2,
                                      FragmentVector &fragments,
                                      MatchVector &matches_mol1, MatchVector &matches_mol2,
-                                     int shell, int min_core_size,
-                                     Product::GenerationType prod_gen, bool reduce_subgraphs) {
-  maximal_common_fragments(mol1, mol2, fragments, matches_mol1, matches_mol2, shell, min_core_size, std::numeric_limits<int>::max(), prod_gen, reduce_subgraphs);
+                                     int shell, unsigned int min_core_size,
+                                     Product::GenerationType prod_gen, bool reduce_subgraphs, bool maximum) {
+  maximal_common_fragments(mol1, mol2, fragments, matches_mol1, matches_mol2, shell, min_core_size,
+                           std::numeric_limits<int>::max(), prod_gen, reduce_subgraphs, maximum);
 }
 
 void mogli::maximal_common_fragments(Molecule &mol1, Molecule &mol2,
                                      FragmentVector &fragments,
                                      MatchVector &matches_mol1, MatchVector &matches_mol2,
-                                     int shell, int min_core_size, int max_core_size,
-                                     Product::GenerationType prod_gen, bool reduce_subgraphs) {
+                                     int shell, unsigned int min_core_size, unsigned int max_core_size,
+                                     Product::GenerationType prod_gen, bool reduce_subgraphs, bool maximum) {
 
-  Product product(mol1, mol2, shell, prod_gen);
+  Product product(mol1, mol2, shell, prod_gen, min_core_size, max_core_size);
 
-  BronKerbosch bk(product);
+//  std::ofstream ofs("/home/martin/workspace/mogli/product.dot", std::ifstream::out);
+//  product.print_dot(ofs);
+//  ofs.close();
+
+  BronKerbosch bk(product, min_core_size, max_core_size, maximum);
   bk.run();
 
   NodeVectorVector cliques = bk.getMaxCliques();
@@ -38,7 +43,6 @@ void mogli::maximal_common_fragments(Molecule &mol1, Molecule &mol2,
       if (fragment->get_core_atom_count() >= min_core_size && fragment->get_core_atom_count() <= max_core_size) {
         Match match1(g_to_mol1);
         Match match2(g_to_mol2);
-        IntVector _node_ids;
 
         fragments.push_back(fragment);
         matches_mol1.push_back(match1);
@@ -61,7 +65,6 @@ void mogli::maximal_common_fragments(Molecule &mol1, Molecule &mol2,
       if (fragment->get_core_atom_count() >= min_core_size && fragment->get_core_atom_count() <= max_core_size) {
         Match match1(g_to_mol1);
         Match match2(g_to_mol2);
-        IntVector _node_ids;
 
         frags.push_back(fragment);
         matches1.push_back(match1);

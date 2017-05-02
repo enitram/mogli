@@ -33,7 +33,7 @@ set(SOURCE_FILES
         src/canonization.cpp
         src/molecule.h
         src/molecule.cpp
-        src/iacm.h
+        src/periodictable.h
         src/product.h
         src/product.cpp
         src/bronkerbosch.cpp
@@ -78,5 +78,3 @@ link_directories( "${LIBLEMON_ROOT}/lib")
 
 add_library(mogli SHARED ${SOURCE_FILES} src/util/boosting.cpp ${NAUTY_SRC} ${LAD_SRC})
 target_link_libraries(mogli ${Boost_LIBRARIES} ${CommonLibs})
-
-
