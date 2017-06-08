@@ -80,3 +80,6 @@ link_directories( "${LIBLEMON_ROOT}/lib")
 
 add_library(mogli SHARED ${HEADER_FILES} ${SOURCE_FILES} src/util/boosting.cpp ${NAUTY_SRC} ${LAD_SRC})
 target_link_libraries(mogli ${Boost_LIBRARIES} ${CommonLibs})
+
+add_executable(report test/report.cpp ${SOURCE_FILES} ${NAUTY_SRC} ${LAD_SRC})
+target_link_libraries(report ${Boost_LIBRARIES} ${CommonLibs})

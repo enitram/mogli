@@ -7,7 +7,6 @@
 #include "../../include/canonization.h"
 #include "../../include/util/packing.h"
 #include "../../include/mcf.h"
-#include "../../include/periodictable.h"
 
 using namespace boost::python;
 using namespace mogli;
@@ -147,12 +146,17 @@ BOOST_PYTHON_MODULE(libmogli) {
       .def("__iter__", iterator<NodeVector>())
       .def(vector_indexing_suite<NodeVector>());
 
+  typedef std::vector<boost::shared_ptr<Molecule> > MoleculeVector;
+  class_<MoleculeVector, boost::noncopyable>("MoleculeVector")
+      .def("__iter__", iterator<MoleculeVector, return_internal_reference<> >())
+      .def("__len__", &MoleculeVector::size);
+
   class_<FragmentVector, boost::noncopyable>("FragmentVector")
       .def("__iter__", iterator<FragmentVector, return_internal_reference<> >())
       .def("__len__", &FragmentVector::size);
 
   class_<MatchVector, boost::noncopyable>("MatchVector")
-      .def("__iter__", iterator<MatchVector>())
+      .def("__iter__", iterator<MatchVector, return_internal_reference<> >())
       .def("__len__", &MatchVector::size);
 
   class_<Canonization>("Canonization", init<const Molecule&>())
@@ -174,6 +178,9 @@ BOOST_PYTHON_MODULE(libmogli) {
   const Node (Molecule::*add_atom2)(int, std::string) = &Molecule::add_atom;
   const Node (Molecule::*add_atom3)(unsigned short) = &Molecule::add_atom;
   const Node (Molecule::*add_atom4)(int, unsigned short) = &Molecule::add_atom;
+
+  std::string (Molecule::*write_lgf1)() = &Molecule::write_lgf;
+  std::string (Molecule::*write_lgf2)(const LGFIOConfig&) = &Molecule::write_lgf;
 
   void (Molecule::*read_lgf1)(const std::string &) = &Molecule::read_lgf;
   void (Molecule::*read_lgf2)(const std::string &, const LGFIOConfig&) = &Molecule::read_lgf;
@@ -206,12 +213,16 @@ BOOST_PYTHON_MODULE(libmogli) {
       .def("get_u", &Molecule::get_u)
       .def("get_v", &Molecule::get_v)
       .def("get_atom_count", &Molecule::get_atom_count)
+      .def("has_node_with_id", &Molecule::has_node_with_id)
       .def("get_node_by_id", &Molecule::get_node_by_id)
       .def("get_id", &Molecule::get_id)
       .def("get_color", &Molecule::get_color)
       .def("get_element", &Molecule::get_element)
       .def("is_connected", &Molecule::is_connected)
+      .def("get_connected_components", &Molecule::get_connected_components)
       .def("is_isomorphic", &Molecule::is_isomorphic)
+      .def("write_lgf", write_lgf1)
+      .def("write_lgf", write_lgf2)
       .def("read_lgf", read_lgf1)
       .def("read_lgf", read_lgf2)
       .def("print_dot", print_dot1)

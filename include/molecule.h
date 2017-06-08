@@ -13,8 +13,11 @@
 #include <lemon/adaptors.h>
 #include <lemon/lgf_reader.h>
 #include <lemon/list_graph.h>
+#include <lemon/connectivity.h>
 #include <boost/ptr_container/ptr_map.hpp>
+#include <boost/ptr_container/exception.hpp>
 #include <boost/any.hpp>
+#include <boost/smart_ptr/make_shared.hpp>
 #include "periodictable.h"
 #include "types.h"
 
@@ -111,6 +114,15 @@ namespace mogli {
 
   };
 
+  struct sort_tuple {
+    bool operator()(const std::pair<int,int> &left, const std::pair<int,int> &right) {
+      if (left.first == right.first) {
+        return left.second < right.second;
+      }
+      return left.first < right.first;
+    }
+  };
+
 
   class Molecule {
 
@@ -125,6 +137,7 @@ namespace mogli {
     typedef typename Graph::template NodeMap<unsigned short> NodeToUShortMap;
     typedef typename Graph::template NodeMap<double> NodeToDoubleMap;
     typedef typename Graph::template NodeMap<std::string> NodeToStringMap;
+    typedef typename Graph::template NodeMap<char *> NodeToCStringMap;
 
     typedef typename boost::ptr_map<int, Node> IntToNodeMap;
 
@@ -174,9 +187,14 @@ namespace mogli {
     }
 
     // set properties
-
     const boost::any get_property(Node node, std::string property) const {
-      return (&_properties.at(property))->operator[](node);
+      // FIXME boost::python looses error msg
+      try {
+        return (&_properties.at(property))->operator[](node);
+      } catch (boost::bad_ptr_container_operation) {
+        std::string msg = "Could not find property " + property;
+        BOOST_PTR_CONTAINER_THROW_EXCEPTION(true, boost::bad_ptr_container_operation, msg.c_str());
+      }
     }
 
     void set_property(Node node, std::string property, boost::any value) {
@@ -252,6 +270,10 @@ namespace mogli {
       return _g.v(edge);
     }
 
+    const bool has_node_with_id(int id) const {
+      return _id_to_node.find(id) != _id_to_node.end();
+    }
+
     const Node get_node_by_id(int id) const {
       return _id_to_node.at(id);
     }
@@ -272,7 +294,19 @@ namespace mogli {
       return _perdiodic_table.get_color(get_color(node));
     }
 
-    // lgf reading
+    // I/O
+
+    virtual void write_gml_stream(std::string label, std::ostream &out);
+
+    virtual std::string write_gml(std::string label);
+
+    virtual void write_lgf_stream(std::ostream &out);
+
+    virtual void write_lgf_stream(std::ostream &out, const LGFIOConfig& config);
+
+    virtual std::string write_lgf();
+
+    virtual std::string write_lgf(const LGFIOConfig &config);
 
     virtual void read_lgf_stream(std::istream &in);
 
@@ -289,6 +323,37 @@ namespace mogli {
         _is_connected = is_connected0();
       }
       return _is_connected == 1;
+    }
+
+    void get_connected_components(std::vector<boost::shared_ptr<Molecule> > &components) {
+      NodeToIntMap compMap(_g);
+      int count = lemon::connectedComponents(_g, compMap);
+      // create a new molecule for every connected component
+      for (int i = 0; i < count; ++i) {
+        boost::shared_ptr<Molecule> mol = boost::make_shared<Molecule>();
+        components.push_back(mol);
+      }
+      // copy nodes and properties
+      for (NodeIt v(_g); v != lemon::INVALID; ++v) {
+        Node cv = components[compMap[v]]->add_atom(_node_to_id[v], _colors[v]);
+        for (StringToAnyTypeMapMap::const_iterator it = _properties.begin(), end = _properties.end(); it != end; ++it) {
+          components[compMap[v]]->set_property(cv, it->first, get_property(v, it->first));
+        }
+      }
+      // copy edges
+      lemon::ArcLookUp<Graph> arcLookUp(_g);
+      for (int i = 0; i < count; ++i) {
+        for (NodeIt u(components[i]->get_graph()); u != lemon::INVALID; ++u) {
+          for (NodeIt v(components[i]->get_graph()); v != lemon::INVALID; ++v) {
+            if (u == v)
+              continue;
+            if (arcLookUp(_id_to_node[components[i]->get_id(u)], _id_to_node[components[i]->get_id(v)]) != lemon::INVALID) {
+              components[i]->add_edge(u,v);
+            }
+          }
+        }
+      }
+
     }
 
     const bool is_isomorphic(Molecule &other) const;
@@ -382,7 +447,101 @@ namespace mogli {
 
   };
 
-//  TODO LGF writer
+  inline std::string Molecule::write_gml(std::string label) {
+    std::stringstream buffer;
+    write_gml_stream(label, buffer);
+    return buffer.str();
+  }
+
+  inline void Molecule::write_gml_stream(std::string label, std::ostream &out) {
+    assert(out.good());
+    out << "graph [\n\tdirected 0\n\tlabel "<< label <<"\n";
+    for (NodeIt v(_g); v != lemon::INVALID; ++v) {
+      out << "\tnode [\n\t\tid " << _node_to_id[v] << "\n\t\tlabel \"" << _colors[v] << "\"\n\t]\n";
+    }
+    for (EdgeIt e(_g); e != lemon::INVALID; ++e) {
+      out << "\tedge [\n\t\tsource " << _node_to_id[_g.u(e)] << "\n\t\ttarget " << _node_to_id[_g.v(e)]
+          << "\n\t\tlabel \"-\"\n\t]\n";
+    }
+    out << "]\n\n";
+  }
+
+  inline std::string Molecule::write_lgf(const LGFIOConfig &config) {
+    std::stringstream buffer;
+    write_lgf_stream(buffer, config);
+    return buffer.str();
+  }
+
+  inline std::string Molecule::write_lgf() {
+    std::stringstream buffer;
+    write_lgf_stream(buffer);
+    return buffer.str();
+  }
+
+  inline void Molecule::write_lgf_stream(std::ostream &out) {
+    assert(out.good());
+    write_lgf_stream(out, LGFIOConfig::get_default());
+  }
+
+  inline void Molecule::write_lgf_stream(std::ostream &out, const LGFIOConfig &config) {
+    assert(out.good());
+    // nodes header
+    out << "@nodes\n";
+    out << config.get_id_property() << "\t" << config.get_color_property() << "\t";
+    for (std::string prop : config.get_bool_node_props()) {
+      out << prop << "\t";
+    }
+    for (std::string prop : config.get_int_node_props()) {
+      out << prop << "\t";
+    }
+    for (std::string prop : config.get_double_node_props()) {
+      out << prop << "\t";
+    }
+    for (std::string prop : config.get_string_node_props()) {
+      out << prop << "\t";
+    }
+    out << "\n";
+
+    // nodes
+    IntVector nodes;
+    for (NodeIt v(_g); v != lemon::INVALID; ++v) {
+      int id = _node_to_id[v];
+      nodes.push_back(id);
+    }
+    std::sort(nodes.begin(), nodes.end());
+
+    for (int id : nodes) {
+      Node v = _id_to_node[id];
+      out << id << "\t" << _colors[v] << "\t";
+      for (std::string prop : config.get_bool_node_props()) {
+        out << boost::any_cast<bool>(get_property(v, prop)) << "\t";
+      }
+      for (std::string prop : config.get_int_node_props()) {
+        out << boost::any_cast<int>(get_property(v, prop)) << "\t";
+      }
+      for (std::string prop : config.get_double_node_props()) {
+        out << boost::any_cast<double>(get_property(v, prop)) << "\t";
+      }
+      for (std::string prop : config.get_string_node_props()) {
+        out << boost::any_cast<std::string>(get_property(v, prop)) << "\t";
+      }
+      out << "\n";
+    }
+
+    // edges
+    out << "@edges\n\t\tlabel\t\n";
+    int k = 0;
+    std::vector<std::pair<int, int> > edges;
+    for (EdgeIt e(_g); e != lemon::INVALID; ++e, ++k) {
+      int u = _node_to_id[_g.u(e)];
+      int v = _node_to_id[_g.v(e)];
+      edges.push_back(std::make_pair(u, v));
+    }
+    std::sort(edges.begin(), edges.end(), sort_tuple());
+    for (std::pair<int, int> pair : edges) {
+      out << pair.first << "\t" << pair.second << "\t" << k << "\t\n";
+    }
+  }
 
   inline void Molecule::read_lgf(const std::string &in, const LGFIOConfig &config) {
     std::stringstream buffer;
