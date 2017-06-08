@@ -14,6 +14,31 @@
 
 using namespace mogli;
 
+std::pair<float, float> run(Product& product, int min_core, int max_core, FragmentVector& fragments) {
+  std::chrono::high_resolution_clock::time_point t1 = std::chrono::high_resolution_clock::now();
+
+  BronKerbosch bk(product, min_core, max_core, false);
+  bk.run();
+
+  std::chrono::high_resolution_clock::time_point t2 = std::chrono::high_resolution_clock::now();
+  std::chrono::duration<float> bk_duration = t2 - t1;
+
+  NodeVectorVector cliques = bk.getMaxCliques();
+  for (NodeVectorVector::const_iterator it = cliques.begin(), end = cliques.end(); it != end; ++it) {
+    IntToIntMap g_to_mol1, g_to_mol2;
+    boost::shared_ptr<Fragment> fragment = boost::make_shared<Fragment>(product, *it, g_to_mol1, g_to_mol2);
+
+    if (fragment->get_core_atom_count() > 1) {
+      fragments.push_back(fragment);
+    }
+  }
+
+  std::chrono::high_resolution_clock::time_point t3 = std::chrono::high_resolution_clock::now();
+  std::chrono::duration<float> gen_duration = t3 - t2;
+
+  return std::make_pair(bk_duration.count(), gen_duration.count());
+}
+
 int main(int argc, char** argv) {
 
   lemon::ArgParser ap(argc, (const char *const *) argv);
@@ -60,43 +85,33 @@ int main(int argc, char** argv) {
   std::chrono::high_resolution_clock::time_point t2 = std::chrono::high_resolution_clock::now();
   std::chrono::duration<float> pg_duration = t2 - t1;
 
-  unsigned long pg_size = 0;
-  for (NodeIt v(product.get_graph()); v != lemon::INVALID; ++v) {
-    ++pg_size;
-  }
+  int pg_size = lemon::countNodes(product.get_graph());
   if (pg_size == 0)
     return 0;
 
   std::chrono::high_resolution_clock::time_point t3 = std::chrono::high_resolution_clock::now();
 
-  BronKerbosch bk(product, min_core, max_core, false);
-  bk.run();
-
-  std::chrono::high_resolution_clock::time_point t4 = std::chrono::high_resolution_clock::now();
-  std::chrono::duration<float> bk_duration = t4 - t3;
-
-  std::chrono::high_resolution_clock::time_point t5 = std::chrono::high_resolution_clock::now();
-
-  NodeVectorVector cliques = bk.getMaxCliques();
+  float bk_time = 0;
+  float gen_time = 0;
   FragmentVector fragments;
-  for (NodeVectorVector::const_iterator it = cliques.begin(), end = cliques.end(); it != end; ++it) {
-    IntToIntMap g_to_mol1, g_to_mol2;
-    boost::shared_ptr<Fragment> fragment = boost::make_shared<Fragment>(product, *it, g_to_mol1, g_to_mol2);
+  if (product.get_components() == 1) {
+    std::pair<float, float> timing = run(product, min_core, max_core, fragments);
+    bk_time = timing.first;
+    gen_time = timing.second;
+  } else {
+    for (int c = 0; c < product.get_components(); ++c) {
+      Product component(product, c);
 
-    if (fragment->get_core_atom_count() > 1) {
-      fragments.push_back(fragment);
+      std::pair<float, float> timing = run(component, min_core, max_core, fragments);
+      bk_time += timing.first;
+      gen_time += timing.second;
     }
   }
-
-  std::chrono::high_resolution_clock::time_point t6 = std::chrono::high_resolution_clock::now();
-  std::chrono::duration<float> gen_duration = t6 - t5;
 
   if (fragments.size() == 0)
     return 0;
 
   float pg_time = pg_duration.count();
-  float bk_time = bk_duration.count();
-  float gen_time = gen_duration.count();
   float runtime = pg_time + bk_time + gen_time;
 
   std::cout << pg_size << "\t" << fragments.size() << "\t" << pg_time << "\t" << bk_time << "\t"

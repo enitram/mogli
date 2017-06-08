@@ -28,9 +28,6 @@ namespace mogli {
 
   public:
 
-    // TODO SUB rule without connection to root node -> check connection after matching to decide if shell or core!
-    // TODO SUB rule new implementation (slower, for correctness check only): build all product nodes, check against every other neighborhood
-
     enum GenerationType {
       NO_OPT = 0,
       UNCON = 1,
@@ -70,8 +67,55 @@ namespace mogli {
     NodeToNodePairVectorMap _reductions;
     NodeToCanonizationMap _g_to_mol1_canons;
     NodeToCanonizationMap _g_to_mol2_canons;
+    NodeToIntMap _comp_map;
+    int _comp_count;
 
   public:
+    Product(const Product& parent, int component)
+      : _mol1(parent._mol1)
+      , _mol2(parent._mol2)
+      , _shell(parent._shell)
+      , _gen_type(parent._gen_type)
+      , _g()
+      , _node_sizes(_g)
+      , _reductions(_g)
+      , _g_to_mol1(_g)
+      , _g_to_mol2(_g)
+      , _g_to_mol1_canons(_g)
+      , _g_to_mol2_canons(_g)
+      , _connectivity(_g)
+      , _comp_map(_g)
+      , _comp_count(0) {
+
+      NodeToNodeMap nodes(_g);
+      for (NodeIt orig(parent._g); orig != lemon::INVALID; ++orig) {
+        if (parent._comp_map[orig] == component) {
+          Node copy = _g.addNode();
+          nodes[copy] = orig;
+          _node_sizes[copy] = parent._node_sizes[orig];
+          _reductions[copy] = parent._reductions[orig];
+          _g_to_mol1[copy] = parent._g_to_mol1[orig];
+          _g_to_mol2[copy] = parent._g_to_mol2[orig];
+          _g_to_mol1_canons[copy] = parent._g_to_mol1_canons[orig];
+          _g_to_mol2_canons[copy] = parent._g_to_mol2_canons[orig];
+        }
+      }
+
+      lemon::ArcLookUp<Graph> arcLookUp(parent._g);
+      for (NodeIt v(_g); v != lemon::INVALID; ++v) {
+        for (NodeIt u = v; u != lemon::INVALID; ++u) {
+          if (v == u)
+            continue;
+
+          Edge e = arcLookUp(nodes[u], nodes[v]);
+          if (e != lemon::INVALID) {
+            _connectivity[_g.addEdge(u,v)] = parent._connectivity[e];
+          }
+        }
+      }
+
+    }
+
     Product(const Molecule& mol1, const Molecule& mol2, int shell, GenerationType gen,
             unsigned int min_core_size, unsigned int max_core_size)
       : _mol1(mol1)
@@ -85,8 +129,9 @@ namespace mogli {
       , _g_to_mol2(_g)
       , _g_to_mol1_canons(_g)
       , _g_to_mol2_canons(_g)
-      , _connectivity(_g) {
-      NodeVectorVector nodes;
+      , _connectivity(_g)
+      , _comp_map(_g)
+      , _comp_count(1) {
       if ((gen == DEG_1 || gen == UNCON_DEG_1) && shell > 0) {
         generate_nodes_deg1();
       } else if ((gen == SUB || gen == UNCON_SUB) && shell > 0) {
@@ -95,9 +140,7 @@ namespace mogli {
         generate_nodes();
       }
       if (gen == UNCON || gen == UNCON_DEG_1 || gen == UNCON_SUB) {
-        NodeToBoolMap connected_nodes(_g);
-        generate_edges(connected_nodes);
-        prune_nodes(connected_nodes, min_core_size, max_core_size);
+        generate_edges_connected(min_core_size, max_core_size);
       } else {
         generate_edges();
       }
@@ -115,8 +158,16 @@ namespace mogli {
       return _g;
     }
 
+    const int get_components() const {
+      return _comp_count;
+    }
+
     const int get_shell() const {
       return _shell;
+    }
+
+    const GenerationType get_gen_type() const {
+      return _gen_type;
     }
 
     const Node& get_mol1_node(const Node& uv) const {
@@ -253,7 +304,7 @@ namespace mogli {
 
     void generate_edges();
 
-    void generate_edges(NodeToBoolMap& connected_nodes);
+    void generate_edges_connected(unsigned int min_core_size, unsigned int max_core_size);
 
     void determine_degrees(const Graph& g, IntToNodeMap& deg_to_node, NodeToIntMap& deg);
 
@@ -268,8 +319,6 @@ namespace mogli {
     void bfs_subgraph(const Molecule &mol, const Node &product_node, const Node &root_node, const IntSet &root_neighbors,
                       const NodeToIntSetMap &neighborhoods, const NodeVector &order1, const NodeVector &order2,
                       ShortToNodeVectorPairMap &current_reductions);
-
-    void prune_nodes(NodeToBoolMap& connected_nodes, unsigned int min_core_size, unsigned int max_core_size);
 
   };
 

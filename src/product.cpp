@@ -320,6 +320,8 @@ void Product::generate_edges() {
   for (NodeIt u1v1(_g); u1v1 != lemon::INVALID; ++u1v1) {
     Node u1 = _g_to_mol1[u1v1];
     Node v1 = _g_to_mol2[u1v1];
+    assert(_mol1.get_color(u1) == _mol2.get_color(v1));
+
     for (NodeIt u2v2 = u1v1; u2v2 != lemon::INVALID; ++ u2v2) {
       if (u1v1 == u2v2)
         continue;
@@ -327,7 +329,7 @@ void Product::generate_edges() {
       Node u2 = _g_to_mol1[u2v2];
       Node v2 = _g_to_mol2[u2v2];
 
-      assert(_mol1.get_color(u1) == _mol2.get_color(v1));
+      assert(_mol1.get_color(u2) == _mol2.get_color(v2));
 
       if (u1 != u2 && v1 != v2) {
         bool u1u2 = arcLookUp1(u1, u2) != lemon::INVALID;
@@ -342,39 +344,92 @@ void Product::generate_edges() {
 
 }
 
-void Product::generate_edges(NodeToBoolMap& connected_nodes) {
+void Product::generate_edges_connected(unsigned int min_core_size, unsigned int max_core_size) {
   const Graph& g1 = _mol1.get_graph();
   const Graph& g2 = _mol2.get_graph();
 
   lemon::ArcLookUp<Graph> arcLookUp1(g1);
   lemon::ArcLookUp<Graph> arcLookUp2(g2);
 
+  // build c-edges
   for (NodeIt u1v1(_g); u1v1 != lemon::INVALID; ++u1v1) {
     Node u1 = _g_to_mol1[u1v1];
     Node v1 = _g_to_mol2[u1v1];
+    assert(_mol1.get_color(u1) == _mol2.get_color(v1));
+
     for (NodeIt u2v2 = u1v1; u2v2 != lemon::INVALID; ++ u2v2) {
       if (u1v1 == u2v2)
         continue;
 
       Node u2 = _g_to_mol1[u2v2];
       Node v2 = _g_to_mol2[u2v2];
-
-      assert(_mol1.get_color(u1) == _mol2.get_color(v1));
+      assert(_mol1.get_color(u2) == _mol2.get_color(v2));
 
       if (u1 != u2 && v1 != v2) {
         bool u1u2 = arcLookUp1(u1, u2) != lemon::INVALID;
         bool v1v2 = arcLookUp2(v1, v2) != lemon::INVALID;
 
-        if (u1u2 == v1v2) {
-          _connectivity[_g.addEdge(u1v1, u2v2)] = u1u2;
-          if (u1u2) {
-            connected_nodes[u1v1] = true;
-            connected_nodes[u2v2] = true;
-          }
+        if (u1u2 == v1v2 && u1u2) {
+          _connectivity[_g.addEdge(u1v1, u2v2)] = true;
         }
       }
     }
   }
+
+  // find connected components
+  NodeToIntMap compMap(_g);
+  int count = lemon::connectedComponents(_g, compMap);
+
+  for (int c = 0; c < count; ++c) {
+    int c_size = 0;
+
+    // get the nodes of the current component
+    NodeVector nodes;
+    for (NodeIt u1v1(_g); u1v1 != lemon::INVALID; ++u1v1) {
+      if (compMap[u1v1] != c)
+        continue;
+
+      c_size += _node_sizes[u1v1];
+      nodes.push_back(u1v1);
+    }
+
+    // delete current component if it is too small
+    if (c_size < min_core_size) {
+      for (int i = 0; i < nodes.size(); ++i) {
+        _g.erase(nodes[i]);
+      }
+      continue;
+    }
+
+    // add d-edges for current component
+    for (int i = 0; i < nodes.size()-1; ++i) {
+      Node u1v1 = nodes[i];
+      Node u1 = _g_to_mol1[u1v1];
+      Node v1 = _g_to_mol2[u1v1];
+      assert(_mol1.get_color(u1) == _mol2.get_color(v1));
+
+      for (int j = i+1; j < nodes.size(); ++j) {
+        Node u2v2 = nodes[j];
+
+        Node u2 = _g_to_mol1[u2v2];
+        Node v2 = _g_to_mol2[u2v2];
+        assert(_mol1.get_color(u2) == _mol2.get_color(v2));
+
+        if (u1 != u2 && v1 != v2) {
+          bool u1u2 = arcLookUp1(u1, u2) != lemon::INVALID;
+          bool v1v2 = arcLookUp2(v1, v2) != lemon::INVALID;
+
+          if (u1u2 == v1v2 && !u1u2) {
+            _connectivity[_g.addEdge(u1v1, u2v2)] = false;
+          }
+        }
+      }
+    }
+
+  }
+
+  // count connected components again (we might have deleted some components)
+  _comp_count = lemon::connectedComponents(_g, _comp_map);
 
 }
 
@@ -385,18 +440,5 @@ Node Product::add_node(const Node &u, const Node &v) {
   return uv;
 }
 
-void Product::prune_nodes(NodeToBoolMap& connected_nodes, unsigned int min_core_size, unsigned int max_core_size) {
-  for (NodeIt u(_g); u != lemon::INVALID;) {
-    Node current = u;
-    ++u;
-    if (_gen_type == UNCON_DEG_1 && !connected_nodes[current]) {
-      if (_reductions[current].size() == 0 ||
-          _node_sizes[current] < min_core_size || _node_sizes[current] > max_core_size) {
-        // TODO mark erased nodes/edges instead of real erase?
-        _g.erase(current);
-      }
-    }
-  }
-}
 
 

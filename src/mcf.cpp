@@ -24,6 +24,8 @@ void mogli::maximal_common_fragments(Molecule &mol1, Molecule &mol2,
                                      int shell, unsigned int min_core_size, unsigned int max_core_size,
                                      Product::GenerationType prod_gen, bool reduce_subgraphs, bool maximum) {
 
+  // TODO new unconnected rule: product graph may consist of several unconnected components
+
   Product product(mol1, mol2, shell, prod_gen, min_core_size, max_core_size);
   BronKerbosch bk(product, min_core_size, max_core_size, maximum);
   bk.run();
