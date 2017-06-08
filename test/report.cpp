@@ -99,7 +99,7 @@ int main(int argc, char** argv) {
   float gen_time = gen_duration.count();
   float runtime = pg_time + bk_time + gen_time;
 
-  std::cout << pg_size << fragments.size() << "\t" << pg_time << "\t" << bk_time << "\t"
+  std::cout << pg_size << "\t" << fragments.size() << "\t" << pg_time << "\t" << bk_time << "\t"
             << gen_time << "\t" << runtime << std::endl;
 
   return 0;
