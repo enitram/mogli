@@ -81,7 +81,7 @@ def main():
     molids = [f[:-4] for f in os.listdir(in_dir) if f.endswith('.lgf')]
 
     with open(os.path.join(out_dir, 'results'+ext), 'w') as fi:
-        fi.write('MATCH\tRUN\tSHELL\tGEN-TYPE\tNODES\tPG-TIME\tBK-TIME\tGEN-TIME\n')
+        fi.write('MATCH\tRUN\tSHELL\tFRAGMENTS\tGEN-TYPE\tNODES\tPG-TIME\tBK-TIME\tGEN-TIME\tRUNTIME\n')
 
     pool = Pool() if proc < 1 else Pool(proc)
     for i in xrange(len(molids)):

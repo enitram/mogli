@@ -94,9 +94,13 @@ int main(int argc, char** argv) {
   if (fragments.size() == 0)
     return 0;
 
+  float pg_time = pg_duration.count();
+  float bk_time = bk_duration.count();
+  float gen_time = gen_duration.count();
+  float runtime = pg_time + bk_time + gen_time;
 
-  std::cout << pg_size << "\t" << pg_duration.count() << "\t"
-            << bk_duration.count() << "\t" << gen_duration.count() << std::endl;
+  std::cout << pg_size << fragments.size() << "\t" << pg_time << "\t" << bk_time << "\t"
+            << gen_time << "\t" << runtime << std::endl;
 
   return 0;
 
