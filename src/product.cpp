@@ -93,6 +93,7 @@ void Product::bfs_subgraph(const Molecule &mol, const Node &product_node, const 
         current_reductions[color].first.push_back(current);
         current_reductions[color].second.push_back(w);
         _reductions[product_node].push_back(std::make_pair(current, w));
+        ++_node_sizes[product_node];
       }
 
       if (depth[current] < _shell) {
@@ -232,7 +233,6 @@ void Product::generate_nodes_deg1() {
 
 }
 
-// FIXME missing: nodes sizes
 void Product::generate_nodes_sub() {
   const Graph& g1 = _mol1.get_graph();
   const Graph& g2 = _mol2.get_graph();

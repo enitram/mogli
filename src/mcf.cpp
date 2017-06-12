@@ -9,6 +9,32 @@ bool less(const std::pair<int, int>& a, const std::pair<int, int>& b) {
   return a.second < b.second;
 }
 
+using namespace mogli;
+
+void run_mcf(Product &product, FragmentVector &fragments,
+             MatchVector &matches_mol1, MatchVector &matches_mol2,
+             int min_core_size, int max_core_size, bool maximum) {
+
+  BronKerbosch bk(product, min_core_size, max_core_size, maximum);
+  bk.run();
+
+  NodeVectorVector cliques = bk.getMaxCliques();
+
+  for (NodeVectorVector::const_iterator it = cliques.begin(), end = cliques.end(); it != end; ++it) {
+    IntToIntMap g_to_mol1, g_to_mol2;
+    boost::shared_ptr<Fragment> fragment = boost::make_shared<Fragment>(product, *it, g_to_mol1, g_to_mol2);
+
+    if (fragment->get_core_atom_count() >= min_core_size && fragment->get_core_atom_count() <= max_core_size) {
+      Match match1(g_to_mol1);
+      Match match2(g_to_mol2);
+
+      fragments.push_back(fragment);
+      matches_mol1.push_back(match1);
+      matches_mol2.push_back(match2);
+    }
+  }
+}
+
 void mogli::maximal_common_fragments(Molecule &mol1, Molecule &mol2,
                                      FragmentVector &fragments,
                                      MatchVector &matches_mol1, MatchVector &matches_mol2,
@@ -24,26 +50,17 @@ void mogli::maximal_common_fragments(Molecule &mol1, Molecule &mol2,
                                      int shell, unsigned int min_core_size, unsigned int max_core_size,
                                      Product::GenerationType prod_gen, bool reduce_subgraphs, bool maximum) {
 
-  // TODO new unconnected rule: product graph may consist of several unconnected components
-
   Product product(mol1, mol2, shell, prod_gen, min_core_size, max_core_size);
-  BronKerbosch bk(product, min_core_size, max_core_size, maximum);
-  bk.run();
 
-  NodeVectorVector cliques = bk.getMaxCliques();
   if (!reduce_subgraphs) {
-
-    for (NodeVectorVector::const_iterator it = cliques.begin(), end = cliques.end(); it != end; ++it) {
-      IntToIntMap g_to_mol1, g_to_mol2;
-      boost::shared_ptr<Fragment> fragment = boost::make_shared<Fragment>(product, *it, g_to_mol1, g_to_mol2);
-
-      if (fragment->get_core_atom_count() >= min_core_size && fragment->get_core_atom_count() <= max_core_size) {
-        Match match1(g_to_mol1);
-        Match match2(g_to_mol2);
-
-        fragments.push_back(fragment);
-        matches_mol1.push_back(match1);
-        matches_mol2.push_back(match2);
+    if (product.get_components() == 1) {
+      run_mcf(product, fragments, matches_mol1, matches_mol2,
+              min_core_size, max_core_size, maximum);
+    } else {
+      for (int c = 0; c < product.get_components(); ++c) {
+        Product component(product, c);
+        run_mcf(component, fragments, matches_mol1, matches_mol2,
+                min_core_size, max_core_size, maximum);
       }
     }
 
@@ -54,30 +71,30 @@ void mogli::maximal_common_fragments(Molecule &mol1, Molecule &mol2,
     MatchVector matches1;
     MatchVector matches2;
 
-    int k = 0;
-    for (NodeVectorVector::const_iterator it = cliques.begin(), end = cliques.end(); it != end; ++it) {
-      IntToIntMap g_to_mol1, g_to_mol2;
-      boost::shared_ptr<Fragment> fragment = boost::make_shared<Fragment>(product, *it, g_to_mol1, g_to_mol2);
-
-      if (fragment->get_core_atom_count() >= min_core_size && fragment->get_core_atom_count() <= max_core_size) {
-        Match match1(g_to_mol1);
-        Match match2(g_to_mol2);
-
-        frags.push_back(fragment);
-        matches1.push_back(match1);
-        matches2.push_back(match2);
-        deque.push_back(std::make_pair(k, fragment->get_atom_count()));
-        ++k;
+    if (product.get_components() == 1) {
+      run_mcf(product, frags, matches1, matches2,
+              min_core_size, max_core_size, maximum);
+    } else {
+      for (int c = 0; c < product.get_components(); ++c) {
+        Product component(product, c);
+        run_mcf(component, frags, matches1, matches2,
+                min_core_size, max_core_size, maximum);
       }
+    }
+
+    int k = 0;
+    for (auto fragment : frags) {
+      deque.push_back(std::make_pair(k, (int) fragment->get_atom_count()));
+      ++k;
     }
 
     assert(k == deque.size());
 
     std::sort(deque.begin(), deque.end(), less);
 
-    fragments.reserve(cliques.size());
-    matches_mol1.reserve(cliques.size());
-    matches_mol2.reserve(cliques.size());
+    fragments.reserve(deque.size());
+    matches_mol1.reserve(deque.size());
+    matches_mol2.reserve(deque.size());
 
     while (deque.size() > 0) {
 

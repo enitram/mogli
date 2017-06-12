@@ -188,13 +188,7 @@ namespace mogli {
 
     // set properties
     const boost::any get_property(Node node, std::string property) const {
-      // FIXME boost::python looses error msg
-      try {
-        return (&_properties.at(property))->operator[](node);
-      } catch (boost::bad_ptr_container_operation) {
-        std::string msg = "Could not find property " + property;
-        BOOST_PTR_CONTAINER_THROW_EXCEPTION(true, boost::bad_ptr_container_operation, msg.c_str());
-      }
+      return (&_properties.at(property))->operator[](node);
     }
 
     void set_property(Node node, std::string property, boost::any value) {
@@ -530,16 +524,16 @@ namespace mogli {
 
     // edges
     out << "@edges\n\t\tlabel\t\n";
-    int k = 0;
     std::vector<std::pair<int, int> > edges;
-    for (EdgeIt e(_g); e != lemon::INVALID; ++e, ++k) {
+    for (EdgeIt e(_g); e != lemon::INVALID; ++e) {
       int u = _node_to_id[_g.u(e)];
       int v = _node_to_id[_g.v(e)];
       edges.push_back(std::make_pair(u, v));
     }
     std::sort(edges.begin(), edges.end(), sort_tuple());
+    int k = 0;
     for (std::pair<int, int> pair : edges) {
-      out << pair.first << "\t" << pair.second << "\t" << k << "\t\n";
+      out << pair.first << "\t" << pair.second << "\t" << k++ << "\t\n";
     }
   }
 

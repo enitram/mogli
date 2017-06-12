@@ -72,26 +72,22 @@ BOOST_PYTHON_MODULE(libmogli) {
         void *storage = ((converter::rvalue_from_python_storage<boost::any> *) data)->storage.bytes;
         new(storage) boost::any(value);
         data->convertible = storage;
-      }
-      if (PyInt_Check(obj_ptr)) {
+      } else if (PyInt_Check(obj_ptr)) {
         int value = extract<int>(obj_ptr);
         void *storage = ((converter::rvalue_from_python_storage<boost::any> *) data)->storage.bytes;
         new(storage) boost::any(value);
         data->convertible = storage;
-      }
-      if (PyLong_Check(obj_ptr)) {
+      } else if (PyLong_Check(obj_ptr)) {
         long value = extract<long>(obj_ptr);
         void *storage = ((converter::rvalue_from_python_storage<boost::any> *) data)->storage.bytes;
         new(storage) boost::any(value);
         data->convertible = storage;
-      }
-      if (PyFloat_Check(obj_ptr)) {
+      } else if (PyFloat_Check(obj_ptr)) {
         double value = extract<double>(obj_ptr);
         void *storage = ((converter::rvalue_from_python_storage<boost::any> *) data)->storage.bytes;
         new(storage) boost::any(value);
         data->convertible = storage;
-      }
-      if (PyString_Check(obj_ptr)) {
+      } else if (PyString_Check(obj_ptr)) {
         std::string value = extract<std::string>(obj_ptr);
         void *storage = ((converter::rvalue_from_python_storage<boost::any> *) data)->storage.bytes;
         new(storage) boost::any(value);
@@ -172,7 +168,8 @@ BOOST_PYTHON_MODULE(libmogli) {
   enum_<Product::GenerationType>("GenerationType")
       .value("NO_OPT", Product::GenerationType::NO_OPT)
       .value("UNCON", Product::GenerationType::UNCON)
-      .value("DEG_1", Product::GenerationType::DEG_1);
+      .value("DEG_1", Product::GenerationType::DEG_1)
+      .value("UNCON_DEG_1", Product::GenerationType::UNCON_DEG_1);
 
   const Node (Molecule::*add_atom1)(std::string) = &Molecule::add_atom;
   const Node (Molecule::*add_atom2)(int, std::string) = &Molecule::add_atom;

@@ -180,11 +180,10 @@ namespace mogli {
             shell_mol_to_g[current] = uv;
             int id = mol.get_id(current);
             shell_ids.insert(id);
-            std::string current_label = boost::any_cast<std::string>(mol.get_property(current, "label2"));
+
             const ShortVector &order1 = canon1.get_node_order();
             const ShortVector &order2 = canon2.get_node_order();
             for (int i = 0; i < order1.size(); ++i) {
-              std::string found_label = boost::any_cast<std::string>(mol.get_property(mol.get_node_by_id(order1[i]), "label2"));
               if (order1[i] == id) {
                 g_to_mol1[_node_to_id[uv]] = id;
                 g_to_mol2[_node_to_id[uv]] = order2[i];
