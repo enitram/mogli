@@ -69,6 +69,7 @@ namespace mogli {
     NodeToCanonizationMap _g_to_mol2_canons;
     NodeToIntMap _comp_map;
     int _comp_count;
+    IntVector _comp_sizes;
 
   public:
     Product(const Product& parent, int component)
@@ -85,7 +86,8 @@ namespace mogli {
       , _g_to_mol2_canons(_g)
       , _connectivity(_g)
       , _comp_map(_g)
-      , _comp_count(0) {
+      , _comp_count(0)
+      , _comp_sizes() {
 
       NodeToNodeMap nodes(_g);
       for (NodeIt orig(parent._g); orig != lemon::INVALID; ++orig) {
@@ -160,6 +162,10 @@ namespace mogli {
 
     const int get_components() const {
       return _comp_count;
+    }
+
+    const int get_component_size(int component) const {
+      return _comp_sizes[component];
     }
 
     const int get_shell() const {

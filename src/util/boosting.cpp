@@ -104,13 +104,17 @@ BOOST_PYTHON_MODULE(libmogli) {
   std::string (*pack_fragment1)(const Fragment&) = &pack_fragment;
   std::string (*pack_fragment2)(const boost::shared_ptr<Fragment>&) = &pack_fragment;
 
+  std::string (*pack_molecule1)(const Molecule&) = &pack_molecule;
+  std::string (*pack_molecule2)(const boost::shared_ptr<Molecule>&) = &pack_molecule;
+
   def("pack_canonization", pack_canonization);
   def("unpack_canonization", unpack_canonization);
   def("hash_canonization", hash_canonization);
   def("pack_fcanonization", pack_fcanonization);
   def("unpack_fcanonization", unpack_fcanonization);
   def("hash_fcanonization", hash_fcanonization);
-  def("pack_molecule", pack_molecule);
+  def("pack_molecule", pack_molecule1);
+  def("pack_molecule", pack_molecule2);
   def("unpack_molecule", unpack_molecule);
   def("pack_fragment", pack_fragment1);
   def("pack_fragment", pack_fragment2);
@@ -196,7 +200,7 @@ BOOST_PYTHON_MODULE(libmogli) {
       .def("add_double_node_prop", &LGFIOConfig::add_double_node_prop, return_internal_reference<>())
       .def("add_string_node_prop", &LGFIOConfig::add_string_node_prop, return_internal_reference<>());
 
-  class_<Molecule, boost::noncopyable>("Molecule", init<>())
+  class_<Molecule, boost::shared_ptr<Molecule>, boost::noncopyable>("Molecule", init<>())
       .def(init<PeriodicTable&>())
       .def("add_atom", add_atom1)
       .def("add_atom", add_atom2)

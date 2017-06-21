@@ -450,11 +450,28 @@ namespace mogli {
   inline void Molecule::write_gml_stream(std::string label, std::ostream &out) {
     assert(out.good());
     out << "graph [\n\tdirected 0\n\tlabel "<< label <<"\n";
+
+    // nodes
+    IntVector nodes;
     for (NodeIt v(_g); v != lemon::INVALID; ++v) {
-      out << "\tnode [\n\t\tid " << _node_to_id[v] << "\n\t\tlabel \"" << _colors[v] << "\"\n\t]\n";
+      int id = _node_to_id[v];
+      nodes.push_back(id);
     }
+    std::sort(nodes.begin(), nodes.end());
+    for (int id : nodes) {
+      out << "\tnode [\n\t\tid " << id << "\n\t\tlabel \"" << _colors[_id_to_node[id]] << "\"\n\t]\n";
+    }
+
+    // edges
+    std::vector<std::pair<int, int> > edges;
     for (EdgeIt e(_g); e != lemon::INVALID; ++e) {
-      out << "\tedge [\n\t\tsource " << _node_to_id[_g.u(e)] << "\n\t\ttarget " << _node_to_id[_g.v(e)]
+      int u = _node_to_id[_g.u(e)];
+      int v = _node_to_id[_g.v(e)];
+      edges.push_back(std::make_pair(u, v));
+    }
+    std::sort(edges.begin(), edges.end(), sort_tuple());
+    for (std::pair<int, int> pair : edges) {
+      out << "\tedge [\n\t\tsource " << pair.first << "\n\t\ttarget " << pair.second
           << "\n\t\tlabel \"-\"\n\t]\n";
     }
     out << "]\n\n";

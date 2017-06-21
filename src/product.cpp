@@ -381,20 +381,21 @@ void Product::generate_edges_connected(unsigned int min_core_size, unsigned int 
   int count = lemon::connectedComponents(_g, compMap);
 
   for (int c = 0; c < count; ++c) {
-    int c_size = 0;
 
+    int comp_size = 0;
     // get the nodes of the current component
     NodeVector nodes;
     for (NodeIt u1v1(_g); u1v1 != lemon::INVALID; ++u1v1) {
       if (compMap[u1v1] != c)
         continue;
 
-      c_size += _node_sizes[u1v1];
+      comp_size += _node_sizes[u1v1];
       nodes.push_back(u1v1);
     }
+    _comp_sizes.push_back(comp_size);
 
     // delete current component if it is too small
-    if (c_size < min_core_size) {
+    if (_comp_sizes[c] < min_core_size) {
       for (int i = 0; i < nodes.size(); ++i) {
         _g.erase(nodes[i]);
       }

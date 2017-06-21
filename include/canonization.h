@@ -6,7 +6,6 @@
 #define MOGLI_CANONIZATION_H
 
 #include "molecule.h"
-//#include "fragment.h"
 #include <nauty.h>
 #include <malloc.h>
 #include <boost/dynamic_bitset.hpp>

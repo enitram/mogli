@@ -316,6 +316,10 @@ namespace mogli {
     return buffer.str();
   }
 
+  std::string pack_molecule(const boost::shared_ptr<Molecule> &obj) {
+    return pack_molecule(*obj);
+  }
+
   void unpack_molecule(std::string str, Molecule &obj) {
     unpacked msg_unpacked = unpack(str.data(), str.size());
     object msg_object = msg_unpacked.get();

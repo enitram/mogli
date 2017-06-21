@@ -3,6 +3,7 @@
 //
 
 #include <sublad.h>
+#include <numeric>
 #include "../include/mcf.h"
 
 bool less(const std::pair<int, int>& a, const std::pair<int, int>& b) {
@@ -10,6 +11,21 @@ bool less(const std::pair<int, int>& a, const std::pair<int, int>& b) {
 }
 
 using namespace mogli;
+
+void append_fragments(Product &product, NodeVectorVector& cliques, FragmentVector &fragments,
+                      MatchVector &matches_mol1, MatchVector &matches_mol2) {
+  for (NodeVectorVector::const_iterator it = cliques.begin(), end = cliques.end(); it != end; ++it) {
+    IntToIntMap g_to_mol1, g_to_mol2;
+    boost::shared_ptr<Fragment> fragment = boost::make_shared<Fragment>(product, *it, g_to_mol1, g_to_mol2);
+
+    Match match1(g_to_mol1);
+    Match match2(g_to_mol2);
+
+    fragments.push_back(fragment);
+    matches_mol1.push_back(match1);
+    matches_mol2.push_back(match2);
+  }
+}
 
 void run_mcf(Product &product, FragmentVector &fragments,
              MatchVector &matches_mol1, MatchVector &matches_mol2,
@@ -20,17 +36,19 @@ void run_mcf(Product &product, FragmentVector &fragments,
 
   NodeVectorVector cliques = bk.getMaxCliques();
 
-  for (NodeVectorVector::const_iterator it = cliques.begin(), end = cliques.end(); it != end; ++it) {
-    IntToIntMap g_to_mol1, g_to_mol2;
-    boost::shared_ptr<Fragment> fragment = boost::make_shared<Fragment>(product, *it, g_to_mol1, g_to_mol2);
+  if (!maximum) {
+    append_fragments(product, cliques, fragments, matches_mol1, matches_mol2);
+  } else {
+    int current_max = fragments.size() > 0 ? fragments[0]->get_core_atom_count() : 0;
+    int cliques_size = cliques.size() > 0 ? product.get_clique_size(cliques[0]) : 0;
 
-    if (fragment->get_core_atom_count() >= min_core_size && fragment->get_core_atom_count() <= max_core_size) {
-      Match match1(g_to_mol1);
-      Match match2(g_to_mol2);
-
-      fragments.push_back(fragment);
-      matches_mol1.push_back(match1);
-      matches_mol2.push_back(match2);
+    if (cliques_size > current_max) {
+      fragments.clear();
+      matches_mol1.clear();
+      matches_mol2.clear();
+    }
+    if (cliques_size >= current_max) {
+      append_fragments(product, cliques, fragments, matches_mol1, matches_mol2);
     }
   }
 }
@@ -56,8 +74,24 @@ void mogli::maximal_common_fragments(Molecule &mol1, Molecule &mol2,
     if (product.get_components() == 1) {
       run_mcf(product, fragments, matches_mol1, matches_mol2,
               min_core_size, max_core_size, maximum);
-    } else {
+    } else if (!maximum) {
       for (int c = 0; c < product.get_components(); ++c) {
+        Product component(product, c);
+        run_mcf(component, fragments, matches_mol1, matches_mol2,
+                min_core_size, max_core_size, maximum);
+      }
+    } else {
+      // sort components descending by size
+      std::vector<int> idx(product.get_components());
+      std::iota(idx.begin(), idx.end(), 0);
+      sort(idx.begin(), idx.end(), [&product](int i1, int i2) {return product.get_component_size(i1)
+                                                                            > product.get_component_size(i2);});
+
+      for (int c : idx) {
+        // break if component smaller than current max fragment
+        int current_max = fragments.size() > 0 ? fragments[0]->get_core_atom_count() : 0;
+        if (product.get_component_size(c) < current_max)
+          break;
         Product component(product, c);
         run_mcf(component, fragments, matches_mol1, matches_mol2,
                 min_core_size, max_core_size, maximum);
@@ -74,8 +108,24 @@ void mogli::maximal_common_fragments(Molecule &mol1, Molecule &mol2,
     if (product.get_components() == 1) {
       run_mcf(product, frags, matches1, matches2,
               min_core_size, max_core_size, maximum);
-    } else {
+    } else if (!maximum) {
       for (int c = 0; c < product.get_components(); ++c) {
+        Product component(product, c);
+        run_mcf(component, frags, matches1, matches2,
+                min_core_size, max_core_size, maximum);
+      }
+    } else {
+      // sort components descending by size
+      std::vector<int> idx(product.get_components());
+      std::iota(idx.begin(), idx.end(), 0);
+      sort(idx.begin(), idx.end(), [&product](int i1, int i2) {return product.get_component_size(i1)
+                                                                      > product.get_component_size(i2);});
+
+      for (int c : idx) {
+        // break if component smaller than current max fragment
+        int current_max = frags.size() > 0 ? frags[0]->get_core_atom_count() : 0;
+        if (product.get_component_size(c) < current_max)
+          break;
         Product component(product, c);
         run_mcf(component, frags, matches1, matches2,
                 min_core_size, max_core_size, maximum);
