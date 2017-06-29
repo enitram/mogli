@@ -287,7 +287,7 @@ namespace mogli {
   std::string hash_canonization(const Canonization &obj) {
     std::stringstream buffer;
     packer<std::stringstream> p(buffer);
-    p.pack_array(2).pack(obj.get_colors()).pack(obj.get_canonization());
+    p.pack_array(3).pack(obj.get_colors()).pack(obj.get_canonization()).pack(obj.get_node_order());
     return buffer.str();
   }
 
