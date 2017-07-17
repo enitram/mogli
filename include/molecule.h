@@ -653,17 +653,17 @@ namespace mogli {
 //          ofs2 << "]" << std::endl;
 //        }
 //      }
-
-      // edges
-      for (EdgeIt e(bctree); e != lemon::INVALID; ++e) {
-        Node u = bctree.u(e);
-        Node v = bctree.v(e);
-        if ((subtree_map1[u] || subtree_map2[u]) && (subtree_map1[v] || subtree_map2[v]))
-          ofs2 << bctree.id(u) << " -- " << bctree.id(v) << std::endl;
-      }
-
-      ofs2 << "}" << std::endl;
-      ofs2.close();
+//
+//      // edges
+//      for (EdgeIt e(bctree); e != lemon::INVALID; ++e) {
+//        Node u = bctree.u(e);
+//        Node v = bctree.v(e);
+//        if ((subtree_map1[u] || subtree_map2[u]) && (subtree_map1[v] || subtree_map2[v]))
+//          ofs2 << bctree.id(u) << " -- " << bctree.id(v) << std::endl;
+//      }
+//
+//      ofs2 << "}" << std::endl;
+//      ofs2.close();
 
       ++k;
 
