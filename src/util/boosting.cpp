@@ -221,6 +221,7 @@ BOOST_PYTHON_MODULE(libmogli) {
       .def("get_element", &Molecule::get_element)
       .def("is_connected", &Molecule::is_connected)
       .def("get_connected_components", &Molecule::get_connected_components)
+      .def("split", &Molecule::split)
       .def("is_isomorphic", &Molecule::is_isomorphic)
       .def("write_lgf", write_lgf1)
       .def("write_lgf", write_lgf2)

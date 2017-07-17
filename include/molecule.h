@@ -18,12 +18,18 @@
 #include <boost/ptr_container/exception.hpp>
 #include <boost/any.hpp>
 #include <boost/smart_ptr/make_shared.hpp>
+#include <queue>
+#include <boost/ptr_container/ptr_vector.hpp>
+#include <cmath>
 #include "periodictable.h"
 #include "types.h"
 
 namespace mogli {
 
   typedef typename Graph::template NodeMap<int> NodeToIntMap;
+  typedef typename Graph::template EdgeMap<int> EdgeToIntMap;
+  typedef typename Graph::template EdgeMap<bool> EdgeToBoolMap;
+  typedef lemon::SubGraph<Graph, NodeToBoolMap, EdgeToBoolMap> SubGraph;
 
   class LGFIOConfig {
 
@@ -123,6 +129,13 @@ namespace mogli {
     }
   };
 
+  template <typename T1, typename T2>
+  struct more_first {
+    bool operator() (const std::pair<T1, T2>& x,
+                     const std::pair<T1, T2>& y) const {
+      return x.first > y.first;
+    }
+  };
 
   class Molecule {
 
@@ -338,7 +351,7 @@ namespace mogli {
       lemon::ArcLookUp<Graph> arcLookUp(_g);
       for (int i = 0; i < count; ++i) {
         for (NodeIt u(components[i]->get_graph()); u != lemon::INVALID; ++u) {
-          for (NodeIt v(components[i]->get_graph()); v != lemon::INVALID; ++v) {
+          for (NodeIt v = u; v != lemon::INVALID; ++v) {
             if (u == v)
               continue;
             if (arcLookUp(_id_to_node[components[i]->get_id(u)], _id_to_node[components[i]->get_id(v)]) != lemon::INVALID) {
@@ -349,6 +362,479 @@ namespace mogli {
       }
 
     }
+
+    int split(int max_size, int shell, std::vector<boost::shared_ptr<Molecule> > &components) {
+      // get the biconnected components of the graph
+      EdgeToIntMap biConnected(_g);
+      int bc_count = lemon::biNodeConnectedComponents(_g, biConnected);
+
+      if (bc_count < 2) {
+        return bc_count;
+      }
+
+      // get the node sets of the biconnected components
+      boost::ptr_vector<std::set<Node> > nodes;
+      for (int i = 0; i < bc_count; ++i) {
+        nodes.push_back(new std::set<Node> ());
+      }
+      for (EdgeIt e(_g); e != lemon::INVALID; ++e) {
+        int bc_num = biConnected[e];
+        nodes.at(bc_num).insert(_g.u(e));
+        nodes.at(bc_num).insert(_g.v(e));
+      }
+
+      // build bc tree
+      Graph bctree;
+      NodeToIntMap weights(bctree);
+      NodeToIntMap bc_2_comp(bctree);
+      IntToNodeMap comp_2_bc;
+      IntToNodeMap cut_2_bc;
+      IntSet cut_ids;
+
+      for (int i = 0; i < nodes.size(); ++i) {
+        Node u = bctree.addNode();
+        bc_2_comp[u] = i;
+        comp_2_bc[i] = u;
+        weights[u] = static_cast<int>(nodes.at(i).size());
+      }
+
+      lemon::ArcLookUp<Graph> arcsBC(bctree);
+      for (int i = 0; i < nodes.size()-1; ++i) {
+        for (int j = i+1; j < nodes.size(); ++j) {
+          std::vector<Node> intersection;
+          std::set<Node> &c1 = nodes.at(i);
+          std::set<Node> &c2 = nodes.at(j);
+
+          std::set_intersection(c1.begin(), c1.end(),
+                                c2.begin(), c2.end(),
+                                std::back_inserter(intersection));
+
+          if (intersection.size() > 0) {
+            int cut_id = _node_to_id[intersection.front()];
+            if (cut_ids.find(cut_id) == cut_ids.end()) {
+              Node cut = bctree.addNode();
+              bc_2_comp[cut] = -_node_to_id[intersection.front()]-1;
+              weights[cut] = 1;
+              cut_2_bc[cut_id] = cut;
+              cut_ids.insert(cut_id);
+              if (arcsBC(comp_2_bc[i], cut) == lemon::INVALID) {
+                bctree.addEdge(comp_2_bc[i], cut);
+                arcsBC.refresh(comp_2_bc[i]);
+              }
+              if (arcsBC(comp_2_bc[j], cut) == lemon::INVALID) {
+                bctree.addEdge(comp_2_bc[j], cut);
+                arcsBC.refresh(comp_2_bc[j]);
+              }
+            } else {
+              Node cut = cut_2_bc[cut_id];
+              if (arcsBC(comp_2_bc[i], cut) == lemon::INVALID) {
+                bctree.addEdge(comp_2_bc[i], cut);
+                arcsBC.refresh(comp_2_bc[i]);
+              }
+              if (arcsBC(comp_2_bc[j], cut) == lemon::INVALID) {
+                bctree.addEdge(comp_2_bc[j], cut);
+                arcsBC.refresh(comp_2_bc[j]);
+              }
+            }
+          }
+
+        }
+      }
+
+      NodeToBoolMap subtree_map(bctree, true);
+      boost::shared_ptr<NodeToBoolMap> subgraph_map = boost::make_shared<NodeToBoolMap>(_g, true);
+      boost::shared_ptr<IntSet> shell_ids = boost::make_shared<IntSet>();
+      boost::shared_ptr<NodeToIntMap> shell_min_depth = boost::make_shared<NodeToIntMap>(_g, 0);
+
+      std::vector<boost::shared_ptr<NodeToBoolMap> > partitions;
+      std::vector<boost::shared_ptr<IntSet> > partitions_shell_ids;
+      std::vector<boost::shared_ptr<NodeToIntMap> > partitions_shell_min_depth;
+
+      balanced_cut(_g, subgraph_map, shell_ids, shell_min_depth,
+                   bc_2_comp, nodes,
+                   bctree, subtree_map, weights,
+                   max_size, shell,
+                   partitions, partitions_shell_ids, partitions_shell_min_depth, 0);
+
+      assert(partitions.size() == partitions_shell_ids.size());
+      assert(partitions.size() == partitions_shell_min_depth.size());
+
+      for (int i = 0; i < partitions.size(); ++i) {
+
+        boost::shared_ptr<Molecule> submol = boost::make_shared<Molecule>();
+        lemon::ArcLookUp<Graph> arcLookUp(_g);
+        NodeToBoolMap core_nodes(_g);
+        // copy core nodes and properties
+        for (NodeIt v(_g); v != lemon::INVALID; ++v) {
+          if (partitions.at(i)->operator[](v)) {
+            core_nodes[v] = true;
+            Node cv = submol->add_atom(_node_to_id[v], _colors[v]);
+            for (StringToAnyTypeMapMap::const_iterator it = _properties.begin(), end = _properties.end(); it != end; ++it) {
+              submol->set_property(cv, it->first, get_property(v, it->first));
+            }
+          }
+        }
+
+        // copy shell nodes and properties
+        for (int id : *partitions_shell_ids.at(i)) {
+          Node v = _id_to_node.at(id);
+          Node cv = submol->add_atom(id, _colors[v]);
+          for (StringToAnyTypeMapMap::const_iterator it = _properties.begin(), end = _properties.end(); it != end; ++it) {
+            submol->set_property(cv, it->first, get_property(v, it->first));
+          }
+        }
+
+        // copy edges
+        for (NodeIt u(submol->get_graph()); u != lemon::INVALID; ++u) {
+          for (NodeIt v = u; v != lemon::INVALID; ++v) {
+            if (u == v)
+              continue;
+            Node src_u = _id_to_node.at(submol->get_id(u));
+            Node src_v = _id_to_node.at(submol->get_id(v));
+
+            // if both nodes are shell nodes with maximal depth, there can't be an edge between them
+            if (!core_nodes[src_u] && !core_nodes[src_v] &&
+                partitions_shell_min_depth.at(i)->operator[](src_u) == shell &&
+                partitions_shell_min_depth.at(i)->operator[](src_v) == shell)
+              continue;
+
+            if (arcLookUp(src_u, src_v) != lemon::INVALID) {
+              submol->add_edge(u,v);
+            }
+          }
+        }
+
+        components.push_back(submol);
+
+      }
+
+//      std::ofstream ofs("/home/martin/workspace/mogli/bctree.dot", std::ofstream::out);
+//      ofs << "graph G {" << std::endl
+//          << "\toverlap=scale" << std::endl;
+//
+//      // nodes
+//      for (NodeIt v(bctree); v != lemon::INVALID; ++v) {
+//        int ci = bc_2_comp[v];
+//        if (ci < 0) {
+//          ofs << "\t" << bctree.id(v);
+//          ofs << "[label=\"" << -ci-1 << "\"]";
+//          ofs << std::endl;
+//        } else {
+//          ofs << "\t" << bctree.id(v);
+//          ofs << "[label=\"(";
+//          for (Node v : nodes[ci]) {
+//            ofs << _node_to_id[v] << ",";
+//          }
+//          ofs << ")\"]";
+//          ofs << std::endl;
+//        }
+//
+//      }
+//
+//      // edges
+//      for (EdgeIt e(bctree); e != lemon::INVALID; ++e) {
+//        ofs << bctree.id(bctree.u(e)) << " -- " << bctree.id(bctree.v(e)) << std::endl;
+////            << "[label=\"" << weightMap[e] << "\"]" << std::endl;
+//      }
+//
+//      ofs << "}" << std::endl;
+//      ofs.close();
+
+      return static_cast<int>(components.size());
+
+    }
+
+  protected:
+
+    void balanced_cut(Graph& graph,
+                      boost::shared_ptr<NodeToBoolMap> subgraph_map,
+                      boost::shared_ptr<IntSet> shell_ids,
+                      boost::shared_ptr<NodeToIntMap> shell_min_depth,
+                      NodeToIntMap& bctree_2_bicon_comp,
+                      boost::ptr_vector<std::set<Node> > biconnected_nodes,
+                      Graph& bctree,
+                      NodeToBoolMap& subtree_map,
+                      NodeToIntMap &bctree_node_weights,
+                      int max_size, int shell,
+                      std::vector<boost::shared_ptr<NodeToBoolMap> > &partitions,
+                      std::vector<boost::shared_ptr<IntSet> > &partitions_shell_ids,
+                      std::vector<boost::shared_ptr<NodeToIntMap> > &partitions_shell_min_depth, int k) {
+
+      EdgeToBoolMap subgraph_edge_map(graph, true), subtree_edge_map(bctree, true);
+      boost::shared_ptr<SubGraph> subgraph = boost::make_shared<SubGraph>(graph, *subgraph_map, subgraph_edge_map);
+      SubGraph subtree(bctree, subtree_map, subtree_edge_map);
+
+      int N = lemon::countNodes(*subgraph);
+      int Nblocks = 0;
+      for (SubGraph::NodeIt v(subtree); v != lemon::INVALID; ++v) {
+        if (bctree_2_bicon_comp[v] >= 0) {
+          ++Nblocks;
+        }
+      }
+
+      if (N + shell_ids->size() <= max_size || Nblocks < 2) {
+        partitions_shell_ids.push_back(shell_ids);
+        partitions_shell_min_depth.push_back(shell_min_depth);
+        partitions.push_back(subgraph_map);
+        return;
+      }
+
+      Edge cut_edge  = get_cut_edge(subtree, bctree_node_weights, N);
+      assert(cut_edge != lemon::INVALID);
+
+      subtree_edge_map[cut_edge] = false;
+      SubGraph::NodeMap<int> bctree_components(subtree);
+      int count = lemon::connectedComponents(subtree, bctree_components);
+      assert(count == 2);
+
+      boost::shared_ptr<IntSet> shell_ids1 = boost::make_shared<IntSet>();
+      boost::shared_ptr<IntSet> shell_ids2 = boost::make_shared<IntSet>();
+
+      boost::shared_ptr<NodeToIntMap> shell_min_depth1 = boost::make_shared<NodeToIntMap>(graph, 0);
+      boost::shared_ptr<NodeToIntMap> shell_min_depth2 = boost::make_shared<NodeToIntMap>(graph, 0);
+
+      boost::shared_ptr<NodeToBoolMap> subgraph_map1 = boost::make_shared<NodeToBoolMap>(graph, false);
+      boost::shared_ptr<NodeToBoolMap> subgraph_map2 = boost::make_shared<NodeToBoolMap>(graph, false);
+      NodeToBoolMap subtree_map1(bctree, false), subtree_map2(bctree, false);
+
+      get_subgraph(subtree, bctree_components, bctree_2_bicon_comp, biconnected_nodes, 0, subgraph_map1, subtree_map1);
+      get_subgraph(subtree, bctree_components, bctree_2_bicon_comp, biconnected_nodes, 1, subgraph_map2, subtree_map2);
+
+      find_shell_nodes(graph, subgraph_map1, shell, shell_ids1, shell_min_depth1);
+      find_shell_nodes(graph, subgraph_map2, shell, shell_ids2, shell_min_depth2);
+
+//      std::ofstream ofs("/home/martin/workspace/mogli/partitions/partition_graph_" + std::to_string(k) + ".dot", std::ofstream::out);
+//
+//      ofs << "graph G {" << std::endl
+//          << "\toverlap=scale" << std::endl;
+//      // nodes
+//      for (NodeIt v(graph); v != lemon::INVALID; ++v) {
+//        if (subgraph_map1->operator[](v) || subgraph_map2->operator[](v)) {
+//          ofs << "\t" << graph.id(v);
+//          ofs << "[label=\"" << _node_to_id[v] << "\",style=filled,fillcolor=";
+//          if (subgraph_map1->operator[](v) && subgraph_map2->operator[](v)) {
+//            ofs << "\"lightblue;0.5:salmon\"";
+//          } else if (subgraph_map1->operator[](v)) {
+//            ofs << "\"lightblue\"";
+//          } else {
+//            ofs << "\"salmon\"";
+//          }
+//          ofs << "]" << std::endl;
+//        }
+//      }
+//
+//      // edges
+//      for (EdgeIt e(graph); e != lemon::INVALID; ++e) {
+//        Node u = graph.u(e);
+//        Node v = graph.v(e);
+//        if ((subgraph_map1->operator[](u) || subgraph_map2->operator[](u))
+//            && (subgraph_map1->operator[](v) || subgraph_map2->operator[](v)))
+//          ofs << graph.id(u) << " -- " << graph.id(v) << std::endl;
+//      }
+//
+//      ofs << "}" << std::endl;
+//      ofs.close();
+//
+//      std::ofstream ofs2("/home/martin/workspace/mogli/partitions/partition_tree_" + std::to_string(k) + ".dot", std::ofstream::out);
+//      ofs2 << "graph G {" << std::endl
+//          << "\toverlap=scale" << std::endl;
+//      // nodes
+//      for (NodeIt v(bctree); v != lemon::INVALID; ++v) {
+//        if (subtree_map1[v] || subtree_map2[v]) {
+//          ofs2 << "\t" << bctree.id(v);
+//          ofs2 << "[label=\"" << bctree.id(v) << "\",style=filled,fillcolor=";
+//          if (subtree_map1[v] && subtree_map2[v]) {
+//            ofs2 << "\"lightblue;0.5:salmon\"";
+//          } else if (subtree_map1[v]) {
+//            ofs2 << "\"lightblue\"";
+//          } else {
+//            ofs2 << "\"salmon\"";
+//          }
+//          ofs2 << "]" << std::endl;
+//        }
+//      }
+
+      // edges
+      for (EdgeIt e(bctree); e != lemon::INVALID; ++e) {
+        Node u = bctree.u(e);
+        Node v = bctree.v(e);
+        if ((subtree_map1[u] || subtree_map2[u]) && (subtree_map1[v] || subtree_map2[v]))
+          ofs2 << bctree.id(u) << " -- " << bctree.id(v) << std::endl;
+      }
+
+      ofs2 << "}" << std::endl;
+      ofs2.close();
+
+      ++k;
+
+      balanced_cut(graph, subgraph_map1, shell_ids1, shell_min_depth1,
+                   bctree_2_bicon_comp, biconnected_nodes,
+                   bctree, subtree_map1, bctree_node_weights,
+                   max_size, shell,
+                   partitions, partitions_shell_ids, partitions_shell_min_depth, k);
+
+      balanced_cut(graph, subgraph_map2, shell_ids2, shell_min_depth2,
+                   bctree_2_bicon_comp, biconnected_nodes,
+                   bctree, subtree_map2, bctree_node_weights,
+                   max_size, shell,
+                   partitions, partitions_shell_ids, partitions_shell_min_depth, k);
+    }
+
+    void get_subgraph(SubGraph& bctree,
+                      NodeToIntMap& bctree_components,
+                      NodeToIntMap& bctree_2_bicon_comp,
+                      boost::ptr_vector<std::set<Node> > biconnected_nodes,
+                      int component,
+                      boost::shared_ptr<NodeToBoolMap> subgraph_map,
+                      NodeToBoolMap& subtree_map) {
+
+      // make union of nodes represented by block nodes in the bc-tree
+      for (SubGraph::NodeIt bc_v(bctree); bc_v != lemon::INVALID; ++bc_v) {
+        int bc_comp = bctree_2_bicon_comp[bc_v];
+
+        if (bctree_components[bc_v] == component) {
+          subtree_map[bc_v] = true;
+          if (bc_comp >= 0) {
+            for (Node v : biconnected_nodes[bc_comp]) {
+              subgraph_map->operator[](v) = true;
+            }
+          }
+        }
+      }
+    }
+
+    void find_shell_nodes(Graph& graph,
+                          boost::shared_ptr<NodeToBoolMap> subgraph_map,
+                          int shell,
+                          boost::shared_ptr<IntSet> shell_ids,
+                          boost::shared_ptr<NodeToIntMap> shell_min_depth) {
+
+      // find shell nodes
+      for (NodeIt v(graph); v!= lemon::INVALID; ++v) {
+        if (subgraph_map->operator[](v)) {
+          bfs_split_shell(graph, subgraph_map, v, shell, shell_ids, shell_min_depth);
+        }
+      }
+    }
+
+    void bfs_split_shell(Graph& graph,
+                         boost::shared_ptr<NodeToBoolMap> core_nodes,
+                         const Node &v, int shell,
+                         boost::shared_ptr<IntSet> shell_ids,
+                         boost::shared_ptr<NodeToIntMap> shell_min_depth) {
+      NodeToIntMap depth(graph, 0);
+      NodeToBoolMap visited(graph, false);
+      std::deque<Node> queue;
+
+      queue.push_back(v);
+      visited[v] = true;
+      while (queue.size() > 0) {
+        Node &current = queue.front();
+        // if current node is not a core node
+        if (!core_nodes->operator[](current)) {
+          // have we seen the node before?
+          int id = _node_to_id[current];
+          if (shell_ids->count(id) == 0) {
+            shell_ids->insert(id);
+          }
+          // minimal distance of this shell node to the nearest core node
+          if (shell_min_depth->operator[](current) > 0) {
+            shell_min_depth->operator[](current) = std::min(shell_min_depth->operator[](current), depth[current]);
+          } else {
+            shell_min_depth->operator[](current) = depth[current];
+          }
+
+        }
+
+        // breadth-first-search
+        if (depth[current] < shell) {
+          for (IncEdgeIt e(graph, current); e != lemon::INVALID; ++e) {
+            Node w = graph.oppositeNode(current, e);
+            if (!visited[w]) {
+              visited[w] = true;
+              depth[w] = depth[current]+1;
+              queue.push_back(w);
+            }
+          }
+        }
+        queue.pop_front();
+      }
+    }
+
+    Edge get_cut_edge(SubGraph& bctree, NodeToIntMap &node_weights, int N) {
+      SubGraph::NodeMap<int> weight_sum(bctree);
+      SubGraph::NodeMap<int> unmarked(bctree);
+      SubGraph::EdgeMap<bool> marked(bctree);
+
+      int target = (int) std::ceil((double) N / 2.0);
+      int min_dist = std::numeric_limits<int>::max();
+      Edge cut_edge = lemon::INVALID;
+
+      boost::ptr_map<int, std::set<Node> > unmarked2node;
+
+      for (SubGraph::NodeIt v(bctree); v != lemon::INVALID; ++v) {
+        int deg = 0;
+        for (SubGraph::IncEdgeIt e(bctree, v); e != lemon::INVALID; ++e) {
+          ++deg;
+        }
+
+        if (unmarked2node.find(deg) == unmarked2node.end()) {
+          unmarked2node[deg] = std::set<Node> ();
+        }
+        unmarked2node[deg].insert(v);
+        unmarked[v] = deg;
+        weight_sum[v] = 0;
+      }
+
+      for (SubGraph::EdgeIt e(bctree); e != lemon::INVALID; ++e) {
+        marked[e] = false;
+      }
+
+      while (unmarked2node[1].size() > 0) {
+
+        std::vector<Node> copy;
+        std::copy(unmarked2node[1].begin(),
+                  unmarked2node[1].end(),
+                  std::back_inserter(copy));
+
+        for (Node u : copy) {
+          unmarked2node[1].erase(u);
+          for (SubGraph::IncEdgeIt e(bctree, u); e != lemon::INVALID; ++e) {
+            if (!marked[e]) {
+              // TODO need to count shell nodes
+              int weight = node_weights[u] + weight_sum[u];
+              int dist = std::min(std::abs(target-weight), std::abs(target-(N-weight+1)));
+              if (dist < min_dist) {
+                min_dist = dist;
+                cut_edge = e;
+              }
+
+              marked[e] = true;
+
+              Node v = bctree.oppositeNode(u, e);
+              int num_unmarked = unmarked[v];
+              unmarked2node[num_unmarked].erase(v);
+
+              unmarked[v] = --num_unmarked;
+              if (unmarked2node.find(num_unmarked) == unmarked2node.end()) {
+                unmarked2node[num_unmarked] = std::set<Node>();
+              }
+              unmarked2node[num_unmarked].insert(v);
+
+              weight_sum[v] = weight_sum[v] + weight - 1;
+
+              break;
+            }
+          }
+
+        }
+      }
+
+      return cut_edge;
+
+    }
+
+  public:
 
     const bool is_isomorphic(Molecule &other) const;
 
