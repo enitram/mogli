@@ -402,61 +402,6 @@ namespace mogli {
 
       }
 
-//      PeriodicTable& iacm = PeriodicTable::get_default();
-//
-//      std::string dir = "/home/martin/workspace/eXamine/data_taxol_" + std::to_string(shell);
-//
-//      system(("mkdir -p " + dir).c_str());
-//
-//      std::ofstream ofs(dir + "/atoms.nodes", std::ofstream::out);
-//      ofs << "Identifier\tScore\tSymbol\tURL" << std::endl;
-//      // nodes
-//      for (NodeIt v(_g); v != lemon::INVALID; ++v) {
-//        ofs << _node_to_id[v] << "\t0\t" << iacm.get_element(get_color(v)) << "\tabout:blank" << std::endl;
-//      }
-//      ofs.close();
-//
-//      std::ofstream ofs2(dir + "/bonds.links", std::ofstream::out);
-//      // edges
-//      for (EdgeIt e(_g); e != lemon::INVALID; ++e) {
-//        Node u = _g.u(e);
-//        Node v = _g.v(e);
-//
-//        ofs2 << _node_to_id[u] << "\t" << _node_to_id[v] << std::endl;
-//      }
-//      ofs2.close();
-//
-//      std::ofstream ofs3(dir + "/partitions.annotations", std::ofstream::out);
-//      ofs3 << "Identifier\tCategory\tScore\tSymbol\tURL" << std::endl;
-//      // groups
-//      for (int i = 0; i < partitions.size(); ++i) {
-//        ofs3 << "p" << i << "\tPartition\t0\tPartition " << i << "\tabout:blank" << std::endl;
-//      }
-//      ofs3.close();
-//
-//      std::ofstream ofs4(dir + "/partitions.links", std::ofstream::out);
-//      // groups
-//      for (NodeIt v(_g); v != lemon::INVALID; ++v) {
-//        ofs4 << _node_to_id[v];
-//        for (int i = 0; i < partitions.size(); ++i) {
-//          if (partitions[i]->operator[](v)) {
-//            ofs4 << "\tp" << i;
-//          }
-//        }
-//        ofs4 << std::endl;
-//      }
-//      ofs4.close();
-//
-//      std::ofstream ofs5(dir + "/modules.annotations", std::ofstream::out);
-//      ofs5 << "Identifier\tCategory\tScore\tSymbol\tURL" << std::endl << "small\tModule\t1\tSmall\tabout:blank" << std::endl;
-//      ofs5.close();
-//
-//      std::ofstream ofs6(dir + "/modules.links", std::ofstream::out);
-//      for (NodeIt v(_g); v!= lemon::INVALID; ++v) {
-//        ofs6 << "small\t" << _node_to_id[v] << std::endl;
-//      }
-//      ofs6.close();
-
       return static_cast<int>(components.size());
 
     }
