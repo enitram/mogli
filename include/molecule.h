@@ -302,7 +302,7 @@ namespace mogli {
 
     // I/O
 
-    virtual void write_gml_stream(std::string label, std::ostream &out);
+    virtual void write_gml_stream(std::string label, std::ostream &out, bool raw = false);
 
     virtual std::string write_gml(std::string label);
 
@@ -426,9 +426,13 @@ namespace mogli {
       EdgeToIntSetMap bctree_shell_ids_u(bctree), bctree_shell_ids_v(bctree);
       boost::ptr_vector<std::set<Node> > biconnected_nodes;
 
-      get_bctree(subgraph, bctree,
+      int bc_count = get_bctree(subgraph, bctree,
                  bctree_node_weights, bctree_2_bicon_comp, biconnected_nodes,
                  bctree_shell_ids_u, bctree_shell_ids_v, shell);
+      if (bc_count == 0) {
+        partitions.push_back(subgraph_map);
+        return;
+      }
 
       int num_blocks = 0;
       for (NodeIt v(bctree); v != lemon::INVALID; ++v) {
@@ -482,7 +486,7 @@ namespace mogli {
       balanced_cut(subgraph_map_1, max_size, shell, partitions);
     }
 
-    void get_bctree(boost::shared_ptr<SubGraph> subgraph,
+    int get_bctree(boost::shared_ptr<SubGraph> subgraph,
                     Graph& bctree,
                     NodeToIntMap& bctree_node_weights, NodeToIntMap& bctree_2_bicon_comp,
                     boost::ptr_vector<std::set<Node> >& biconnected_nodes,
@@ -490,6 +494,9 @@ namespace mogli {
       // get the biconnected components of the graph
       SubGraph::EdgeMap<int> biConnected(*subgraph);
       int bc_count = lemon::biNodeConnectedComponents(*subgraph, biConnected);
+      if (bc_count == 0) {
+        return 0;
+      }
 
       // get the node sets of the biconnected components
       for (int i = 0; i < bc_count; ++i) {
@@ -557,6 +564,7 @@ namespace mogli {
       }
 
       find_shell_nodes(subgraph, bctree_2_bicon_comp, biconnected_nodes, bctree, shell, bctree_shell_ids_u, bctree_shell_ids_v);
+      return bc_count;
 
     }
 
@@ -887,13 +895,18 @@ namespace mogli {
 
   inline std::string Molecule::write_gml(std::string label) {
     std::stringstream buffer;
-    write_gml_stream(label, buffer);
+    write_gml_stream(label, buffer, false);
     return buffer.str();
   }
 
-  inline void Molecule::write_gml_stream(std::string label, std::ostream &out) {
+  inline void Molecule::write_gml_stream(std::string label, std::ostream &out, bool raw) {
     assert(out.good());
-    out << "graph [\n\tdirected 0\n\tlabel "<< label <<"\n";
+    if (!raw) {
+      out << "graph [\n\tdirected 0\n\tlabel "<< label << "\n";
+    } else {
+      out << R"(graph [\n\tdirected 0\n\tlabel )" << label << R"(\n)";
+    }
+
 
     // nodes
     IntVector nodes;
@@ -902,8 +915,14 @@ namespace mogli {
       nodes.push_back(id);
     }
     std::sort(nodes.begin(), nodes.end());
-    for (int id : nodes) {
-      out << "\tnode [\n\t\tid " << id << "\n\t\tlabel \"" << _colors[_id_to_node[id]] << "\"\n\t]\n";
+    if (!raw) {
+      for (int id : nodes) {
+        out << "\tnode [\n\t\tid " << id << "\n\t\tlabel \"" << _colors[_id_to_node[id]] << "\"\n\t]\n";
+      }
+    } else {
+      for (int id : nodes) {
+        out << R"(\tnode [\n\t\tid )" << id << R"(\n\t\tlabel \")" << _colors[_id_to_node[id]] << R"(\"\n\t]\n)";
+      }
     }
 
     // edges
@@ -914,11 +933,22 @@ namespace mogli {
       edges.push_back(std::make_pair(u, v));
     }
     std::sort(edges.begin(), edges.end(), sort_tuple());
-    for (std::pair<int, int> pair : edges) {
-      out << "\tedge [\n\t\tsource " << pair.first << "\n\t\ttarget " << pair.second
-          << "\n\t\tlabel \"-\"\n\t]\n";
+    if (!raw) {
+      for (std::pair<int, int> pair : edges) {
+        out << "\tedge [\n\t\tsource " << pair.first << "\n\t\ttarget " << pair.second
+            << "\n\t\tlabel \"-\"\n\t]\n";
+      }
+    } else {
+      for (std::pair<int, int> pair : edges) {
+        out << R"(\tedge [\n\t\tsource )" << pair.first << R"(\n\t\ttarget )" << pair.second
+            << R"(\n\t\tlabel \"-\"\n\t]\n)";
+      }
     }
-    out << "]\n\n";
+    if (!raw) {
+      out << "]\n\n";
+    } else {
+      out << R"(]\n\n)";
+    }
   }
 
   inline std::string Molecule::write_lgf(const LGFIOConfig &config) {

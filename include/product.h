@@ -70,6 +70,7 @@ namespace mogli {
     NodeToIntMap _comp_map;
     int _comp_count;
     IntVector _comp_sizes;
+    bool _is_complete;
 
   public:
     Product(const Product& parent, int component)
@@ -87,12 +88,15 @@ namespace mogli {
       , _connectivity(_g)
       , _comp_map(_g)
       , _comp_count(0)
-      , _comp_sizes() {
+      , _comp_sizes()
+      , _is_complete(false) {
 
       NodeToNodeMap nodes(_g);
+      int V = 0;
       for (NodeIt orig(parent._g); orig != lemon::INVALID; ++orig) {
         if (parent._comp_map[orig] == component) {
           Node copy = _g.addNode();
+          ++V;
           nodes[copy] = orig;
           _node_sizes[copy] = parent._node_sizes[orig];
           _reductions[copy] = parent._reductions[orig];
@@ -104,6 +108,7 @@ namespace mogli {
       }
 
       lemon::ArcLookUp<Graph> arcLookUp(parent._g);
+      int E = 0;
       for (NodeIt v(_g); v != lemon::INVALID; ++v) {
         for (NodeIt u = v; u != lemon::INVALID; ++u) {
           if (v == u)
@@ -112,9 +117,11 @@ namespace mogli {
           Edge e = arcLookUp(nodes[u], nodes[v]);
           if (e != lemon::INVALID) {
             _connectivity[_g.addEdge(u,v)] = parent._connectivity[e];
+            ++E;
           }
         }
       }
+      _is_complete = E == ((V*(V-1))/2);
 
     }
 
@@ -133,19 +140,23 @@ namespace mogli {
       , _g_to_mol2_canons(_g)
       , _connectivity(_g)
       , _comp_map(_g)
-      , _comp_count(1) {
+      , _comp_count(1)
+      , _is_complete(false) {
+      int V, E;
       if ((gen == DEG_1 || gen == UNCON_DEG_1) && shell > 0) {
-        generate_nodes_deg1();
+        V = generate_nodes_deg1();
       } else if ((gen == SUB || gen == UNCON_SUB) && shell > 0) {
-        generate_nodes_sub();
+        V = generate_nodes_sub();
       } else {
-        generate_nodes();
+        V = generate_nodes();
       }
       if (gen == UNCON || gen == UNCON_DEG_1 || gen == UNCON_SUB) {
-        generate_edges_connected(min_core_size, max_core_size);
+        E = generate_edges_connected(min_core_size, max_core_size);
       } else {
-        generate_edges();
+        E = generate_edges();
       }
+      _is_complete = E == ((V*(V-1))/2);
+
     }
 
     const Molecule& get_mol1() const {
@@ -170,6 +181,10 @@ namespace mogli {
 
     const int get_shell() const {
       return _shell;
+    }
+
+    const bool is_complete() const {
+      return _is_complete;
     }
 
     const GenerationType get_gen_type() const {
@@ -238,7 +253,12 @@ namespace mogli {
 
       // edges
       for (EdgeIt e(_g); e != lemon::INVALID; ++e) {
-        out << _g.id(_g.u(e)) << " -- " << _g.id(_g.v(e)) << std::endl;
+        out << "\t" << _g.id(_g.u(e)) << " -- " << _g.id(_g.v(e));
+        if (_connectivity[e]) {
+          out <<  std::endl;
+        } else {
+          out << "[style=\"dashed\"]" << std::endl;
+        }
       }
 
       out << "}" << std::endl;
@@ -292,7 +312,12 @@ namespace mogli {
 
       // edges
       for (EdgeIt e(_g); e != lemon::INVALID; ++e) {
-        out << _g.id(_g.u(e)) << " -- " << _g.id(_g.v(e)) << std::endl;
+        out << "\t" << _g.id(_g.u(e)) << " -- " << _g.id(_g.v(e));
+        if (_connectivity[e]) {
+          out <<  std::endl;
+        } else {
+          out << "[style=\"dashed\"]" << std::endl;
+        }
       }
 
       out << "}" << std::endl;
@@ -302,15 +327,15 @@ namespace mogli {
 
     Node add_node(const Node& u, const Node& v);
 
-    void generate_nodes();
+    int generate_nodes();
 
-    void generate_nodes_deg1();
+    int generate_nodes_deg1();
 
-    void generate_nodes_sub();
+    int generate_nodes_sub();
 
-    void generate_edges();
+    int generate_edges();
 
-    void generate_edges_connected(unsigned int min_core_size, unsigned int max_core_size);
+    int generate_edges_connected(unsigned int min_core_size, unsigned int max_core_size);
 
     void determine_degrees(const Graph& g, IntToNodeMap& deg_to_node, NodeToIntMap& deg);
 

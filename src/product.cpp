@@ -123,7 +123,7 @@ void Product::generate_subgraph(const Molecule &mol, const Node &v, NodeToIntSet
   sizes.insert(std::make_pair(size, v));
 }
 
-void Product::generate_nodes() {
+int Product::generate_nodes() {
   const Graph& g1 = _mol1.get_graph();
   const Graph& g2 = _mol2.get_graph();
 
@@ -138,20 +138,24 @@ void Product::generate_nodes() {
   }
 
   // generate product nodes
+  int V = 0;
   for (NodeIt u = _mol1.get_node_iter(); u != lemon::INVALID; ++u) {
     for (NodeIt v = _mol2.get_node_iter(); v != lemon::INVALID; ++v) {
       if (_mol1.get_color(u) == _mol2.get_color(v) &&
           subgraph_canons1[u].is_isomorphic(subgraph_canons2[v])) {
         const Node& uv = add_node(u, v);
+        ++V;
         _node_sizes[uv] = 1;
         _g_to_mol1_canons[uv] = subgraph_canons1[u];
         _g_to_mol2_canons[uv] = subgraph_canons2[v];
       }
     }
   }
+
+  return V;
 }
 
-void Product::generate_nodes_deg1() {
+int Product::generate_nodes_deg1() {
   const Graph& g1 = _mol1.get_graph();
   const Graph& g2 = _mol2.get_graph();
 
@@ -170,6 +174,7 @@ void Product::generate_nodes_deg1() {
   NodeToIntSetMap reduced_nodes(g1, IntSet());
 
   // iterate nodes u with decreasing degree
+  int V = 0;
   for (IntToNodeMap::reverse_iterator it = deg_to_node1.rbegin(), end = deg_to_node1.rend(); it != end; ++it) {
     Node u = it->second;
     NodeToBoolMap filter(g1, false);
@@ -190,6 +195,7 @@ void Product::generate_nodes_deg1() {
         if (canon1.is_isomorphic(canon2)) {
           // generate product node uv
           const Node& uv = add_node(u, v);
+          ++V;
           _node_sizes[uv] = 1;
           // apply degree-1 rule to neighbors of u and v
           const ShortVector& order1 = canon1.get_node_order();
@@ -231,9 +237,11 @@ void Product::generate_nodes_deg1() {
     }
   }
 
+  return V;
+
 }
 
-void Product::generate_nodes_sub() {
+int Product::generate_nodes_sub() {
   const Graph& g1 = _mol1.get_graph();
   const Graph& g2 = _mol2.get_graph();
 
@@ -257,6 +265,7 @@ void Product::generate_nodes_sub() {
   NodeToIntSetMap reduced_nodes(g1, IntSet());
 
   // iterate nodes u with decreasing neighborhood size
+  int V = 0;
   for (IntToNodeMap::reverse_iterator it = neighborhood_sizes1.rbegin(), end = neighborhood_sizes1.rend(); it != end; ++it) {
     Node u = it->second;
     NodeToBoolMap filter(g1, false);
@@ -277,6 +286,7 @@ void Product::generate_nodes_sub() {
         if (canon1.is_isomorphic(canon2)) {
           // generate product node uv
           const Node& uv = add_node(u, v);
+          ++V;
           _node_sizes[uv] = 1;
           // apply neighborhood subset rule to neighbors of u and v
           IntSet &neighbors_u = neighborhoods1[u];
@@ -308,15 +318,17 @@ void Product::generate_nodes_sub() {
     }
   }
 
+  return V;
 }
 
-void Product::generate_edges() {
+int Product::generate_edges() {
   const Graph& g1 = _mol1.get_graph();
   const Graph& g2 = _mol2.get_graph();
 
   lemon::ArcLookUp<Graph> arcLookUp1(g1);
   lemon::ArcLookUp<Graph> arcLookUp2(g2);
 
+  int E = 0;
   for (NodeIt u1v1(_g); u1v1 != lemon::INVALID; ++u1v1) {
     Node u1 = _g_to_mol1[u1v1];
     Node v1 = _g_to_mol2[u1v1];
@@ -337,14 +349,16 @@ void Product::generate_edges() {
 
         if (u1u2 == v1v2) {
           _connectivity[_g.addEdge(u1v1, u2v2)] = u1u2;
+          ++E;
         }
       }
     }
   }
 
+  return E;
 }
 
-void Product::generate_edges_connected(unsigned int min_core_size, unsigned int max_core_size) {
+int Product::generate_edges_connected(unsigned int min_core_size, unsigned int max_core_size) {
   const Graph& g1 = _mol1.get_graph();
   const Graph& g2 = _mol2.get_graph();
 
@@ -352,6 +366,7 @@ void Product::generate_edges_connected(unsigned int min_core_size, unsigned int 
   lemon::ArcLookUp<Graph> arcLookUp2(g2);
 
   // build c-edges
+  int E = 0;
   for (NodeIt u1v1(_g); u1v1 != lemon::INVALID; ++u1v1) {
     Node u1 = _g_to_mol1[u1v1];
     Node v1 = _g_to_mol2[u1v1];
@@ -369,8 +384,9 @@ void Product::generate_edges_connected(unsigned int min_core_size, unsigned int 
         bool u1u2 = arcLookUp1(u1, u2) != lemon::INVALID;
         bool v1v2 = arcLookUp2(v1, v2) != lemon::INVALID;
 
-        if (u1u2 == v1v2 && u1u2) {
+        if (u1u2 && v1v2) {
           _connectivity[_g.addEdge(u1v1, u2v2)] = true;
+          ++E;
         }
       }
     }
@@ -392,10 +408,9 @@ void Product::generate_edges_connected(unsigned int min_core_size, unsigned int 
       comp_size += _node_sizes[u1v1];
       nodes.push_back(u1v1);
     }
-    _comp_sizes.push_back(comp_size);
 
     // delete current component if it is too small
-    if (_comp_sizes[c] < min_core_size) {
+    if (comp_size < min_core_size) {
       for (int i = 0; i < nodes.size(); ++i) {
         _g.erase(nodes[i]);
       }
@@ -417,11 +432,12 @@ void Product::generate_edges_connected(unsigned int min_core_size, unsigned int 
         assert(_mol1.get_color(u2) == _mol2.get_color(v2));
 
         if (u1 != u2 && v1 != v2) {
-          bool u1u2 = arcLookUp1(u1, u2) != lemon::INVALID;
-          bool v1v2 = arcLookUp2(v1, v2) != lemon::INVALID;
+          bool u1u2 = arcLookUp1(u1, u2) == lemon::INVALID;
+          bool v1v2 = arcLookUp2(v1, v2) == lemon::INVALID;
 
-          if (u1u2 == v1v2 && !u1u2) {
+          if (u1u2 && v1v2) {
             _connectivity[_g.addEdge(u1v1, u2v2)] = false;
+            ++E;
           }
         }
       }
@@ -431,7 +447,14 @@ void Product::generate_edges_connected(unsigned int min_core_size, unsigned int 
 
   // count connected components again (we might have deleted some components)
   _comp_count = lemon::connectedComponents(_g, _comp_map);
+  for (int c = 0; c < _comp_count; ++c) {
+    _comp_sizes.push_back(0);
+  }
+  for (NodeIt u1v1(_g); u1v1 != lemon::INVALID; ++u1v1) {
+    _comp_sizes[_comp_map[u1v1]] += _node_sizes[u1v1];
+  }
 
+  return E;
 }
 
 Node Product::add_node(const Node &u, const Node &v) {

@@ -5,7 +5,7 @@ import functools
 
 import itertools
 import os
-
+import traceback
 import subprocess
 
 from multiprocessing import Pool
@@ -40,7 +40,7 @@ def run(ms, molid1, in_dir, gen_int, min_core, runs, timeout):
                 traceback.print_exc()
             return ['{0}x{1}\t{2}\t{3}\t{4}\n'.format(molid1, molid2, run, shell, gen_type)]
 
-        line = '{0}x{1}\t{2}\t{3}\t{4}\t{5}'.format(molid1, molid2, run, shell, gen_type, timings)
+        line = '{0}x{1}\t{2}\t{3}\t{4}\t{5}\n'.format(molid1, molid2, run, shell, gen_type, timings.strip())
         values.append(line)
     return values
 
@@ -91,11 +91,12 @@ def main():
     molids = sorted([f[:-4] for f in os.listdir(in_dir) if f.endswith('.lgf')])
 
     with open(os.path.join(out_dir, 'results'+ext), 'w') as fi:
-        fi.write('MATCH\tRUN\tSHELL\tGEN-TYPE\tNODES\tFRAGMENTS\tPG-TIME\tBK-TIME\tGEN-TIME\tRUNTIME\n')
+        fi.write('MATCH\tRUN\tSHELL\tGEN-TYPE\tNODES\tFRAGMENTS\tPG-TIME\tBK-TIME\tGEN-TIME\tRUNTIME'
+                 '\tDEGEN\tCOMPS\tCOMPL\tBC-COMPS\tBC-COMPL\n')
 
     pool = Pool() if proc < 1 else Pool(proc)
     for i in xrange(min(args.f, len(molids)-2), len(molids)-1):
-        print('%d/%d' % (i+1,len(molids)))
+        print('%d/%d' % (i+1,len(molids)-1))
         lines = pool.map(functools.partial(run,
                                            molid1=molids[i],
                                            in_dir=in_dir,

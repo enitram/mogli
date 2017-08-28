@@ -8,6 +8,22 @@ using namespace mogli;
 
 void BronKerbosch::run() {
 
+  // the productgraph is a complete graph with a spanning tree of c-edges, we don't actually need to run BK!
+  if ((_product.get_gen_type() == Product::GenerationType::UNCON ||
+      _product.get_gen_type() == Product::GenerationType::UNCON_DEG_1 ||
+      _product.get_gen_type() == Product::GenerationType::UNCON_SUB) &&
+      _product.is_complete()) {
+    NodeVector clique;
+    for (NodeIt v(_product.get_graph()); v != lemon::INVALID; ++v) {
+      clique.push_back(v);
+    }
+    int size = _product.get_clique_size(clique);
+    if (_min_core_size <= size && size <= _max_core_size) {
+      _cliques.push_back(clique);
+    }
+    return;
+  }
+
   NodeVector order;
   computeDegeneracy(order);
 
@@ -34,8 +50,12 @@ void BronKerbosch::run() {
 
 }
 
-size_t BronKerbosch::computeDegeneracy(NodeVector& order)
-{
+size_t BronKerbosch::computeDegeneracy() {
+  NodeVector order;
+  return computeDegeneracy(order);
+}
+
+size_t BronKerbosch::computeDegeneracy(NodeVector& order) {
   // Requires O(|V| + |E|) time
   order.clear();
 

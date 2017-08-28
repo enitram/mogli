@@ -88,6 +88,8 @@ namespace mogli {
       return _cliques;
     }
 
+    size_t computeDegeneracy();
+
   private:
 
     size_t computeDegeneracy(NodeVector& order);
