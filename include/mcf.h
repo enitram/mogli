@@ -30,6 +30,8 @@ namespace mogli {
                                 Product::GenerationType prod_gen,
                                 bool reduce_subgraphs, bool maximum);
 
+  void atomic_fragments(Molecule &mol, FragmentVector &fragments, MatchVector &matches, int shell);
+
 }
 
 #endif //MOGLI_MCF_H

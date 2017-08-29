@@ -53,6 +53,12 @@ namespace mogli {
       return _frag_to_mol;
     }
 
+    void get_atom_ids(IntVector& ids) const {
+      for (int id : _target_set) {
+        ids.push_back(id);
+      }
+    }
+
     const IntSet& get_target_set() const {
       return _target_set;
     }

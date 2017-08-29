@@ -207,3 +207,62 @@ void mogli::maximal_common_fragments(Molecule &mol1, Molecule &mol2,
   }
 
 }
+
+void mogli::atomic_fragments(Molecule &mol, FragmentVector &fragments, MatchVector &matches, int shell) {
+  typedef typename Graph::template NodeMap<NodeVector> NodeToNodeVectorMap;
+  typedef std::deque<Node> NodeDeque;
+
+  const Graph& g = mol.get_graph();
+  lemon::ArcLookUp<Graph> arcLookUp(mol.get_graph());
+
+  for (NodeIt v(g); v != lemon::INVALID; ++v) {
+    NodeToNodeMap mol_to_g(g);
+    NodeToBoolMap visited(mol.get_graph(), false);
+    NodeToIntMap depth(mol.get_graph(), 0);
+    NodeDeque queue;
+    boost::shared_ptr<Fragment> fragment = boost::make_shared<Fragment>();
+    Match match;
+
+    queue.push_back(v);
+    visited[v] = true;
+    while (queue.size() > 0) {
+      Node &current = queue.front();
+
+      Node copy = fragment->add_atom(mol.get_color(current));
+      match.add_frag_to_mol(fragment->get_id(copy), mol.get_id(current));
+      mol_to_g[current] = copy;
+
+      if (depth[current] < shell) {
+        for (IncEdgeIt e = mol.get_inc_edge_iter(current); e != lemon::INVALID; ++e) {
+          Node w = mol.get_opposite_node(current, e);
+          if (!visited[w]) {
+            visited[w] = true;
+            depth[w] = depth[current] + 1;
+            queue.push_back(w);
+          }
+        }
+      }
+      queue.pop_front();
+    }
+
+    const Graph& gf = fragment->get_graph();
+    for (NodeIt u(gf); u != lemon::INVALID; ++u) {
+      for (NodeIt w = u; w != lemon::INVALID; ++w) {
+        if (u == w)
+          continue;
+
+        if (arcLookUp(u, w) != lemon::INVALID) {
+          fragment->add_edge(mol_to_g[u], mol_to_g[w]);
+        }
+      }
+    }
+
+    fragment->set_core(mol_to_g[v], true);
+    fragment->set_shell_size(shell);
+
+    fragments.push_back(fragment);
+    matches.push_back(match);
+  }
+
+}
+

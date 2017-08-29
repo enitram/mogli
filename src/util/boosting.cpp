@@ -240,6 +240,7 @@ BOOST_PYTHON_MODULE(libmogli) {
   class_<Match, boost::shared_ptr<Match>>("Match", init<>())
       .def("frag_to_mol", &Match::frag_to_mol)
       .def("merged_frag_to_mol", &Match::merged_frag_to_mol)
+      .def("get_atom_ids", &Match::get_atom_ids)
       .def("map_ids", &Match::map_ids)
       .def(self == self)
       .def(self != self);
@@ -251,6 +252,7 @@ BOOST_PYTHON_MODULE(libmogli) {
 
   def("maximal_common_fragments", mcf1);
   def("maximal_common_fragments", mcf2);
+  def("atomic_fragments", atomic_fragments);
 
   class_<Node>("Node")
       .def(self == self)
