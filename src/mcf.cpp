@@ -216,7 +216,6 @@ void mogli::atomic_fragments(Molecule &mol, FragmentVector &fragments, MatchVect
   lemon::ArcLookUp<Graph> arcLookUp(mol.get_graph());
 
   for (NodeIt v(g); v != lemon::INVALID; ++v) {
-    NodeToNodeMap mol_to_g(g);
     NodeToBoolMap visited(mol.get_graph(), false);
     NodeToIntMap depth(mol.get_graph(), 0);
     NodeDeque queue;
@@ -225,12 +224,14 @@ void mogli::atomic_fragments(Molecule &mol, FragmentVector &fragments, MatchVect
 
     queue.push_back(v);
     visited[v] = true;
+    Node root;
     while (queue.size() > 0) {
       Node &current = queue.front();
 
       Node copy = fragment->add_atom(mol.get_color(current));
       match.add_frag_to_mol(fragment->get_id(copy), mol.get_id(current));
-      mol_to_g[current] = copy;
+      if (current == v)
+        root = copy;
 
       if (depth[current] < shell) {
         for (IncEdgeIt e = mol.get_inc_edge_iter(current); e != lemon::INVALID; ++e) {
@@ -251,13 +252,14 @@ void mogli::atomic_fragments(Molecule &mol, FragmentVector &fragments, MatchVect
         if (u == w)
           continue;
 
-        if (arcLookUp(u, w) != lemon::INVALID) {
-          fragment->add_edge(mol_to_g[u], mol_to_g[w]);
+        if (arcLookUp(mol.get_node_by_id(match.frag_to_mol(fragment->get_id(u))),
+                      mol.get_node_by_id(match.frag_to_mol(fragment->get_id(w)))) != lemon::INVALID) {
+          fragment->add_edge(u, w);
         }
       }
     }
 
-    fragment->set_core(mol_to_g[v], true);
+    fragment->set_core(root, true);
     fragment->set_shell_size(shell);
 
     fragments.push_back(fragment);
