@@ -14,23 +14,17 @@ namespace mogli {
   private:
 
     IntToIntMap _frag_to_mol;
-    IntSet _target_set;
     IntToIntMapVector _merged_frag_to_mol;
 
   public:
 
     Match() :
         _frag_to_mol(),
-        _target_set(),
         _merged_frag_to_mol() {}
 
     Match(const IntToIntMap &frag_to_mol) :
         _frag_to_mol(frag_to_mol),
-        _target_set(),
         _merged_frag_to_mol() {
-      for (IntToIntMap::const_iterator it = _frag_to_mol.begin(), end = _frag_to_mol.end(); it != end; ++it) {
-        _target_set.insert(it->second);
-      }
     }
 
     const int frag_to_mol(const int id) const {
@@ -54,13 +48,9 @@ namespace mogli {
     }
 
     void get_atom_ids(IntVector& ids) const {
-      for (int id : _target_set) {
-        ids.push_back(id);
+      for (auto el : _frag_to_mol) {
+        ids.push_back(el.second);
       }
-    }
-
-    const IntSet& get_target_set() const {
-      return _target_set;
     }
 
     const IntToIntMapVector& get_merged_frag_to_mol() const {
@@ -69,7 +59,6 @@ namespace mogli {
 
     void add_frag_to_mol(int from, int to) {
       _frag_to_mol[from] = to;
-      _target_set.insert(to);
     }
 
     void add_merged_frag_to_mol(IntToIntMap &ftm) {
@@ -97,15 +86,6 @@ namespace mogli {
       for (IntToIntMapVector::iterator it = _merged_frag_to_mol.begin(), end = _merged_frag_to_mol.end(); it != end; ++it) {
         map_other(*it, this_nodes, other_nodes);
       }
-    }
-
-    bool operator==(const Match& rhs) {
-      const IntSet other = rhs.get_target_set();
-      return _target_set == other;
-    }
-
-    bool operator!=(const Match& rhs) {
-      return !(*this == rhs);
     }
 
   private:

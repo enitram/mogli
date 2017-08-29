@@ -241,9 +241,7 @@ BOOST_PYTHON_MODULE(libmogli) {
       .def("frag_to_mol", &Match::frag_to_mol)
       .def("merged_frag_to_mol", &Match::merged_frag_to_mol)
       .def("get_atom_ids", &Match::get_atom_ids)
-      .def("map_ids", &Match::map_ids)
-      .def(self == self)
-      .def(self != self);
+      .def("map_ids", &Match::map_ids);
 
   void (*mcf1)(Molecule&, Molecule&, FragmentVector&, MatchVector&, MatchVector&,
                int, unsigned int, unsigned int, Product::GenerationType, bool, bool) = &maximal_common_fragments;
