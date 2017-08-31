@@ -147,7 +147,7 @@ namespace mogli {
         } else {
           out << "[style=\"filled,dashed\",fillcolor=" << _perdiodic_table.get_color(_colors[v]);
         }
-        out << ",label=\"" << _node_to_id[v] << "\"]" << std::endl;
+        out << ",label=\"" << _node_to_id[v] << " (" << _perdiodic_table.get_element(_colors[v]) << ")\"]" << std::endl;
       }
 
       // edges
