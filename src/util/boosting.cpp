@@ -244,9 +244,9 @@ BOOST_PYTHON_MODULE(libmogli) {
       .def("map_ids", &Match::map_ids);
 
   void (*mcf1)(Molecule&, Molecule&, FragmentVector&, MatchVector&, MatchVector&,
-               int, unsigned int, unsigned int, Product::GenerationType, bool, bool) = &maximal_common_fragments;
+               int, unsigned int, unsigned int, Product::GenerationType, bool, bool, int) = &maximal_common_fragments;
   void (*mcf2)(Molecule&, Molecule&, FragmentVector&, MatchVector&, MatchVector&,
-               int, unsigned int, Product::GenerationType, bool, bool) = &maximal_common_fragments;
+               int, unsigned int, Product::GenerationType, bool, bool, int) = &maximal_common_fragments;
 
   def("maximal_common_fragments", mcf1);
   def("maximal_common_fragments", mcf2);

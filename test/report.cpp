@@ -19,7 +19,7 @@ std::tuple<float, float, bool, int> run(Product& product, int min_core, int max_
   std::chrono::high_resolution_clock::time_point t1 = std::chrono::high_resolution_clock::now();
 
   BronKerbosch bk(product, min_core, max_core, false);
-  bk.run();
+  bk.run(-1);
 
   int degeneracy = static_cast<int>(bk.computeDegeneracy());
 

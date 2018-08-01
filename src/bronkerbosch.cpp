@@ -6,7 +6,13 @@
 
 using namespace mogli;
 
-void BronKerbosch::run() {
+void BronKerbosch::run(int seconds) {
+  std::chrono::high_resolution_clock::time_point start = std::chrono::high_resolution_clock::now();
+  long microseconds = 1000l * seconds;
+  run(start, microseconds);
+}
+
+void BronKerbosch::run(std::chrono::high_resolution_clock::time_point start, long microseconds) {
 
   // the productgraph is a complete graph with a spanning tree of c-edges, we don't actually need to run BK!
   if ((_product.get_gen_type() == Product::GenerationType::UNCON ||
@@ -44,7 +50,7 @@ void BronKerbosch::run() {
     BitSet R(_n);
     R.set(_nodeToBit[v]);
 
-    bkPivot(P, D, R, X, S);
+    bkPivot(P, D, R, X, S, start, microseconds);
     mask.set(_nodeToBit[v]);
   }
 
@@ -121,7 +127,9 @@ size_t BronKerbosch::computeDegeneracy(NodeVector& order) {
 
 void BronKerbosch::bkPivot(BitSet P, BitSet D,
                            BitSet R,
-                           BitSet X, BitSet S) {
+                           BitSet X, BitSet S,
+                           std::chrono::high_resolution_clock::time_point start,
+                           long microseconds) {
   // all sets are pairwise disjoint
   assert((P & D).none());
   assert((P & R).none());
@@ -134,51 +142,58 @@ void BronKerbosch::bkPivot(BitSet P, BitSet D,
   assert((R & S).none());
   assert((X & S).none());
 
+  std::chrono::high_resolution_clock::time_point now = std::chrono::high_resolution_clock::now();
+  long duration = std::chrono::duration_cast<std::chrono::microseconds>( now - start ).count();
+
   // Reports maximal c-cliques in P \cup R (but not in X and S)
   BitSet P_cup_X = P | X;
   if (P_cup_X.none()) {
     report(R);
   } else {
-    // choose a pivot u from (P | X) s.t |P & N(u)| is maximum, Tomita et al. (2006)
-    size_t maxBitCount = 0;
-    Node max_u = lemon::INVALID;
-    for (size_t i = 0; i < P.size(); ++i) {
-      if (P_cup_X[i]) {
-        Node u = _bitToNode[i];
-        BitSet P_cap_Nu = P & _bitNeighborhood[u];
-        size_t s = P_cap_Nu.count();
-        if (s >= maxBitCount) {
-          max_u = u;
-          maxBitCount = s;
+    if (microseconds >= 0 && duration < microseconds) {
+      // choose a pivot u from (P | X) s.t |P & N(u)| is maximum, Tomita et al. (2006)
+      size_t maxBitCount = 0;
+      Node max_u = lemon::INVALID;
+      for (size_t i = 0; i < P.size(); ++i) {
+        if (P_cup_X[i]) {
+          Node u = _bitToNode[i];
+          BitSet P_cap_Nu = P & _bitNeighborhood[u];
+          size_t s = P_cap_Nu.count();
+          if (s >= maxBitCount) {
+            max_u = u;
+            maxBitCount = s;
+          }
         }
       }
-    }
 
-    assert(max_u != lemon::INVALID);
-    BitSet P_diff_Nu = P - _bitNeighborhood[max_u];
-    for (size_t i = 0; i < P.size(); ++i) {
-      if (P_diff_Nu[i]) {
-        Node v = _bitToNode[i];
-        const BitSet& N_v = _bitNeighborhood[v];
-        const BitSet& Nc_v = _restrictedBitNeighborhood[v];
+      assert(max_u != lemon::INVALID);
+      BitSet P_diff_Nu = P - _bitNeighborhood[max_u];
+      for (size_t i = 0; i < P.size(); ++i) {
+        if (P_diff_Nu[i]) {
+          Node v = _bitToNode[i];
+          const BitSet &N_v = _bitNeighborhood[v];
+          const BitSet &Nc_v = _restrictedBitNeighborhood[v];
 
-        BitSet P_ = P | ( D & Nc_v );
-        BitSet D_ = D - Nc_v;
+          BitSet P_ = P | (D & Nc_v);
+          BitSet D_ = D - Nc_v;
 
-        BitSet R_ = R;
-        R_[_nodeToBit[v]] = 1;
+          BitSet R_ = R;
+          R_[_nodeToBit[v]] = 1;
 
-        BitSet X_ = X | ( S & Nc_v );
-        BitSet S_ = S - Nc_v;
+          BitSet X_ = X | (S & Nc_v);
+          BitSet S_ = S - Nc_v;
 
-        // report all maximal cliques in ( (P | N[v]) & R) \ (X & N[v]) )
-        bkPivot(P_ & N_v,
-                D_ & N_v,
-                R_,
-                X_ & N_v,
-                S_ & N_v);
-        P[i] = 0;
-        X[i] = 1;
+          // report all maximal cliques in ( (P | N[v]) & R) \ (X & N[v]) )
+          bkPivot(P_ & N_v,
+                  D_ & N_v,
+                  R_,
+                  X_ & N_v,
+                  S_ & N_v,
+                  start,
+                  microseconds);
+          P[i] = 0;
+          X[i] = 1;
+        }
       }
     }
   }

@@ -21,14 +21,16 @@ namespace mogli {
                                 MatchVector &matches_mol1, MatchVector &matches_mol2,
                                 int shell, unsigned int min_core_size, unsigned int max_core_size,
                                 Product::GenerationType prod_gen,
-                                bool reduce_subgraphs, bool maximum);
+                                bool reduce_subgraphs, bool maximum,
+                                int timeout_seconds);
 
   void maximal_common_fragments(Molecule &mol1, Molecule &mol2,
                                 FragmentVector &fragments,
                                 MatchVector &matches_mol1, MatchVector &matches_mol2,
                                 int shell, unsigned int min_core_size,
                                 Product::GenerationType prod_gen,
-                                bool reduce_subgraphs, bool maximum);
+                                bool reduce_subgraphs, bool maximum,
+                                int timeout_seconds);
 
   void atomic_fragments(Molecule &mol, FragmentVector &fragments, MatchVector &matches, int shell);
 

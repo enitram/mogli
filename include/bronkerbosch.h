@@ -10,6 +10,7 @@
 #ifndef MOGLI_BRONKERBOSCH_H
 #define MOGLI_BRONKERBOSCH_H
 
+#include <chrono>
 #include "product.h"
 #include "boost/graph/vf2_sub_graph_iso.hpp"
 
@@ -82,7 +83,9 @@ namespace mogli {
       }
     }
 
-    void run();
+    void run(int seconds);
+
+    void run(std::chrono::high_resolution_clock::time_point start, long microseconds);
 
     const NodeVectorVector& getMaxCliques() const {
       return _cliques;
@@ -94,7 +97,8 @@ namespace mogli {
 
     size_t computeDegeneracy(NodeVector& order);
 
-    void bkPivot(BitSet P, BitSet D, BitSet R, BitSet X, BitSet S);
+    void bkPivot(BitSet P, BitSet D, BitSet R, BitSet X, BitSet S,
+                 std::chrono::high_resolution_clock::time_point start, long microseconds);
 
     void report(const BitSet& R);
 

@@ -91,8 +91,8 @@ public:
           .add(29, "CA2+", "green4")
               //    P
           .add(30, "P,SI", "orange")
-              //    Si
-          .add(31, "AR", "pink")
+              //    Ar
+          .add(31, "AR", "lightblue")
               //    F
           .add(32, "F", "green").add(47, "FTFE", "green")
               //    Cl
