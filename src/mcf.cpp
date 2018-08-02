@@ -98,7 +98,7 @@ void mogli::maximal_common_fragments(Molecule &mol1, Molecule &mol2,
 
         std::chrono::high_resolution_clock::time_point now = std::chrono::high_resolution_clock::now();
         long duration = std::chrono::duration_cast<std::chrono::microseconds>( now - start ).count();
-        if (microseconds >= 0 && duration < microseconds) {
+        if (microseconds > 0 && duration > microseconds) {
           break;
         }
 
@@ -133,7 +133,7 @@ void mogli::maximal_common_fragments(Molecule &mol1, Molecule &mol2,
 
         std::chrono::high_resolution_clock::time_point now = std::chrono::high_resolution_clock::now();
         long duration = std::chrono::duration_cast<std::chrono::microseconds>( now - start ).count();
-        if (microseconds >= 0 && duration < microseconds) {
+        if (microseconds > 0 && duration > microseconds) {
           break;
         }
       }

@@ -150,7 +150,7 @@ void BronKerbosch::bkPivot(BitSet P, BitSet D,
   if (P_cup_X.none()) {
     report(R);
   } else {
-    if (microseconds >= 0 && duration < microseconds) {
+    if (microseconds > 0 && duration < microseconds) {
       // choose a pivot u from (P | X) s.t |P & N(u)| is maximum, Tomita et al. (2006)
       size_t maxBitCount = 0;
       Node max_u = lemon::INVALID;
