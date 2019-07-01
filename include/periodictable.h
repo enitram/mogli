@@ -67,14 +67,17 @@ public:
               //    O
       _instance.add(1, "O", "red").add(2, "OM", "red").add(3, "OA", "red").add(4, "OE", "red").add(5, "OW", "red")
           .add(36, "OMet", "red").add(44, "ODmso", "red").add(50, "OTFE", "red").add(52, "OUrea", "red")
+          .add(62, "OEOpt", "red").add(68, "OAlc", "red")
               //    N
           .add(6, "N", "blue").add(7, "NT", "blue").add(8, "NL", "blue").add(9, "NR", "blue").add(10, "NZ", "blue")
-          .add(11, "NE", "blue").add(53, "NUrea", "blue")
+          .add(11, "NE", "blue").add(53, "NUrea", "blue").add(63, "NOpt", "blue").add(66, "NPri", "blue")
+          .add(67, "NTer", "blue")
               //    C
           .add(12, "C", "grey54").add(13, "CH0", "grey54").add(14, "CH1", "grey54").add(15, "CH2", "grey54")
           .add(16, "CH3", "grey54").add(17, "CH4", "grey54").add(18, "CH2r", "grey54").add(19, "CR1", "grey54")
           .add(35, "CMet", "grey54").add(39, "CChl", "grey54").add(43, "CDmso", "grey54").add(45, "CCl4", "grey54")
           .add(48, "CTFE", "grey54").add(49, "CHTFE", "grey54").add(51, "CUrea", "grey54").add(54, "CH3p", "grey54")
+          .add(64, "CAro", "grey54").add(65, "CPos", "grey54")
               //    H
           .add(20, "HC", "white").add(21, "H", "white").add(41, "HChl", "white").add(59, "HS14", "white")
               //    S
@@ -90,7 +93,7 @@ public:
               //    Ca
           .add(29, "CA2+", "green4")
               //    P
-          .add(30, "P,SI", "orange")
+          .add(30, "P,SI", "orange").add(69, "P", "orange")
               //    Ar
           .add(31, "AR", "lightblue")
               //    F
@@ -108,6 +111,8 @@ public:
           .add(57, "B", "salmon")
               //    Se
           .add(58, "SE", "goldenrod1")
+              // Si
+          .add(70, "Si", "orange")
               //    DUMMY
           .add_uncolored(22, "DUM");
     }
