@@ -167,7 +167,7 @@ namespace mogli {
 
       queue.push_back(v);
       visited[v] = true;
-      while (queue.size() > 0) {
+      while (!queue.empty()) {
         Node &current = queue.front();
         // if current node is not a core
         if (!core_nodes[current]) {

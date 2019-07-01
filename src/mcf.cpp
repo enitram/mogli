@@ -153,7 +153,7 @@ void mogli::maximal_common_fragments(Molecule &mol1, Molecule &mol2,
     matches_mol1.reserve(deque.size());
     matches_mol2.reserve(deque.size());
 
-    while (deque.size() > 0) {
+    while (!deque.empty()) {
 
       int current = deque.begin()->first;
 

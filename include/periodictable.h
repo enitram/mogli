@@ -2,8 +2,8 @@
 // Created by M. Engler on 25/10/16.
 //
 
-#ifndef MOGLI_BOOSTERPACK_IACM_H
-#define MOGLI_BOOSTERPACK_IACM_H
+#ifndef MOGLI_PERIODICTABLE_H
+#define MOGLI_PERIODICTABLE_H
 
 class PeriodicTable {
 
@@ -63,7 +63,7 @@ public:
 
   static PeriodicTable& get_default() {
     static PeriodicTable _instance;
-    if (_instance.ELEMENTS.size() == 0) {
+    if (_instance.ELEMENTS.empty()) {
               //    O
       _instance.add(1, "O", "red").add(2, "OM", "red").add(3, "OA", "red").add(4, "OE", "red").add(5, "OW", "red")
           .add(36, "OMet", "red").add(44, "ODmso", "red").add(50, "OTFE", "red").add(52, "OUrea", "red")
@@ -122,4 +122,4 @@ public:
 };
 
 
-#endif //MOGLI_BOOSTERPACK_IACM_H
+#endif //MOGLI_PERIODICTABLE_H

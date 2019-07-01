@@ -66,7 +66,7 @@ namespace mogli {
     }
 
     void merge(Match &other, const IntToIntMap &isomorphism_map) {
-      if (isomorphism_map.size() > 0) {
+      if (!isomorphism_map.empty()) {
         const IntToIntMap &other_ftm = other.get_frag_to_mol();
         const IntToIntMapVector &other_mftm = other.get_merged_frag_to_mol();
         _merge_same(other_ftm, isomorphism_map);

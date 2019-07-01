@@ -157,7 +157,6 @@ add_dependencies(report lemon)
 #add_executable(timeout test/timeout.cpp ${SOURCE_FILES} ${NAUTY_SRC} ${LAD_SRC})
 #target_link_libraries(timeout ${Boost_LIBRARIES} ${CommonLibs})
 
-# TODO auto iterators and .empty()
 # TODO pybind11
 # TODO catch2 unit tests
 # TODO impl -> .cpp, organize #includes

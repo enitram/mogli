@@ -24,7 +24,7 @@ void Product::bfs(const Molecule &mol, const Node &v, NodeToBoolMap &filter) {
 
   queue.push_back(v);
   visited[v] = true;
-  while (queue.size() > 0) {
+  while (!queue.empty()) {
     Node &current = queue.front();
     filter[current] = true;
 
@@ -49,7 +49,7 @@ void Product::bfs_neighbors(const Molecule &mol, const Node &v, IntSet &neighbor
 
   queue.push_back(v);
   visited[v] = true;
-  while (queue.size() > 0) {
+  while (!queue.empty()) {
     Node &current = queue.front();
     neighbors.insert(mol.get_id(current));
     ++size;
@@ -77,7 +77,7 @@ void Product::bfs_subgraph(const Molecule &mol, const Node &product_node, const 
 
   queue.push_back(root_node);
   visited[root_node] = true;
-  while (queue.size() > 0) {
+  while (!queue.empty()) {
     Node &current = queue.front();
 
     const IntSet &neighbors_current = neighborhoods[current];

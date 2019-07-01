@@ -95,7 +95,7 @@ size_t BronKerbosch::computeDegeneracy(NodeVector& order) {
   size_t i = 0;
   while (i < n) {
     NodeList& l = T[i];
-    if (T[i].size() > 0) {
+    if (!T[i].empty()) {
       Node v = l.front();
       l.pop_front();
       order.push_back(v);
