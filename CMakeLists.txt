@@ -141,7 +141,6 @@ add_dependencies(mogli lemon)
 add_executable(report test/report.cpp ${SOURCE_FILES} ${NAUTY_SRC} ${LAD_SRC})
 target_link_libraries(report ${CommonLibs})
 add_dependencies(report lemon)
-#target_link_libraries(report ${Boost_LIBRARIES} ${CommonLibs})
 
 #add_executable(bbpmcs_compare test/bbpmcs_compare.cpp ${SOURCE_FILES} ${NAUTY_SRC} ${LAD_SRC})
 #target_link_libraries(bbpmcs_compare ${Boost_LIBRARIES} ${CommonLibs})
@@ -158,9 +157,11 @@ add_dependencies(report lemon)
 #add_executable(timeout test/timeout.cpp ${SOURCE_FILES} ${NAUTY_SRC} ${LAD_SRC})
 #target_link_libraries(timeout ${Boost_LIBRARIES} ${CommonLibs})
 
-# TODO pybind11
 # TODO auto iterators and .empty()
-# TODO unit tests
+# TODO pybind11
+# TODO catch2 unit tests
+# TODO impl -> .cpp, organize #includes
 # TODO file headers
 # TODO documentation
+# TODO scripts -> py3
 

@@ -48,25 +48,25 @@ namespace mogli {
       NodeToIntMap shell_min_depth(_g, 0);
 
       int core_nodes = 0;
-      for (NodeVector::const_iterator it = clique.begin(), end = clique.end(); it != end; ++it) {
-        Node u = product.get_mol1_node(*it);
+      for (auto & it : clique) {
+        Node u = product.get_mol1_node(it);
         Node uv = add_atom(mol1.get_color(u));
 
-        g_to_product[uv] = *it;
+        g_to_product[uv] = it;
         g_to_mol1[_node_to_id[uv]] = mol1.get_id(u);
-        g_to_mol2[_node_to_id[uv]] = mol2.get_id(product.get_mol2_node(*it));
+        g_to_mol2[_node_to_id[uv]] = mol2.get_id(product.get_mol2_node(it));
         _is_core[uv] = true;
         mol1_core_nodes[u] = true;
         _core_node_count++;
 
-        const NodePairVector &reductions = product.get_reductions(*it);
-        for (NodePairVector::const_iterator it2 = reductions.begin(), end2 = reductions.end(); it2 != end2; ++it2) {
-          Node _u = it2->first;
+        const NodePairVector &reductions = product.get_reductions(it);
+        for (auto & it2 : reductions) {
+          Node _u = it2.first;
           Node _uv = add_atom(mol1.get_color(_u));
 
-          g_to_product[_uv] = *it;
+          g_to_product[_uv] = it;
           g_to_mol1[_node_to_id[_uv]] = mol1.get_id(_u);
-          g_to_mol2[_node_to_id[_uv]] = mol2.get_id(it2->second);
+          g_to_mol2[_node_to_id[_uv]] = mol2.get_id(it2.second);
           _is_core[_uv] = true;
           mol1_core_nodes[_u] = true;
           _core_node_count++;

@@ -36,9 +36,9 @@ namespace mogli {
     }
 
     void merged_frag_to_mol(const int id, IntVector &ids) const {
-      for (IntToIntMapVector::const_iterator it = _merged_frag_to_mol.begin(), end = _merged_frag_to_mol.end(); it != end; ++it) {
-        if (it->count(id) > 0) {
-          ids.push_back(it->at(id));
+      for (auto & it : _merged_frag_to_mol) {
+        if (it.count(id) > 0) {
+          ids.push_back(it.at(id));
         }
       }
     }
@@ -70,9 +70,8 @@ namespace mogli {
         const IntToIntMap &other_ftm = other.get_frag_to_mol();
         const IntToIntMapVector &other_mftm = other.get_merged_frag_to_mol();
         _merge_same(other_ftm, isomorphism_map);
-        for (IntToIntMapVector::const_iterator it = other_mftm.begin(), end = other_mftm.end();
-             it != end; ++it) {
-          _merge_same(*it, isomorphism_map);
+        for (auto & it : other_mftm) {
+          _merge_same(it, isomorphism_map);
         }
       }
     }
@@ -83,8 +82,8 @@ namespace mogli {
       assert(this_nodes.size() == other_nodes.size());
       map_other(_frag_to_mol, this_nodes, other_nodes);
       assert(_frag_to_mol.size() == this_nodes.size());
-      for (IntToIntMapVector::iterator it = _merged_frag_to_mol.begin(), end = _merged_frag_to_mol.end(); it != end; ++it) {
-        map_other(*it, this_nodes, other_nodes);
+      for (auto & it : _merged_frag_to_mol) {
+        map_other(it, this_nodes, other_nodes);
       }
     }
 
@@ -92,9 +91,9 @@ namespace mogli {
 
     void _merge_same(const IntToIntMap &other, const IntToIntMap & iso_map) {
       IntToIntMap copy;
-      for (IntToIntMap::const_iterator it = other.begin(), end = other.end(); it != end; ++it) {
-        if (iso_map.count(it->first) > 0) {
-          copy[iso_map.at(it->first)] = it->second;
+      for (auto & it : other) {
+        if (iso_map.count(it.first) > 0) {
+          copy[iso_map.at(it.first)] = it.second;
         }
       }
       _merged_frag_to_mol.push_back(copy);
@@ -108,8 +107,8 @@ namespace mogli {
         }
       }
       map.clear();
-      for (IntToIntMap::const_iterator it = copy.begin(), end = copy.end(); it != end; ++it) {
-        map[it->first] = it->second;
+      for (auto & it : copy) {
+        map[it.first] = it.second;
       }
     }
 

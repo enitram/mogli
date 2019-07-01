@@ -175,13 +175,13 @@ int Product::generate_nodes_deg1() {
 
   // iterate nodes u with decreasing degree
   int V = 0;
-  for (IntToNodeMap::reverse_iterator it = deg_to_node1.rbegin(), end = deg_to_node1.rend(); it != end; ++it) {
+  for (auto it = deg_to_node1.rbegin(), end = deg_to_node1.rend(); it != end; ++it) {
     Node u = it->second;
     NodeToBoolMap filter(g1, false);
     bfs(_mol1, u, filter);
     Canonization canon1 = Canonization(_mol1, filter, u);
     // iterate nodes v with decreasing degree
-    for (IntToNodeMap::reverse_iterator it2 = deg_to_node2.rbegin(), end2 = deg_to_node2.rend(); it2 != end2; ++it2) {
+    for (auto it2 = deg_to_node2.rbegin(), end2 = deg_to_node2.rend(); it2 != end2; ++it2) {
       Node v = it2->second;
       if (reduced_nodes[u].count(_mol2.get_id(v)) > 0) {
         continue;
@@ -266,13 +266,13 @@ int Product::generate_nodes_sub() {
 
   // iterate nodes u with decreasing neighborhood size
   int V = 0;
-  for (IntToNodeMap::reverse_iterator it = neighborhood_sizes1.rbegin(), end = neighborhood_sizes1.rend(); it != end; ++it) {
+  for (auto it = neighborhood_sizes1.rbegin(), end = neighborhood_sizes1.rend(); it != end; ++it) {
     Node u = it->second;
     NodeToBoolMap filter(g1, false);
     bfs(_mol1, u, filter);
     Canonization canon1 = Canonization(_mol1, filter, u);
     // iterate nodes v with decreasing neighborhood size
-    for (IntToNodeMap::reverse_iterator it2 = neighborhood_sizes2.rbegin(), end2 = neighborhood_sizes2.rend(); it2 != end2; ++it2) {
+    for (auto it2 = neighborhood_sizes2.rbegin(), end2 = neighborhood_sizes2.rend(); it2 != end2; ++it2) {
       Node v = it2->second;
       if (reduced_nodes[u].count(_mol2.get_id(v)) > 0) {
         continue;

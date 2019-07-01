@@ -20,8 +20,8 @@ namespace mogli {
     FragmentCanonization() : Canonization() {}
 
     FragmentCanonization(const Fragment &fragment) : Canonization(fragment) {
-      for (ShortVector::const_iterator it = _node_order.begin(), end = _node_order.end(); it != end; ++it) {
-        _core_nodes.push_back(fragment.is_core(fragment.get_node_by_id(*it)));
+      for (auto & it : _node_order) {
+        _core_nodes.push_back(fragment.is_core(fragment.get_node_by_id(it)));
       }
     }
 

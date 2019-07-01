@@ -169,7 +169,7 @@ void mogli::maximal_common_fragments(Molecule &mol1, Molecule &mol2,
       int map[n];
       bool are_sub_iso = false;
 
-      for (std::deque<std::pair<int, int> >::reverse_iterator it = deque.rbegin(), end = deque.rend(); it < end-1; ++it) {
+      for (auto it = deque.rbegin(), end = deque.rend(); it < end-1; ++it) {
 
         int other = it->first;
 

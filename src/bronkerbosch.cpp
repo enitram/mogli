@@ -35,8 +35,7 @@ void BronKerbosch::run(std::chrono::high_resolution_clock::time_point start, lon
 
   BitSet mask(_n);
 
-  for (typename NodeVector::const_iterator it = order.begin(); it != order.end(); ++it) {
-    Node v = *it;
+  for (auto & v : order) {
     const BitSet& N_v = _bitNeighborhood[v];
     const BitSet& Nc_v = _restrictedBitNeighborhood[v];
     const BitSet Nd_v = N_v - Nc_v;
