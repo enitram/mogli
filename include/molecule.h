@@ -9,17 +9,10 @@
 #include <istream>
 #include <ostream>
 #include <assert.h>
-#include <lemon/core.h>
 #include <lemon/adaptors.h>
 #include <lemon/lgf_reader.h>
-#include <lemon/list_graph.h>
 #include <lemon/connectivity.h>
-#include <boost/ptr_container/ptr_map.hpp>
-#include <boost/ptr_container/exception.hpp>
-#include <boost/any.hpp>
-#include <boost/smart_ptr/make_shared.hpp>
 #include <queue>
-#include <boost/ptr_container/ptr_vector.hpp>
 #include "periodictable.h"
 #include "types.h"
 
@@ -142,16 +135,15 @@ namespace mogli {
 
   protected:
 
-    typedef typename Graph::template NodeMap<boost::any> NodeToAnyMap;
+    typedef typename Graph::template NodeMap<Any> NodeToAnyMap;
 
-    typedef typename boost::ptr_map<std::string, NodeToAnyMap> StringToAnyTypeMapMap;
+    typedef typename UniquePtrMap<std::string, NodeToAnyMap>::type StringToAnyTypeMapMap;
 
     typedef typename Graph::template NodeMap<unsigned short> NodeToUShortMap;
     typedef typename Graph::template NodeMap<double> NodeToDoubleMap;
     typedef typename Graph::template NodeMap<std::string> NodeToStringMap;
-    typedef typename Graph::template NodeMap<char *> NodeToCStringMap;
 
-    typedef typename boost::ptr_map<int, Node> IntToNodeMap;
+    typedef typename UniquePtrMap<int, Node>::type IntToNodeMap;
 
     Graph _g;
 
@@ -191,23 +183,23 @@ namespace mogli {
       return _perdiodic_table;
     }
 
-    const void get_properties(StringVector& properties) const {
-      for (StringToAnyTypeMapMap::const_iterator it = _properties.begin(), end = _properties.end(); it != end; ++it) {
-        properties.push_back(it->first);
+    void get_properties(StringVector& properties) const {
+      for (const auto & it : _properties) {
+        properties.push_back(it.first);
       }
 
     }
 
     // set properties
-    const boost::any get_property(Node node, std::string property) const {
-      return (&_properties.at(property))->operator[](node);
+    const Any get_property(Node node, std::string property) const {
+      return _properties.at(property)->operator[](node);
     }
 
-    void set_property(Node node, std::string property, boost::any value) {
+    void set_property(Node node, std::string property, Any value) {
       if (_properties.count(property) == 0) {
-        _properties.insert(property, new NodeToAnyMap(_g));
+        _properties[property] = std::make_unique<NodeToAnyMap>(_g);
       }
-      (&_properties.at(property))->set(node, value);
+      _properties[property]->operator[](node) = std::move(value);
     }
 
     // add atoms & edges
@@ -227,7 +219,7 @@ namespace mogli {
     const Node add_atom(int id, unsigned short color) {
       Node n = _g.addNode();
       _node_to_id[n] = id;
-      _id_to_node[id] = n;
+      _id_to_node[id] = std::make_unique<Node>(n);
       if (id > _max_uid) {
         _max_uid = id;
       }
@@ -281,7 +273,7 @@ namespace mogli {
     }
 
     const Node get_node_by_id(int id) const {
-      return _id_to_node.at(id);
+      return *_id_to_node.at(id);
     }
 
     const int get_id(const Node &node) const {
@@ -331,19 +323,18 @@ namespace mogli {
       return _is_connected == 1;
     }
 
-    void get_connected_components(std::vector<boost::shared_ptr<Molecule> > &components) {
+    void get_connected_components(SharedPtrVector<Molecule>::type &components) {
       NodeToIntMap compMap(_g);
       int count = lemon::connectedComponents(_g, compMap);
       // create a new molecule for every connected component
       for (int i = 0; i < count; ++i) {
-        boost::shared_ptr<Molecule> mol = boost::make_shared<Molecule>();
-        components.push_back(mol);
+        components.push_back(std::make_shared<Molecule>());
       }
       // copy nodes and properties
       for (NodeIt v(_g); v != lemon::INVALID; ++v) {
         Node cv = components[compMap[v]]->add_atom(_node_to_id[v], _colors[v]);
-        for (StringToAnyTypeMapMap::const_iterator it = _properties.begin(), end = _properties.end(); it != end; ++it) {
-          components[compMap[v]]->set_property(cv, it->first, get_property(v, it->first));
+        for (auto & it : _properties) {
+          components[compMap[v]]->set_property(cv, it.first, get_property(v, it.first));
         }
       }
       // copy edges
@@ -353,7 +344,7 @@ namespace mogli {
           for (NodeIt v = u; v != lemon::INVALID; ++v) {
             if (u == v)
               continue;
-            if (arcLookUp(_id_to_node[components[i]->get_id(u)], _id_to_node[components[i]->get_id(v)]) != lemon::INVALID) {
+            if (arcLookUp(*_id_to_node[components[i]->get_id(u)], *_id_to_node[components[i]->get_id(v)]) != lemon::INVALID) {
               components[i]->add_edge(u,v);
             }
           }
@@ -362,24 +353,24 @@ namespace mogli {
 
     }
 
-    int split(int max_size, int shell, std::vector<boost::shared_ptr<Molecule> > &components) {
+    int split(int max_size, int shell, SharedPtrVector<Molecule>::type &components) {
 
-      boost::shared_ptr<NodeToBoolMap> subgraph_map = boost::make_shared<NodeToBoolMap>(_g, true);
+      auto subgraph_map = std::make_shared<NodeToBoolMap>(_g, true);
 
-      std::vector<boost::shared_ptr<NodeToBoolMap> > partitions;
+      SharedPtrVector<NodeToBoolMap>::type partitions;
 
       balanced_cut(subgraph_map, max_size, shell, partitions);
 
       for (int i = 0; i < partitions.size(); ++i) {
 
-        boost::shared_ptr<Molecule> submol = boost::make_shared<Molecule>();
+        auto submol = std::make_shared<Molecule>();
         lemon::ArcLookUp<Graph> arcLookUp(_g);
         // copy core nodes and properties
         for (NodeIt v(_g); v != lemon::INVALID; ++v) {
           if (partitions.at(i)->operator[](v)) {
             Node cv = submol->add_atom(_node_to_id[v], _colors[v]);
-            for (StringToAnyTypeMapMap::const_iterator it = _properties.begin(), end = _properties.end(); it != end; ++it) {
-              submol->set_property(cv, it->first, get_property(v, it->first));
+            for (auto & it : _properties) {
+              submol->set_property(cv, it.first, get_property(v, it.first));
             }
           }
         }
@@ -389,8 +380,8 @@ namespace mogli {
           for (NodeIt v = u; v != lemon::INVALID; ++v) {
             if (u == v)
               continue;
-            Node src_u = _id_to_node.at(submol->get_id(u));
-            Node src_v = _id_to_node.at(submol->get_id(v));
+            Node src_u = *_id_to_node.at(submol->get_id(u));
+            Node src_v = *_id_to_node.at(submol->get_id(v));
 
             if (arcLookUp(src_u, src_v) != lemon::INVALID) {
               submol->add_edge(u,v);
@@ -408,12 +399,12 @@ namespace mogli {
 
   protected:
 
-    void balanced_cut(boost::shared_ptr<NodeToBoolMap> subgraph_map,
+    void balanced_cut(std::shared_ptr<NodeToBoolMap> subgraph_map,
                       int max_size, int shell,
-                      std::vector<boost::shared_ptr<NodeToBoolMap> > &partitions) {
+                      SharedPtrVector<NodeToBoolMap>::type &partitions) {
 
       EdgeToBoolMap subgraph_edge_map(_g, true);
-      boost::shared_ptr<SubGraph> subgraph = boost::make_shared<SubGraph>(_g, *subgraph_map, subgraph_edge_map);
+      auto subgraph = std::make_shared<SubGraph>(_g, *subgraph_map, subgraph_edge_map);
 
       int size = lemon::countNodes(*subgraph);
       if (size <= max_size) {
@@ -424,7 +415,7 @@ namespace mogli {
       Graph bctree;
       NodeToIntMap bctree_2_bicon_comp(bctree), bctree_node_weights(bctree);
       EdgeToIntSetMap bctree_shell_ids_u(bctree), bctree_shell_ids_v(bctree);
-      boost::ptr_vector<std::set<Node> > biconnected_nodes;
+      SharedPtrVector<std::set<Node>>::type biconnected_nodes;
 
       int bc_count = get_bctree(subgraph, bctree,
                  bctree_node_weights, bctree_2_bicon_comp, biconnected_nodes,
@@ -463,8 +454,8 @@ namespace mogli {
 
       assert(count == 2);
 
-      boost::shared_ptr<NodeToBoolMap> subgraph_map_0 = boost::make_shared<NodeToBoolMap>(_g, false);
-      boost::shared_ptr<NodeToBoolMap> subgraph_map_1 = boost::make_shared<NodeToBoolMap>(_g, false);
+      auto subgraph_map_0 = std::make_shared<NodeToBoolMap>(_g, false);
+      auto subgraph_map_1 = std::make_shared<NodeToBoolMap>(_g, false);
 
       if (st_components[bctree.u(cut_edge)] == 0) {
         get_subgraph(bctree, st_components,
@@ -486,10 +477,10 @@ namespace mogli {
       balanced_cut(subgraph_map_1, max_size, shell, partitions);
     }
 
-    int get_bctree(boost::shared_ptr<SubGraph> subgraph,
+    int get_bctree(std::shared_ptr<SubGraph> subgraph,
                     Graph& bctree,
                     NodeToIntMap& bctree_node_weights, NodeToIntMap& bctree_2_bicon_comp,
-                    boost::ptr_vector<std::set<Node> >& biconnected_nodes,
+                    SharedPtrVector<std::set<Node>>::type & biconnected_nodes,
                     EdgeToIntSetMap& bctree_shell_ids_u, EdgeToIntSetMap& bctree_shell_ids_v, int shell) {
       // get the biconnected components of the graph
       SubGraph::EdgeMap<int> biConnected(*subgraph);
@@ -500,12 +491,12 @@ namespace mogli {
 
       // get the node sets of the biconnected components
       for (int i = 0; i < bc_count; ++i) {
-        biconnected_nodes.push_back(new std::set<Node> ());
+        biconnected_nodes.push_back(std::make_shared<std::set<Node>> ());
       }
       for (SubGraph::EdgeIt e(*subgraph); e != lemon::INVALID; ++e) {
         int bc_num = biConnected[e];
-        biconnected_nodes.at(bc_num).insert(subgraph->u(e));
-        biconnected_nodes.at(bc_num).insert(subgraph->v(e));
+        (*biconnected_nodes.at(bc_num)).insert(subgraph->u(e));
+        (*biconnected_nodes.at(bc_num)).insert(subgraph->v(e));
       }
 
       // build bc tree
@@ -516,46 +507,46 @@ namespace mogli {
       for (int i = 0; i < biconnected_nodes.size(); ++i) {
         Node u = bctree.addNode();
         bctree_2_bicon_comp[u] = i;
-        comp_2_bc[i] = u;
-        bctree_node_weights[u] = static_cast<int>(biconnected_nodes.at(i).size());
+        comp_2_bc[i] = std::make_unique<Node>(u);
+        bctree_node_weights[u] = static_cast<int>((*biconnected_nodes[i]).size());
       }
 
       lemon::ArcLookUp<Graph> arcsBC(bctree);
       for (int i = 0; i < biconnected_nodes.size()-1; ++i) {
         for (int j = i+1; j < biconnected_nodes.size(); ++j) {
           std::vector<Node> intersection;
-          std::set<Node> &c1 = biconnected_nodes.at(i);
-          std::set<Node> &c2 = biconnected_nodes.at(j);
+          std::set<Node> &c1 = *biconnected_nodes.at(i);
+          std::set<Node> &c2 = *biconnected_nodes.at(j);
 
           std::set_intersection(c1.begin(), c1.end(),
                                 c2.begin(), c2.end(),
                                 std::back_inserter(intersection));
 
-          if (intersection.size() > 0) {
+          if (!intersection.empty()) {
             int cut_id = _node_to_id[intersection.front()];
             if (cut_ids.find(cut_id) == cut_ids.end()) {
               Node cut = bctree.addNode();
               bctree_2_bicon_comp[cut] = -_node_to_id[intersection.front()]-1;
               bctree_node_weights[cut] = 1;
-              cut_2_bc[cut_id] = cut;
+              cut_2_bc[cut_id] = std::make_unique<Node>(cut);
               cut_ids.insert(cut_id);
-              if (arcsBC(comp_2_bc[i], cut) == lemon::INVALID) {
-                bctree.addEdge(comp_2_bc[i], cut);
-                arcsBC.refresh(comp_2_bc[i]);
+              if (arcsBC(*comp_2_bc[i], cut) == lemon::INVALID) {
+                bctree.addEdge(*comp_2_bc[i], cut);
+                arcsBC.refresh(*comp_2_bc[i]);
               }
-              if (arcsBC(comp_2_bc[j], cut) == lemon::INVALID) {
-                bctree.addEdge(comp_2_bc[j], cut);
-                arcsBC.refresh(comp_2_bc[j]);
+              if (arcsBC(*comp_2_bc[j], cut) == lemon::INVALID) {
+                bctree.addEdge(*comp_2_bc[j], cut);
+                arcsBC.refresh(*comp_2_bc[j]);
               }
             } else {
-              Node cut = cut_2_bc[cut_id];
-              if (arcsBC(comp_2_bc[i], cut) == lemon::INVALID) {
-                bctree.addEdge(comp_2_bc[i], cut);
-                arcsBC.refresh(comp_2_bc[i]);
+              Node cut = *cut_2_bc[cut_id];
+              if (arcsBC(*comp_2_bc[i], cut) == lemon::INVALID) {
+                bctree.addEdge(*comp_2_bc[i], cut);
+                arcsBC.refresh(*comp_2_bc[i]);
               }
-              if (arcsBC(comp_2_bc[j], cut) == lemon::INVALID) {
-                bctree.addEdge(comp_2_bc[j], cut);
-                arcsBC.refresh(comp_2_bc[j]);
+              if (arcsBC(*comp_2_bc[j], cut) == lemon::INVALID) {
+                bctree.addEdge(*comp_2_bc[j], cut);
+                arcsBC.refresh(*comp_2_bc[j]);
               }
             }
           }
@@ -571,10 +562,10 @@ namespace mogli {
     void get_subgraph(Graph& bctree,
                      NodeToIntMap& bctree_components,
                      NodeToIntMap& bctree_2_bicon_comp,
-                     boost::ptr_vector<std::set<Node> >& biconnected_nodes,
+                     SharedPtrVector<std::set<Node>>::type &biconnected_nodes,
                      IntSet& shell_ids,
                      int component,
-                     boost::shared_ptr<NodeToBoolMap> subgraph_map) {
+                     std::shared_ptr<NodeToBoolMap> subgraph_map) {
 
       // make union of nodes represented by block nodes in the bc-tree
       for (NodeIt bc_v(bctree); bc_v != lemon::INVALID; ++bc_v) {
@@ -582,7 +573,7 @@ namespace mogli {
 
         if (bctree_components[bc_v] == component) {
           if (bc_comp >= 0) {
-            for (Node v : biconnected_nodes[bc_comp]) {
+            for (auto & v : *biconnected_nodes[bc_comp]) {
               if (!subgraph_map->operator[](v)) {
                 subgraph_map->operator[](v) = true;
               }
@@ -592,7 +583,7 @@ namespace mogli {
       }
 
       for (int id : shell_ids) {
-        Node v = _id_to_node[id];
+        auto v = *_id_to_node[id];
         if (!subgraph_map->operator[](v)) {
           subgraph_map->operator[](v) = true;
         }
@@ -600,9 +591,9 @@ namespace mogli {
 
     }
 
-    void find_shell_nodes(boost::shared_ptr<SubGraph> subgraph,
+    void find_shell_nodes(std::shared_ptr<SubGraph> subgraph,
                           NodeToIntMap& bctree_2_bicon_comp,
-                          boost::ptr_vector<std::set<Node> >& biconnected_nodes,
+                          SharedPtrVector<std::set<Node>>::type &biconnected_nodes,
                           Graph& bctree,
                           int shell,
                           EdgeToIntSetMap& bctree_shell_ids_u,
@@ -631,14 +622,14 @@ namespace mogli {
 
           if (bc_comp >= 0) {
             if (bctree_components[bc_v] == 0) {
-              for (Node v : biconnected_nodes[bc_comp]) {
+              for (auto & v : *biconnected_nodes[bc_comp]) {
                 core_nodes_0.insert(_node_to_id[v]);
                 for (int sv : shell_ids[v]) {
                   shell_nodes_0.insert(sv);
                 }
               }
             } else {
-              for (Node v : biconnected_nodes[bc_comp]) {
+              for (auto & v : *biconnected_nodes[bc_comp]) {
                 core_nodes_1.insert(_node_to_id[v]);
                 for (int sv : shell_ids[v]) {
                   shell_nodes_1.insert(sv);
@@ -679,7 +670,7 @@ namespace mogli {
       }
     }
 
-    void bfs_find_shell(boost::shared_ptr<SubGraph> subgraph,
+    void bfs_find_shell(std::shared_ptr<SubGraph> subgraph,
                         const Node &v, int shell,
                         SubGraph::NodeMap<IntSet>& shell_ids) {
       SubGraph::NodeMap<int> depth(*subgraph, 0);
@@ -688,7 +679,7 @@ namespace mogli {
 
       queue.push_back(v);
       visited[v] = true;
-      while (queue.size() > 0) {
+      while (!queue.empty()) {
         Node &current = queue.front();
         // if current node is not the core node
         if (current != v) {
@@ -723,7 +714,7 @@ namespace mogli {
       int min_dist = std::numeric_limits<int>::max();
       Edge cut_edge = lemon::INVALID;
 
-      boost::ptr_map<int, std::set<Node> > unmarked2node;
+      UniquePtrMap<int, std::set<Node>>::type unmarked2node;
 
       for (NodeIt v(bctree); v != lemon::INVALID; ++v) {
         int deg = 0;
@@ -732,9 +723,9 @@ namespace mogli {
         }
 
         if (unmarked2node.find(deg) == unmarked2node.end()) {
-          unmarked2node[deg] = std::set<Node> ();
+          unmarked2node[deg] = std::make_unique<std::set<Node>> ();
         }
-        unmarked2node[deg].insert(v);
+        unmarked2node[deg]->insert(v);
         unmarked[v] = deg;
         weight_sum[v] = 0;
       }
@@ -743,15 +734,15 @@ namespace mogli {
         marked[e] = false;
       }
 
-      while (unmarked2node[1].size() > 0) {
+      while (!unmarked2node[1]->empty()) {
 
         std::vector<Node> copy;
-        std::copy(unmarked2node[1].begin(),
-                  unmarked2node[1].end(),
+        std::copy(unmarked2node[1]->begin(),
+                  unmarked2node[1]->end(),
                   std::back_inserter(copy));
 
         for (Node u : copy) {
-          unmarked2node[1].erase(u);
+          unmarked2node[1]->erase(u);
           for (IncEdgeIt e(bctree, u); e != lemon::INVALID; ++e) {
             if (!marked[e]) {
               int weight_u, weight_v;
@@ -775,13 +766,13 @@ namespace mogli {
 
               Node v = bctree.oppositeNode(u, e);
               int num_unmarked = unmarked[v];
-              unmarked2node[num_unmarked].erase(v);
+              unmarked2node[num_unmarked]->erase(v);
 
               unmarked[v] = --num_unmarked;
               if (unmarked2node.find(num_unmarked) == unmarked2node.end()) {
-                unmarked2node[num_unmarked] = std::set<Node>();
+                unmarked2node[num_unmarked] = std::make_unique<std::set<Node>> ();
               }
-              unmarked2node[num_unmarked].insert(v);
+              unmarked2node[num_unmarked]->insert(v);
 
               if (bctree.u(e) == u) {
                 weight_sum[v] = weight_sum[v] + weight_u - 1;
@@ -854,15 +845,15 @@ namespace mogli {
           } else {
             first = false;
           }
-          boost::any value = get_property(v, prop);
-          if (value.type() == typeid(bool)) {
-            out << boost::any_cast<bool>(value);
-          } else if (value.type() == typeid(int)) {
-            out << boost::any_cast<int>(value);
-          } else if (value.type() == typeid(double)) {
-            out << boost::any_cast<double>(value);
-          } else if (value.type() == typeid(std::string)) {
-            out << boost::any_cast<std::string>(value);
+          Any value = get_property(v, prop);
+          if (std::holds_alternative<bool>(value)) {
+            out << std::get<bool>(value);
+          } else if (std::holds_alternative<int>(value)) {
+            out << std::get<int>(value);
+          } else if (std::holds_alternative<double>(value)) {
+            out << std::get<double>(value);
+          } else if (std::holds_alternative<std::string>(value)) {
+            out << std::get<std::string>(value);
           }
         }
         out << "\"]";
@@ -917,11 +908,11 @@ namespace mogli {
     std::sort(nodes.begin(), nodes.end());
     if (!raw) {
       for (int id : nodes) {
-        out << "\tnode [\n\t\tid " << id << "\n\t\tlabel \"" << _colors[_id_to_node[id]] << "\"\n\t]\n";
+        out << "\tnode [\n\t\tid " << id << "\n\t\tlabel \"" << _colors[*_id_to_node[id]] << "\"\n\t]\n";
       }
     } else {
       for (int id : nodes) {
-        out << R"(\tnode [\n\t\tid )" << id << R"(\n\t\tlabel \")" << _colors[_id_to_node[id]] << R"(\"\n\t]\n)";
+        out << R"(\tnode [\n\t\tid )" << id << R"(\n\t\tlabel \")" << _colors[*_id_to_node[id]] << R"(\"\n\t]\n)";
       }
     }
 
@@ -996,19 +987,19 @@ namespace mogli {
     std::sort(nodes.begin(), nodes.end());
 
     for (int id : nodes) {
-      Node v = _id_to_node[id];
+      auto v = *_id_to_node[id];
       out << id << "\t" << _colors[v] << "\t";
       for (std::string prop : config.get_bool_node_props()) {
-        out << boost::any_cast<bool>(get_property(v, prop)) << "\t";
+        out << std::get<bool>(get_property(v, prop)) << "\t";
       }
       for (std::string prop : config.get_int_node_props()) {
-        out << boost::any_cast<int>(get_property(v, prop)) << "\t";
+        out << std::get<int>(get_property(v, prop)) << "\t";
       }
       for (std::string prop : config.get_double_node_props()) {
-        out << boost::any_cast<double>(get_property(v, prop)) << "\t";
+        out << std::get<double>(get_property(v, prop)) << "\t";
       }
       for (std::string prop : config.get_string_node_props()) {
-        out << boost::any_cast<std::string>(get_property(v, prop)) << "\t";
+        out << std::get<std::string>(get_property(v, prop)) << "\t";
       }
       out << "\n";
     }
@@ -1052,26 +1043,26 @@ namespace mogli {
     reader.nodeMap(config.get_color_property(), _colors);
     reader.nodeMap(config.get_id_property(), _node_to_id);
 
-    boost::ptr_map<std::string, NodeToBoolMap> bool_props;
-    boost::ptr_map<std::string, NodeToIntMap> int_props;
-    boost::ptr_map<std::string, NodeToDoubleMap> double_props;
-    boost::ptr_map<std::string, NodeToStringMap> string_props;
+    UniquePtrMap<std::string, NodeToBoolMap>::type bool_props;
+    UniquePtrMap<std::string, NodeToIntMap>::type int_props;
+    UniquePtrMap<std::string, NodeToDoubleMap>::type double_props;
+    UniquePtrMap<std::string, NodeToStringMap>::type string_props;
 
     for (std::string prop : config.get_bool_node_props()) {
-      bool_props.insert(prop, new NodeToBoolMap(_g));
-      reader.nodeMap(prop, *(&bool_props.at(prop)));
+      bool_props[prop] = std::make_unique<NodeToBoolMap>(_g);
+      reader.nodeMap(prop, *bool_props[prop]);
     }
     for (std::string prop : config.get_int_node_props()) {
-      int_props.insert(prop, new NodeToIntMap(_g));
-      reader.nodeMap(prop, *(&int_props.at(prop)));
+      int_props[prop] = std::make_unique<NodeToIntMap>(_g);
+      reader.nodeMap(prop, *int_props[prop]);
     }
     for (std::string prop : config.get_double_node_props()) {
-      double_props.insert(prop, new NodeToDoubleMap(_g));
-      reader.nodeMap(prop, *(&double_props.at(prop)));
+      double_props[prop] = std::make_unique<NodeToDoubleMap>(_g);
+      reader.nodeMap(prop, *double_props[prop]);
     }
     for (std::string prop : config.get_string_node_props()) {
-      string_props.insert(prop, new NodeToStringMap(_g));
-      reader.nodeMap(prop, *(&string_props.at(prop)));
+      string_props[prop] = std::make_unique<NodeToStringMap>(_g);
+      reader.nodeMap(prop, *string_props[prop]);
     }
     reader.run();
 
@@ -1079,35 +1070,31 @@ namespace mogli {
     _max_uid = 0;
     for (NodeIt n(_g); n != lemon::INVALID; ++n) {
       int id = _node_to_id[n];
-      _id_to_node[id] = n;
+      _id_to_node[id] = std::make_unique<Node>(n);
       if (id > _max_uid) {
         _max_uid = id;
       }
       _atom_count++;
     }
 
-    for (boost::ptr_map<std::string, NodeToBoolMap>::iterator it = bool_props.begin(), end = bool_props.end();
-         it != end; ++it) {
+    for (auto & it : bool_props) {
       for (NodeIt n(_g); n != lemon::INVALID; ++n) {
-        set_property(n, it->first, it->second->operator[](n));
+        set_property(n, it.first, it.second->operator[](n));
       }
     }
-    for (boost::ptr_map<std::string, NodeToIntMap>::iterator it = int_props.begin(), end = int_props.end();
-         it != end; ++it) {
+    for (auto & it : int_props) {
       for (NodeIt n(_g); n != lemon::INVALID; ++n) {
-        set_property(n, it->first, it->second->operator[](n));
+        set_property(n, it.first, it.second->operator[](n));
       }
     }
-    for (boost::ptr_map<std::string, NodeToDoubleMap>::iterator it = double_props.begin(), end = double_props.end();
-         it != end; ++it) {
+    for (auto & it : double_props) {
       for (NodeIt n(_g); n != lemon::INVALID; ++n) {
-        set_property(n, it->first, it->second->operator[](n));
+        set_property(n, it.first, it.second->operator[](n));
       }
     }
-    for (boost::ptr_map<std::string, NodeToStringMap>::iterator it = string_props.begin(), end = string_props.end();
-         it != end; ++it) {
+    for (auto & it : string_props) {
       for (NodeIt n(_g); n != lemon::INVALID; ++n) {
-        set_property(n, it->first, it->second->operator[](n));
+        set_property(n, it.first, it.second->operator[](n));
       }
     }
 

@@ -8,11 +8,9 @@
 #include "molecule.h"
 #include <nauty.h>
 #include <malloc.h>
-#include <boost/dynamic_bitset.hpp>
 
 namespace mogli {
 
-  typedef boost::dynamic_bitset<> BitSet;
 
   class Canonization {
 

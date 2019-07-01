@@ -71,17 +71,17 @@ namespace msgpack {
       };
 
       template<>
-      struct pack<boost::any> {
+      struct pack<Any> {
         template <typename Stream>
-        packer<Stream>& operator()(msgpack::packer<Stream>& o, boost::any const& v) const {
-          if (v.type() == typeid(bool)) {
-            o.pack_array(2).pack(0).pack(boost::any_cast<bool>(v));
-          } else if (v.type() == typeid(int)) {
-            o.pack_array(2).pack(1).pack(boost::any_cast<int>(v));
-          } else if (v.type() == typeid(double)) {
-            o.pack_array(2).pack(2).pack(boost::any_cast<double>(v));
-          } else if (v.type() == typeid(std::string)) {
-            o.pack_array(2).pack(3).pack(boost::any_cast<std::string>(v));
+        packer<Stream>& operator()(msgpack::packer<Stream>& o, Any const& v) const {
+          if (std::holds_alternative<bool>(v)) {
+            o.pack_array(2).pack(0).pack(std::get<bool>(v));
+          } else if (std::holds_alternative<int>(v)) {
+            o.pack_array(2).pack(1).pack(std::get<int>(v));
+          } else if (std::holds_alternative<double>(v)) {
+            o.pack_array(2).pack(2).pack(std::get<double>(v));
+          } else if (std::holds_alternative<std::string>(v)) {
+            o.pack_array(2).pack(3).pack(std::get<std::string>(v));
           } else {
             throw msgpack::type_error();
           }
@@ -90,22 +90,22 @@ namespace msgpack {
       };
 
       template<>
-      struct convert<boost::any> {
+      struct convert<Any> {
 
-        msgpack::object const& operator()(msgpack::object const& o, boost::any& v) const {
+        msgpack::object const& operator()(msgpack::object const& o, Any& v) const {
           if (o.type != msgpack::type::ARRAY) throw msgpack::type_error();
           if (o.via.array.size != 2) throw msgpack::type_error();
 
           msgpack::object *arr = o.via.array.ptr;
           int type = arr[0].as<int>();
           switch (type)  {
-            case 0: v = boost::any(arr[1].as<bool>());
+            case 0: v = arr[1].as<bool>();
               break;
-            case 1: v = boost::any(arr[1].as<int>());
+            case 1: v = arr[1].as<int>();
               break;
-            case 2: v = boost::any(arr[1].as<double>());
+            case 2: v = arr[1].as<double>();
               break;
-            case 3: v = boost::any(arr[1].as<std::string>());
+            case 3: v = arr[1].as<std::string>();
               break;
             default:
               throw msgpack::type_error();
@@ -159,20 +159,20 @@ namespace msgpack {
 
         std::vector<std::pair<int, unsigned short> > atoms = arr[0].as<std::vector<std::pair<int, unsigned short> > >();
 
-        for (std::vector<std::pair<int, unsigned short> >::const_iterator it = atoms.begin(), end = atoms.end(); it != end; ++it) {
-          mol.add_atom(it->first, it->second);
+        for (auto & it : atoms) {
+          mol.add_atom(it.first, it.second);
         }
 
         std::vector<std::pair<int, int> > edges = arr[1].as<std::vector<std::pair<int, int> > >();
-        for (std::vector<std::pair<int, int> >::const_iterator it = edges.begin(), end = edges.end(); it != end; ++it) {
-          Node u = mol.get_node_by_id(it->first);
-          Node v = mol.get_node_by_id(it->second);
+        for (auto & it : edges) {
+          Node u = mol.get_node_by_id(it.first);
+          Node v = mol.get_node_by_id(it.second);
           mol.add_edge(u, v);
         }
 
         StringVector props = arr[2].as<StringVector>();
 
-        std::vector<std::vector<std::pair<int, boost::any> > > properties = arr[3].as<std::vector<std::vector<std::pair<int, boost::any> > > >();
+        std::vector<std::vector<std::pair<int, Any>>> properties = arr[3].as<std::vector<std::vector<std::pair<int, Any>>>>();
         if (props.size() != properties.size()) throw msgpack::type_error();
         for (int i = 0; i < props.size(); ++i) {
           for (auto& pair : properties[i]) {
@@ -224,8 +224,8 @@ namespace msgpack {
           v.set_shell_size(arr[1].as<int>());
 
           std::vector<std::pair<int, bool> > shell = arr[2].as<std::vector<std::pair<int, bool> > >();
-          for (std::vector<std::pair<int, bool> >::const_iterator it = shell.begin(), end = shell.end(); it != end; ++it) {
-            v.set_core(v.get_node_by_id(it->first), it->second);
+          for (auto & it : shell) {
+            v.set_core(v.get_node_by_id(it.first), it.second);
           }
 
           return o;
@@ -253,11 +253,11 @@ namespace msgpack {
           IntToIntMap ftm = arr[0].as<IntToIntMap>();
           IntToIntMapVector mftm = arr[1].as<IntToIntMapVector>();
 
-          for (IntToIntMap::const_iterator it = ftm.begin(), end = ftm.end(); it != end; ++it) {
-            v.add_frag_to_mol(it->first, it->second);
+          for (auto & it : ftm) {
+            v.add_frag_to_mol(it.first, it.second);
           }
-          for (IntToIntMapVector::iterator it = mftm.begin(), end = mftm.end(); it != end; ++it) {
-            v.add_merged_frag_to_mol(*it);
+          for (auto & it : mftm) {
+            v.add_merged_frag_to_mol(it);
           }
 
           return o;
@@ -316,7 +316,7 @@ namespace mogli {
     return buffer.str();
   }
 
-  std::string pack_molecule(const boost::shared_ptr<Molecule> &obj) {
+  std::string pack_molecule(const std::shared_ptr<Molecule> &obj) {
     return pack_molecule(*obj);
   }
 
@@ -332,7 +332,7 @@ namespace mogli {
     return buffer.str();
   }
 
-  std::string pack_fragment(const boost::shared_ptr<Fragment> &obj) {
+  std::string pack_fragment(const std::shared_ptr<Fragment> &obj) {
     return pack_fragment(*obj);
   }
 

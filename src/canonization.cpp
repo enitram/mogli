@@ -2,7 +2,6 @@
 // Created by M. Engler on 10/20/16.
 //
 
-#include <bitset>
 #include "../include/canonization.h"
 
 void mogli::Canonization::init(const Molecule &mol) {

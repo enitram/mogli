@@ -1,27 +1,77 @@
-cmake_minimum_required(VERSION 3.6)
+cmake_minimum_required(VERSION 3.12)
 project(mogli)
 
-set( LIBLEMON_ROOT "$ENV{HOME}/lemon" CACHE PATH "Additional search directory for lemon library" )
+set(CMAKE_CXX_STANDARD 17)
 
-IF(NOT CMAKE_BUILD_TYPE)
-    SET(CMAKE_BUILD_TYPE Release CACHE STRING "Choose the type of build, options are: Debug Release" FORCE)
-ENDIF(NOT CMAKE_BUILD_TYPE)
+include(FetchContent)
+include(ExternalProject)
 
-set(CMAKE_CXX_FLAGS_DEBUG "-g -ggdb -O0 -DDEBUG -std=c++11")
-set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG -std=c++11")
+###############
+# Build options
+###############
+
+if(NOT DEFINED CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE Release)
+endif()
+
+OPTION(BUILD_PYTHON "Build python module." ON)
+OPTION(BUILD_OFFLINE "Build without updating the external projects." OFF)
+OPTION(BUILD_TESTS "Build unit tests" OFF)
+
+if (BUILD_OFFLINE)
+    set(OFFLINE 1)
+else()
+    set(OFFLINE 0)
+endif()
+
+###############
+# Compile flags
+###############
+
+set(CMAKE_CXX_FLAGS_DEBUG "-g -ggdb -O0 -DDEBUG -std=c++17")
+set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG -std=c++17")
 
 set(CMAKE_C_FLAGS_DEBUG "-g -ggdb -O0 -DDEBUG -std=c99")
 set(CMAKE_C_FLAGS_RELEASE "-O3 -DNDEBUG -std=c99")
 
-find_package( Boost 1.60.0 REQUIRED COMPONENTS python)
-set( Boost_USE_STATIC_LIBS OFF )
-set( Boost_USE_MULTITHREADED ON )
-set( Boost_USE_STATIC_RUNTIME OFF )
-include_directories("${Boost_INCLUDE_DIRS}" "/usr/include/python2.7")
-
 if( ${CMAKE_SYSTEM_NAME} MATCHES "Darwin" )
     set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libstdc++ " )
 endif()
+
+#######################
+# Dependency: msgpack-c
+#######################
+
+FetchContent_Declare(
+        msgpack
+        GIT_REPOSITORY https://github.com/msgpack/msgpack-c.git
+        GIT_TAG        cpp-3.2.0
+)
+
+FetchContent_GetProperties(msgpack)
+if(NOT msgpack_POPULATED)
+    FetchContent_Populate(msgpack)
+    add_subdirectory(${msgpack_SOURCE_DIR} ${msgpack_BINARY_DIR})
+endif()
+
+###################
+# Dependency: lemon
+###################
+
+ExternalProject_Add(
+        lemon
+        PREFIX     external
+        URL        http://lemon.cs.elte.hu/pub/sources/lemon-1.3.1.tar.gz
+        URL_HASH   MD5=e89f887559113b68657eca67cf3329b5
+        CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=lemon
+        UPDATE_DISCONNECTED ${OFFLINE}
+)
+
+set(LIBLEMON_ROOT ${CMAKE_CURRENT_BINARY_DIR}/external/src/lemon-build/lemon/)
+
+#######
+# Files
+#######
 
 set( CommonLibs
         m
@@ -69,17 +119,48 @@ set(LAD_SRC
         lib/lad/sublad.h
         lib/lad/compatibility.c)
 
+#############
+# C++ library
+#############
+
 include_directories(
         "include"
         "${LIBLEMON_ROOT}/include"
         "lib/nauty"
         "lib/lad"
-        "lib/msgpack-c/include"
+        "${msgpack_SOURCE_DIR}/include"
+        "lib/dynamic_bitset"
 )
 link_directories( "${LIBLEMON_ROOT}/lib")
 
-add_library(mogli SHARED ${HEADER_FILES} ${SOURCE_FILES} src/util/boosting.cpp ${NAUTY_SRC} ${LAD_SRC})
-target_link_libraries(mogli ${Boost_LIBRARIES} ${CommonLibs})
+add_library(mogli SHARED ${HEADER_FILES} ${SOURCE_FILES} ${NAUTY_SRC} ${LAD_SRC})
+target_link_libraries(mogli ${CommonLibs})
+target_compile_definitions(mogli PRIVATE TR2="${USE_TR2}")
+add_dependencies(mogli lemon)
 
 add_executable(report test/report.cpp ${SOURCE_FILES} ${NAUTY_SRC} ${LAD_SRC})
-target_link_libraries(report ${Boost_LIBRARIES} ${CommonLibs})
+target_link_libraries(report ${CommonLibs})
+add_dependencies(report lemon)
+#target_link_libraries(report ${Boost_LIBRARIES} ${CommonLibs})
+
+#add_executable(bbpmcs_compare test/bbpmcs_compare.cpp ${SOURCE_FILES} ${NAUTY_SRC} ${LAD_SRC})
+#target_link_libraries(bbpmcs_compare ${Boost_LIBRARIES} ${CommonLibs})
+#
+#add_executable(test_product test/test_product.cpp ${SOURCE_FILES} ${NAUTY_SRC} ${LAD_SRC})
+#target_link_libraries(test_product ${Boost_LIBRARIES} ${CommonLibs})
+#
+#add_executable(test_all_combinations test/test_all_combinations.cpp ${SOURCE_FILES} ${NAUTY_SRC} ${LAD_SRC})
+#target_link_libraries(test_all_combinations ${Boost_LIBRARIES} ${CommonLibs})
+#
+#add_executable(mcis test/mcis.cpp ${SOURCE_FILES} ${NAUTY_SRC} ${LAD_SRC})
+#target_link_libraries(mcis ${Boost_LIBRARIES} ${CommonLibs})
+#
+#add_executable(timeout test/timeout.cpp ${SOURCE_FILES} ${NAUTY_SRC} ${LAD_SRC})
+#target_link_libraries(timeout ${Boost_LIBRARIES} ${CommonLibs})
+
+# TODO pybind11
+# TODO auto iterators and .empty()
+# TODO unit tests
+# TODO file headers
+# TODO documentation
+

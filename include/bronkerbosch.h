@@ -11,8 +11,9 @@
 #define MOGLI_BRONKERBOSCH_H
 
 #include <chrono>
+#include <list>
+#include <boost/dynamic_bitset.hpp>
 #include "product.h"
-#include "boost/graph/vf2_sub_graph_iso.hpp"
 
 namespace mogli {
 
@@ -20,6 +21,7 @@ namespace mogli {
   public:
 
   private:
+    typedef typename boost::dynamic_bitset<> BitSet;
     typedef typename Graph::template NodeMap<size_t> NodeToBitMap;
     typedef typename Graph::template NodeMap<BitSet> NodeToBitSetMap;
     typedef std::list<Node> NodeList;

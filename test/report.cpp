@@ -6,9 +6,6 @@
 #include <chrono>
 #include <dirent.h>
 #include <lemon/arg_parser.h>
-#include <boost/format.hpp>
-#include <boost/algorithm/string/replace.hpp>
-#include <boost/ptr_container/ptr_vector.hpp>
 #include "../include/fragment.h"
 #include "../include/mcf.h"
 
@@ -30,7 +27,7 @@ std::tuple<float, float, bool, int> run(Product& product, int min_core, int max_
   bool c = cliques.size() == 1 && cliques[0].size() == lemon::countNodes(product.get_graph());
   for (NodeVectorVector::const_iterator it = cliques.begin(), end = cliques.end(); it != end; ++it) {
     IntToIntMap g_to_mol1, g_to_mol2;
-    boost::shared_ptr<Fragment> fragment = boost::make_shared<Fragment>(product, *it, g_to_mol1, g_to_mol2);
+    auto fragment = std::make_shared<Fragment>(product, *it, g_to_mol1, g_to_mol2);
 
     if (fragment->get_core_atom_count() > 1) {
       fragments.push_back(fragment);
@@ -153,7 +150,10 @@ int main(int argc, char** argv) {
     bk_time = std::get<0>(timing);
     gen_time = std::get<1>(timing);
     degeneracy.push_back(std::get<3>(timing));
-    assert(product.is_complete() == std::get<2> && boost::format("%d: %dx%d") % gen_int % molid1 % molid2);
+    assert(product.is_complete() == std::get<2>(timing) && [](int gen_int, int molid1, int molid2){
+      std::cout << std::to_string(gen_int) << ": " << std::to_string(molid1) << "x" << std::to_string(molid2) << std::endl;
+      return true;
+    });
   } else {
     for (int c = 0; c < product.get_components(); ++c) {
       Product component(product, c);
@@ -197,11 +197,14 @@ int main(int argc, char** argv) {
       bk_time += std::get<0>(timing);
       gen_time += std::get<1>(timing);
       degeneracy.push_back(std::get<3>(timing));
-      assert(component.is_complete() == std::get<2> && boost::format("%d: %dx%d") % gen_int % molid1 % molid2);
+      assert(component.is_complete() == std::get<2>(timing) && [](int gen_int, int molid1, int molid2){
+        std::cout << std::to_string(gen_int) << ": " << std::to_string(molid1) << "x" << std::to_string(molid2) << std::endl;
+        return true;
+      });
     }
   }
 
-  if (fragments.size() == 0)
+  if (fragments.empty())
     return 0;
 
   float pg_time = pg_duration.count();

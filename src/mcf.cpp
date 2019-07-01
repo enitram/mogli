@@ -14,9 +14,9 @@ using namespace mogli;
 
 void append_fragments(Product &product, NodeVectorVector& cliques, FragmentVector &fragments,
                       MatchVector &matches_mol1, MatchVector &matches_mol2) {
-  for (NodeVectorVector::const_iterator it = cliques.begin(), end = cliques.end(); it != end; ++it) {
+  for (auto & it : cliques) {
     IntToIntMap g_to_mol1, g_to_mol2;
-    boost::shared_ptr<Fragment> fragment = boost::make_shared<Fragment>(product, *it, g_to_mol1, g_to_mol2);
+    auto fragment = std::make_shared<Fragment>(product, it, g_to_mol1, g_to_mol2);
 
     Match match1(g_to_mol1);
     Match match2(g_to_mol2);
@@ -40,8 +40,8 @@ void run_mcf(Product &product, FragmentVector &fragments,
   if (!maximum) {
     append_fragments(product, cliques, fragments, matches_mol1, matches_mol2);
   } else {
-    int current_max = fragments.size() > 0 ? fragments[0]->get_core_atom_count() : 0;
-    int cliques_size = cliques.size() > 0 ? product.get_clique_size(cliques[0]) : 0;
+    int current_max = !fragments.empty() ? fragments[0]->get_core_atom_count() : 0;
+    int cliques_size = !cliques.empty() ? product.get_clique_size(cliques[0]) : 0;
 
     if (cliques_size > current_max) {
       fragments.clear();
@@ -87,7 +87,7 @@ void mogli::maximal_common_fragments(Molecule &mol1, Molecule &mol2,
                                                                       > product.get_component_size(i2);});
       for (int c : idx) {
         // break if component smaller than current max fragment
-        int current_max = fragments.size() > 0 ? fragments[0]->get_core_atom_count() : 0;
+        int current_max = !fragments.empty() ? fragments[0]->get_core_atom_count() : 0;
         if (maximum && product.get_component_size(c) < current_max) {
           break;
         }
@@ -122,7 +122,7 @@ void mogli::maximal_common_fragments(Molecule &mol1, Molecule &mol2,
                                                                       > product.get_component_size(i2);});
       for (int c : idx) {
         // break if component smaller than current max fragment
-        int current_max = frags.size() > 0 ? frags[0]->get_core_atom_count() : 0;
+        int current_max = !frags.empty() ? frags[0]->get_core_atom_count() : 0;
         if (maximum && product.get_component_size(c) < current_max) {
           break;
         }
@@ -140,7 +140,7 @@ void mogli::maximal_common_fragments(Molecule &mol1, Molecule &mol2,
     }
 
     int k = 0;
-    for (auto fragment : frags) {
+    for (auto & fragment : frags) {
       deque.push_back(std::make_pair(k, (int) fragment->get_atom_count()));
       ++k;
     }
@@ -226,13 +226,13 @@ void mogli::atomic_fragments(Molecule &mol, FragmentVector &fragments, MatchVect
     NodeToBoolMap visited(mol.get_graph(), false);
     NodeToIntMap depth(mol.get_graph(), 0);
     NodeDeque queue;
-    boost::shared_ptr<Fragment> fragment = boost::make_shared<Fragment>();
+    auto fragment = std::make_shared<Fragment>();
     Match match;
 
     queue.push_back(v);
     visited[v] = true;
     Node root;
-    while (queue.size() > 0) {
+    while (!queue.empty()) {
       Node &current = queue.front();
 
       Node copy = fragment->add_atom(mol.get_color(current));

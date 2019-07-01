@@ -7,14 +7,12 @@
 
 
 #include <deque>
-#include <boost/ptr_container/ptr_vector.hpp>
 #include <cstring>
 #include "product.h"
 
 namespace mogli {
 
   typedef typename lemon::FilterNodes<const Graph, const NodeToBoolMap> FilterNodes;
-  typedef typename FilterNodes::NodeIt FilteredNodeIt;
 
   class Fragment : public Molecule {
 

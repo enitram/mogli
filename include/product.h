@@ -284,26 +284,26 @@ namespace mogli {
           } else {
             first = false;
           }
-          boost::any value1 = _mol1.get_property(u, prop);
-          if (value1.type() == typeid(bool)) {
-            out << boost::any_cast<bool>(value1);
-          } else if (value1.type() == typeid(int)) {
-            out << boost::any_cast<int>(value1);
-          } else if (value1.type() == typeid(double)) {
-            out << boost::any_cast<double>(value1);
-          } else if (value1.type() == typeid(std::string)) {
-            out << boost::any_cast<std::string>(value1);
+          Any value1 = _mol1.get_property(u, prop);
+          if (std::holds_alternative<bool>(value1)) {
+            out << std::get<bool>(value1);
+          } else if (std::holds_alternative<int>(value1)) {
+            out << std::get<int>(value1);
+          } else if (std::holds_alternative<double>(value1)) {
+            out << std::get<double>(value1);
+          } else if (std::holds_alternative<std::string>(value1)) {
+            out << std::get<std::string>(value1);
           }
           out << "x";
-          boost::any value2 = _mol2.get_property(v, prop);
-          if (value2.type() == typeid(bool)) {
-            out << boost::any_cast<bool>(value2);
-          } else if (value2.type() == typeid(int)) {
-            out << boost::any_cast<int>(value2);
-          } else if (value2.type() == typeid(double)) {
-            out << boost::any_cast<double>(value2);
-          } else if (value2.type() == typeid(std::string)) {
-            out << boost::any_cast<std::string>(value2);
+          Any value2 = _mol2.get_property(v, prop);
+          if (std::holds_alternative<bool>(value2)) {
+            out << std::get<bool>(value2);
+          } else if (std::holds_alternative<int>(value2)) {
+            out << std::get<int>(value2);
+          } else if (std::holds_alternative<double>(value2)) {
+            out << std::get<double>(value2);
+          } else if (std::holds_alternative<std::string>(value2)) {
+            out << std::get<std::string>(value2);
           }
         }
         out << "\"]";
