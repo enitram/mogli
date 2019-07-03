@@ -17,12 +17,15 @@
 //    along with this program.  If not, see <https://www.gnu.org/licenses/>.                                          //
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-#include "../include/bronkerbosch.h"
 #include <chrono>
 #include <dirent.h>
+#include <fstream>
+
 #include <lemon/arg_parser.h>
-#include "../include/fragment.h"
-#include "../include/mcf.h"
+#include <lemon/connectivity.h>
+#include "bronkerbosch.h"
+#include "fragment.h"
+#include "mcf.h"
 
 
 using namespace mogli;
