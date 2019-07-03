@@ -91,16 +91,11 @@ namespace mogli {
     void init(const Molecule& mol, const NodeToBoolMap& filter, const Node& root);
 
     void dfs(const Node& current, const Node& last, const Molecule& mol,
-             NodeToBoolMap& visited, ShortSet& colorSet, ShortToNodeVectorMap& colorMap,
-             bool& is_tree);
+             NodeToBoolMap& visited, ShortSet& colorSet, ShortToNodeVectorMap& colorMap);
 
     void dfs(const Node& current, const Node& last, const Molecule& mol,
              const FilterNodes& subgraph, NodeToBoolMap& visited, ShortSet& colorSet,
-             ShortToNodeVectorMap& colorMap, bool& is_tree, unsigned int& node_count);
-
-    void canonTree(const Molecule& mol, const ShortToNodeVectorMap& colorMap);
-
-    void canonTree(const FilterNodes& subgraph, const ShortToNodeVectorMap& colorMap);
+             ShortToNodeVectorMap& colorMap, unsigned int& node_count);
 
     void canonNauty(const Molecule& mol,
                     const ShortSet &colorSet,

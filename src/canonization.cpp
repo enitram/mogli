@@ -12,16 +12,9 @@ void mogli::Canonization::init(const Molecule &mol) {
   NodeToBoolMap visited(mol.get_graph(), false);
   ShortToNodeVectorMap colorMap;
   ShortSet colorSet;
-  bool is_tree = true;
 
-  dfs(v, v, mol, visited, colorSet, colorMap, is_tree);
-
-  if (!is_tree) {
-    //canonTree(g, colorMap);
-    canonNauty(mol, colorSet, colorMap, mol.get_atom_count());
-  } else {
-    canonNauty(mol, colorSet, colorMap, mol.get_atom_count());
-  }
+  dfs(v, v, mol, visited, colorSet, colorMap);
+  canonNauty(mol, colorSet, colorMap, mol.get_atom_count());
 }
 
 void mogli::Canonization::init(const mogli::Molecule &mol, const mogli::Canonization::NodeToBoolMap &filter, const Node& root) {
@@ -33,22 +26,14 @@ void mogli::Canonization::init(const mogli::Molecule &mol, const mogli::Canoniza
   FilteredNodeToBoolMap visited(subgraph, false);
   ShortToNodeVectorMap colorMap;
   ShortSet colorSet;
-  bool is_tree = true;
   unsigned int node_count = 0;
 
-  dfs(v, v, mol, subgraph, visited, colorSet, colorMap, is_tree, node_count);
-
-  if (is_tree) {
-    //canonTree(g, colorMap);
-    canonNauty(mol, subgraph, colorSet, colorMap, root, node_count);
-  } else {
-    canonNauty(mol, subgraph, colorSet, colorMap, root, node_count);
-  }
+  dfs(v, v, mol, subgraph, visited, colorSet, colorMap, node_count);
+  canonNauty(mol, subgraph, colorSet, colorMap, root, node_count);
 }
 
 void mogli::Canonization::dfs(const Node& current, const Node& last, const Molecule& mol,
-                              NodeToBoolMap& visited, ShortSet& colorSet, ShortToNodeVectorMap& colorMap,
-                              bool& is_tree) {
+                              NodeToBoolMap& visited, ShortSet& colorSet, ShortToNodeVectorMap& colorMap) {
   visited[current] = true;
   unsigned short color = mol.get_color(current);
   colorSet.insert(color);
@@ -61,9 +46,7 @@ void mogli::Canonization::dfs(const Node& current, const Node& last, const Molec
   for (IncEdgeIt e = mol.get_inc_edge_iter(current); e != lemon::INVALID; ++e) {
     Node w = mol.get_opposite_node(current, e);
     if (!visited[w]) {
-      dfs(w, current, mol, visited, colorSet, colorMap, is_tree);
-    } else if (w != last) {
-      is_tree = false;
+      dfs(w, current, mol, visited, colorSet, colorMap);
     }
   }
 
@@ -71,7 +54,7 @@ void mogli::Canonization::dfs(const Node& current, const Node& last, const Molec
 
 void mogli::Canonization::dfs(const Node& current, const Node& last, const Molecule& mol,
                               const FilterNodes& subgraph, NodeToBoolMap& visited, ShortSet& colorSet,
-                              ShortToNodeVectorMap& colorMap, bool& is_tree, unsigned int& node_count) {
+                              ShortToNodeVectorMap& colorMap, unsigned int& node_count) {
   ++node_count;
   visited[current] = true;
   unsigned short color = mol.get_color(current);
@@ -85,9 +68,7 @@ void mogli::Canonization::dfs(const Node& current, const Node& last, const Molec
   for (FilteredIncEdgeIt e = FilteredIncEdgeIt(subgraph, current); e != lemon::INVALID; ++e) {
     Node w = subgraph.oppositeNode(current, e);
     if (!visited[w]) {
-      dfs(w, current, mol, subgraph, visited, colorSet, colorMap, is_tree, node_count);
-    } else if (w != last) {
-      is_tree = false;
+      dfs(w, current, mol, subgraph, visited, colorSet, colorMap, node_count);
     }
   }
 
@@ -227,14 +208,3 @@ void mogli::Canonization::canonNauty(const Molecule& mol,
     _canonization.push_back(static_cast<unsigned long>(cg[i]));
   }
 }
-
-void mogli::Canonization::canonTree(const Molecule &mol, const ShortToNodeVectorMap &colorMap) {
-  // TODO write tree canonization method
-  // TODO in which order does nauty return the canonical graphs, if our tree alg has a different order, could we accidentally return the same canonization?
-  // TODO compare tree, nauty, saucy & bliss
-}
-
-void mogli::Canonization::canonTree(const FilterNodes &subgraph, const ShortToNodeVectorMap &colorMap) {
- 
-}
-
