@@ -14,7 +14,7 @@
 #     GNU General Public License for more details.                                                                     #
 #                                                                                                                      #
 #     You should have received a copy of the GNU Lesser General Public License                                         #
-#     along with this program.  If not, see <https:#www.gnu.org/licenses/>.                                            #
+#     along with this program.  If not, see <https://www.gnu.org/licenses/>.                                            #
 ########################################################################################################################
 
 cmake_minimum_required(VERSION 3.12)
@@ -63,7 +63,7 @@ endif()
 
 FetchContent_Declare(
         msgpack
-        GIT_REPOSITORY https:#github.com/msgpack/msgpack-c.git
+        GIT_REPOSITORY https://github.com/msgpack/msgpack-c.git
         GIT_TAG        cpp-3.2.0
 )
 
@@ -80,7 +80,7 @@ endif()
 ExternalProject_Add(
         lemon
         PREFIX     external
-        URL        http:#lemon.cs.elte.hu/pub/sources/lemon-1.3.1.tar.gz
+        URL        http://lemon.cs.elte.hu/pub/sources/lemon-1.3.1.tar.gz
         URL_HASH   MD5=e89f887559113b68657eca67cf3329b5
         CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=lemon
         UPDATE_DISCONNECTED ${OFFLINE}
@@ -191,7 +191,7 @@ if (BUILD_PYTHON)
 
     FetchContent_Declare(
             pybind11
-            GIT_REPOSITORY https:#github.com/pybind/pybind11
+            GIT_REPOSITORY https://github.com/pybind/pybind11
             GIT_TAG        v2.3.0
     )
 
@@ -209,9 +209,8 @@ endif()
 
 
 # TODO sort methods by name, organize #includes
-# TODO file headers
 # TODO catch2 unit tests
 # TODO python unit tests
 # TODO documentation
 # TODO scripts -> py3
-
+# TODO check if all methods (except methods with stream parameters) are exposed to python
