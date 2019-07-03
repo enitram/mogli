@@ -105,12 +105,12 @@ void mogli::Canonization::canonNauty(const Molecule& mol,
   NodeToIntMap nodes(mol.get_graph());
   NodeVector first_order;
 
-  for (ShortSet::iterator it=colorSet.begin(), end = colorSet.end(); it != end; ++it) {
-    NodeVector vector = colorMap.at(*it);
-    for (NodeVector::iterator it2 = vector.begin(), end2 = vector.end(); it2 != end2; ++it2) {
-      _colors.push_back(*it);
-      first_order.push_back(*it2);
-      nodes[*it2] = i;
+  for (const auto & it : colorSet) {
+    NodeVector vector = colorMap.at(it);
+    for (const auto & it2 : vector) {
+      _colors.push_back(it);
+      first_order.push_back(it2);
+      nodes[it2] = i;
       lab[i] = i;
       ptn[i] = 1;
       ++i;
@@ -176,14 +176,14 @@ void mogli::Canonization::canonNauty(const Molecule& mol,
   ptn[0] = 0;
 
   int i = 1;
-  for (ShortSet::iterator it=colorSet.begin(), end = colorSet.end(); it != end; ++it) {
-    NodeVector vector = colorMap.at(*it);
-    for (NodeVector::iterator it2 = vector.begin(), end2 = vector.end(); it2 != end2; ++it2) {
-      if (*it2 == root)
+  for (const auto & it : colorSet) {
+    NodeVector vector = colorMap.at(it);
+    for (const auto & it2 : vector) {
+      if (it2 == root)
         continue;
-      _colors.push_back(*it);
-      first_order.push_back(*it2);
-      nodes[*it2] = i;
+      _colors.push_back(it);
+      first_order.push_back(it2);
+      nodes[it2] = i;
       lab[i] = i;
       ptn[i] = 1;
       ++i;

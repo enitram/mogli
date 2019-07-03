@@ -221,14 +221,14 @@ int Product::generate_nodes_deg1() {
               ++_node_sizes[uv];
             }
           }
-          for (ShortToNodeVectorPairMap::const_iterator it3 = current_reductions.begin(), end3 = current_reductions.end(); it3 != end3; ++it3) {
-            NodeVector foo = it3->second.first;
-            NodeVector bar = it3->second.second;
-            for (int i = 0; i < it3->second.first.size(); ++i) {
-              for (int j = 0; j < it3->second.second.size(); ++j) {
-                Node u = it3->second.first[i];
-                Node v = it3->second.second[j];
-                reduced_nodes[it3->second.first[i]].insert(_mol2.get_id(it3->second.second[j]));
+          for (const auto & it3 : current_reductions) {
+            NodeVector foo = it3.second.first;
+            NodeVector bar = it3.second.second;
+            for (int i = 0; i < it3.second.first.size(); ++i) {
+              for (int j = 0; j < it3.second.second.size(); ++j) {
+                Node u = it3.second.first[i];
+                Node v = it3.second.second[j];
+                reduced_nodes[it3.second.first[i]].insert(_mol2.get_id(it3.second.second[j]));
               }
             }
           }
@@ -297,19 +297,19 @@ int Product::generate_nodes_sub() {
 
           NodeVector order1, order2;
 
-          for (ShortVector::const_iterator it3 = _order1.begin(), end3 = _order1.end(); it3 != end3; ++it3) {
-            order1.push_back(_mol1.get_node_by_id(*it3));
+          for (const auto & it3 : _order1) {
+            order1.push_back(_mol1.get_node_by_id(it3));
           }
-          for (ShortVector::const_iterator it3 = _order2.begin(), end3 = _order2.end(); it3 != end3; ++it3) {
-            order2.push_back(_mol2.get_node_by_id(*it3));
+          for (const auto it3 : _order2) {
+            order2.push_back(_mol2.get_node_by_id(it3));
           }
 
           ShortToNodeVectorPairMap current_reductions;
           bfs_subgraph(_mol1, uv, u, neighbors_u, neighborhoods1, order1, order2, current_reductions);
-          for (ShortToNodeVectorPairMap::const_iterator it3 = current_reductions.begin(), end3 = current_reductions.end(); it3 != end3; ++it3) {
-            for (int i = 0; i < it3->second.first.size(); ++i) {
-              for (int j = 0; j < it3->second.second.size(); ++j) {
-                reduced_nodes[it3->second.first[i]].insert(_mol2.get_id(it3->second.second[j]));
+          for (const auto & it3 : current_reductions) {
+            for (int i = 0; i < it3.second.first.size(); ++i) {
+              for (int j = 0; j < it3.second.second.size(); ++j) {
+                reduced_nodes[it3.second.first[i]].insert(_mol2.get_id(it3.second.second[j]));
               }
             }
           }
