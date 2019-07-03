@@ -1,3 +1,22 @@
+########################################################################################################################
+#     mogli - molecular graph library                                                                                  #
+#                                                                                                                      #
+#     Copyright (C) 2016-2019  Martin S. Engler                                                                        #
+#                                                                                                                      #
+#     This program is free software: you can redistribute it and/or modify                                             #
+#     it under the terms of the GNU Lesser General Public License as published                                         #
+#     by the Free Software Foundation, either version 3 of the License, or                                             #
+#     (at your option) any later version.                                                                              #
+#                                                                                                                      #
+#     This program is distributed in the hope that it will be useful,                                                  #
+#     but WITHOUT ANY WARRANTY; without even the implied warranty of                                                   #
+#     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the                                                     #
+#     GNU General Public License for more details.                                                                     #
+#                                                                                                                      #
+#     You should have received a copy of the GNU Lesser General Public License                                         #
+#     along with this program.  If not, see <https:#www.gnu.org/licenses/>.                                            #
+########################################################################################################################
+
 cmake_minimum_required(VERSION 3.12)
 project(mogli)
 
@@ -44,7 +63,7 @@ endif()
 
 FetchContent_Declare(
         msgpack
-        GIT_REPOSITORY https://github.com/msgpack/msgpack-c.git
+        GIT_REPOSITORY https:#github.com/msgpack/msgpack-c.git
         GIT_TAG        cpp-3.2.0
 )
 
@@ -61,7 +80,7 @@ endif()
 ExternalProject_Add(
         lemon
         PREFIX     external
-        URL        http://lemon.cs.elte.hu/pub/sources/lemon-1.3.1.tar.gz
+        URL        http:#lemon.cs.elte.hu/pub/sources/lemon-1.3.1.tar.gz
         URL_HASH   MD5=e89f887559113b68657eca67cf3329b5
         CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=lemon
         UPDATE_DISCONNECTED ${OFFLINE}
@@ -172,7 +191,7 @@ if (BUILD_PYTHON)
 
     FetchContent_Declare(
             pybind11
-            GIT_REPOSITORY https://github.com/pybind/pybind11
+            GIT_REPOSITORY https:#github.com/pybind/pybind11
             GIT_TAG        v2.3.0
     )
 
