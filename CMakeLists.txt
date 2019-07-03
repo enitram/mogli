@@ -157,10 +157,35 @@ add_dependencies(report lemon)
 #add_executable(timeout test/timeout.cpp ${SOURCE_FILES} ${NAUTY_SRC} ${LAD_SRC})
 #target_link_libraries(timeout ${Boost_LIBRARIES} ${CommonLibs})
 
-# TODO pybind11
-# TODO catch2 unit tests
+#################
+# Python bindings
+#################
+
+if (BUILD_PYTHON)
+
+    FetchContent_Declare(
+            pybind11
+            GIT_REPOSITORY https://github.com/pybind/pybind11
+            GIT_TAG        v2.3.0
+    )
+
+    FetchContent_GetProperties(pybind11)
+    if(NOT pybind11_POPULATED)
+        FetchContent_Populate(pybind11)
+        add_subdirectory(${pybind11_SOURCE_DIR} ${pybind11_BINARY_DIR})
+    endif()
+
+    pybind11_add_module(pymogli src/util/pymogli.cpp)
+    target_link_libraries(pymogli PRIVATE mogli)
+    add_dependencies(pymogli lemon)
+
+endif()
+
+
 # TODO impl -> .cpp, organize #includes
 # TODO file headers
+# TODO catch2 unit tests
+# TODO python unit tests
 # TODO documentation
 # TODO scripts -> py3
 
