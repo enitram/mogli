@@ -4,6 +4,38 @@
 
 #include "../include/canonization.h"
 
+// public functions
+
+const bool mogli::Canonization::is_isomorphic(const Canonization &other) const {
+  const ShortVector& colors2 = other.get_colors();
+
+  if (_colors.size() != colors2.size())
+    return false;
+
+  const LongVector& canonization2 = other.get_canonization();
+
+  if (_canonization.size() != canonization2.size())
+    return false;
+
+  for (auto i1 = _colors.begin(), i2 = colors2.begin(),
+           ie1 = _colors.end(), ie2 = colors2.end();
+       i1 != ie1 && i2 != ie2; ++i1, ++i2) {
+    if (*i1 != *i2)
+      return false;
+  }
+
+  for (auto i1 = _canonization.begin(), i2 = canonization2.begin(),
+           ie1 = _canonization.end(), ie2 = canonization2.end();
+       i1 != ie1 && i2 != ie2; ++i1, ++i2) {
+    if (*i1 != *i2)
+      return false;
+  }
+
+  return true;
+}
+
+// protected functions
+
 void mogli::Canonization::init(const Molecule &mol) {
 
   Node v = mol.get_node_iter();
@@ -77,7 +109,7 @@ void mogli::Canonization::dfs(const Node& current, const Node& last, const Molec
 void mogli::Canonization::canonNauty(const Molecule& mol,
                                      const ShortSet &colorSet,
                                      const ShortToNodeVectorMap &colorMap,
-                                     const unsigned int atom_count) {
+                                     unsigned int atom_count) {
 
   DYNALLSTAT(int,lab,lab_sz);
   DYNALLSTAT(int,ptn,ptn_sz);
@@ -142,7 +174,7 @@ void mogli::Canonization::canonNauty(const Molecule& mol,
                                      const ShortSet &colorSet,
                                      const ShortToNodeVectorMap &colorMap,
                                      const Node& root,
-                                     const unsigned int atom_count) {
+                                     unsigned int atom_count) {
   DYNALLSTAT(int,lab,lab_sz);
   DYNALLSTAT(int,ptn,ptn_sz);
   DYNALLSTAT(int,orbits,orbits_sz);
@@ -191,7 +223,7 @@ void mogli::Canonization::canonNauty(const Molecule& mol,
     ptn[i-1] = 0;
   }
 
-  for(FilteredEdgeIt e = FilteredEdgeIt(subgraph); e!=lemon::INVALID; ++e) {
+  for(auto e = FilteredEdgeIt(subgraph); e!=lemon::INVALID; ++e) {
     int u = nodes[subgraph.u(e)];
     int v = nodes[subgraph.v(e)];
     ADDONEEDGE(ng,u,v,m);

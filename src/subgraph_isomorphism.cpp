@@ -9,7 +9,7 @@ Tgraph* mogli::translate_graph(const Molecule &mol, IntVector &node_ids) {
   // reads data in fileName and create the corresponding graph
 
   int i, j;
-  Tgraph* graph = (Tgraph*)malloc(sizeof(Tgraph));
+  auto* graph = (Tgraph*)malloc(sizeof(Tgraph));
 
   graph->nbVertices = mol.get_atom_count();
 

@@ -6,6 +6,47 @@
 
 using namespace mogli;
 
+BronKerbosch::BronKerbosch(const mogli::Product &product, unsigned int min_core_size, unsigned int max_core_size, bool maximum) :
+    _g(product.get_graph())
+    , _product(product)
+    , _n(static_cast<size_t>(lemon::countNodes(_g)))
+    , _cliques()
+    , _bitToNode()
+    , _nodeToBit(_g, std::numeric_limits<size_t>::max())
+    , _bitNeighborhood(_g, BitSet(_n))
+    , _restrictedBitNeighborhood(_g, BitSet(_n))
+    , _min_core_size(min_core_size)
+    , _max_core_size(max_core_size)
+    , _maximum(maximum)
+    , _current_max(0) {
+  // initialize mappings
+  _bitToNode.reserve(_n);
+  size_t i = 0;
+  for (NodeIt v(_g); v != lemon::INVALID; ++v, ++i) {
+    _bitToNode.push_back(v);
+    _nodeToBit[v] = i;
+  }
+
+  // initialize neighborhoods
+  for (NodeIt v(_g); v != lemon::INVALID; ++v, ++i) {
+    BitSet& neighborhood = _bitNeighborhood[v];
+    for (IncEdgeIt e(_g, v); e != lemon::INVALID; ++e) {
+      Node w = _g.oppositeNode(v, e);
+      neighborhood[_nodeToBit[w]] = true;
+    }
+  }
+
+  // initialize restricted neighborhood mapping
+  for (EdgeIt e(_g); e != lemon::INVALID; ++e) {
+    if (product.is_connectivity_edge(e)) {
+      Node u = _g.u(e);
+      Node v = _g.v(e);
+      _restrictedBitNeighborhood[u][_nodeToBit[v]] = true;
+      _restrictedBitNeighborhood[v][_nodeToBit[u]] = true;
+    }
+  }
+}
+
 void BronKerbosch::run(int seconds) {
   std::chrono::high_resolution_clock::time_point start = std::chrono::high_resolution_clock::now();
   long microseconds = 1000l * seconds;
@@ -124,9 +165,9 @@ size_t BronKerbosch::computeDegeneracy(NodeVector& order) {
   return degeneracy;
 }
 
-void BronKerbosch::bkPivot(BitSet P, BitSet D,
-                           BitSet R,
-                           BitSet X, BitSet S,
+void BronKerbosch::bkPivot(BitSet P, const BitSet & D,
+                           const BitSet & R,
+                           BitSet X, const BitSet & S,
                            std::chrono::high_resolution_clock::time_point start,
                            long microseconds) {
   // all sets are pairwise disjoint
@@ -177,7 +218,7 @@ void BronKerbosch::bkPivot(BitSet P, BitSet D,
           BitSet D_ = D - Nc_v;
 
           BitSet R_ = R;
-          R_[_nodeToBit[v]] = 1;
+          R_[_nodeToBit[v]] = true;
 
           BitSet X_ = X | (S & Nc_v);
           BitSet S_ = S - Nc_v;
@@ -190,8 +231,8 @@ void BronKerbosch::bkPivot(BitSet P, BitSet D,
                   S_ & N_v,
                   start,
                   microseconds);
-          P[i] = 0;
-          X[i] = 1;
+          P[i] = false;
+          X[i] = true;
         }
       }
     }

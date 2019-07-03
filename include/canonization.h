@@ -1,3 +1,5 @@
+#include <utility>
+
 //
 // Created by M. Engler on 10/20/16.
 //
@@ -16,9 +18,9 @@ namespace mogli {
 
   public:
 
-    Canonization() {}
+    Canonization() = default;
 
-    Canonization(const Molecule& mol) : _colors(), _canonization(), _node_order() {
+    explicit Canonization(const Molecule& mol) : _colors(), _canonization(), _node_order() {
       init(mol);
     }
 
@@ -27,8 +29,10 @@ namespace mogli {
       init(mol, filter, root);
     }
 
-    Canonization(const ShortVector &_colors, const LongVector &_canonization, const ShortVector &_node_order) :
-        _colors(_colors), _canonization(_canonization), _node_order(_node_order) {}
+    Canonization(ShortVector _colors, LongVector _canonization, ShortVector _node_order) :
+        _colors(std::move(_colors)),
+        _canonization(std::move(_canonization)),
+        _node_order(std::move(_node_order)) {}
 
     const ShortVector &get_colors() const {
       return _colors;
@@ -42,33 +46,7 @@ namespace mogli {
       return _node_order;
     }
 
-    const bool is_isomorphic(Canonization &other) const {
-      const ShortVector& colors2 = other.get_colors();
-
-      if (_colors.size() != colors2.size())
-        return false;
-
-      const LongVector& canonization2 = other.get_canonization();
-
-      if (_canonization.size() != canonization2.size())
-        return false;
-
-      for (ShortVector::const_iterator i1 = _colors.begin(), i2 = colors2.begin(),
-               ie1 = _colors.end(), ie2 = colors2.end();
-           i1 != ie1 && i2 != ie2; ++i1, ++i2) {
-        if (*i1 != *i2)
-          return false;
-      }
-
-      for (LongVector::const_iterator i1 = _canonization.begin(), i2 = canonization2.begin(),
-               ie1 = _canonization.end(), ie2 = canonization2.end();
-           i1 != ie1 && i2 != ie2; ++i1, ++i2) {
-        if (*i1 != *i2)
-          return false;
-      }
-
-      return true;
-    }
+    const bool is_isomorphic(const Canonization &other) const;
 
   protected:
 
@@ -100,14 +78,14 @@ namespace mogli {
     void canonNauty(const Molecule& mol,
                     const ShortSet &colorSet,
                     const ShortToNodeVectorMap &colorMap,
-                    const unsigned int atom_count);
+                    unsigned int atom_count);
 
     void canonNauty(const Molecule& mol,
                     const FilterNodes& subgraph,
                     const ShortSet &colorSet,
                     const ShortToNodeVectorMap &colorMap,
                     const Node& root,
-                    const unsigned int atom_count);
+                    unsigned int atom_count);
 
   };
 

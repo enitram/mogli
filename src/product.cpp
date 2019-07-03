@@ -6,6 +6,198 @@
 
 using namespace mogli;
 
+// constructors
+
+Product::Product(const mogli::Product &parent, int component)
+    : _mol1(parent._mol1)
+    , _mol2(parent._mol2)
+    , _shell(parent._shell)
+    , _gen_type(parent._gen_type)
+    , _g()
+    , _node_sizes(_g)
+    , _reductions(_g)
+    , _g_to_mol1(_g)
+    , _g_to_mol2(_g)
+    , _g_to_mol1_canons(_g)
+    , _g_to_mol2_canons(_g)
+    , _connectivity(_g)
+    , _comp_map(_g)
+    , _comp_count(0)
+    , _comp_sizes()
+    , _is_complete(false) {
+
+  NodeToNodeMap nodes(_g);
+  int V = 0;
+  for (NodeIt orig(parent._g); orig != lemon::INVALID; ++orig) {
+    if (parent._comp_map[orig] == component) {
+      Node copy = _g.addNode();
+      ++V;
+      nodes[copy] = orig;
+      _node_sizes[copy] = parent._node_sizes[orig];
+      _reductions[copy] = parent._reductions[orig];
+      _g_to_mol1[copy] = parent._g_to_mol1[orig];
+      _g_to_mol2[copy] = parent._g_to_mol2[orig];
+      _g_to_mol1_canons[copy] = parent._g_to_mol1_canons[orig];
+      _g_to_mol2_canons[copy] = parent._g_to_mol2_canons[orig];
+    }
+  }
+
+  lemon::ArcLookUp<Graph> arcLookUp(parent._g);
+  int E = 0;
+  for (NodeIt v(_g); v != lemon::INVALID; ++v) {
+    for (NodeIt u = v; u != lemon::INVALID; ++u) {
+      if (v == u)
+        continue;
+
+      Edge e = arcLookUp(nodes[u], nodes[v]);
+      if (e != lemon::INVALID) {
+        _connectivity[_g.addEdge(u,v)] = parent._connectivity[e];
+        ++E;
+      }
+    }
+  }
+  _is_complete = E == ((V*(V-1))/2);
+
+}
+
+Product::Product(const mogli::Molecule &mol1, const mogli::Molecule &mol2, int shell,
+                 mogli::Product::GenerationType gen, unsigned int min_core_size)
+    : _mol1(mol1)
+    , _mol2(mol2)
+    , _shell(shell)
+    , _gen_type(gen)
+    , _g()
+    , _node_sizes(_g)
+    , _reductions(_g)
+    , _g_to_mol1(_g)
+    , _g_to_mol2(_g)
+    , _g_to_mol1_canons(_g)
+    , _g_to_mol2_canons(_g)
+    , _connectivity(_g)
+    , _comp_map(_g)
+    , _comp_count(1)
+    , _is_complete(false) {
+  int V, E;
+  if ((gen == DEG_1 || gen == UNCON_DEG_1) && shell > 0) {
+    V = generate_nodes_deg1();
+  } else if ((gen == SUB || gen == UNCON_SUB) && shell > 0) {
+    V = generate_nodes_sub();
+  } else {
+    V = generate_nodes();
+  }
+  if (gen == UNCON || gen == UNCON_DEG_1 || gen == UNCON_SUB) {
+    E = generate_edges_connected(min_core_size);
+  } else {
+    E = generate_edges();
+  }
+  _is_complete = E == ((V*(V-1))/2);
+
+}
+
+// public methods
+
+const std::string Product::print_dot() const {
+  std::stringstream buffer;
+  print_dot(buffer);
+  return buffer.str();
+}
+
+const std::string Product::print_dot(const mogli::StringVector &properties) const {
+  std::stringstream buffer;
+  print_dot(buffer, properties);
+  return buffer.str();
+}
+
+const void Product::print_dot(std::ostream &out) const {
+  // header
+  out << "graph G {" << std::endl
+      << "\toverlap=scale" << std::endl;
+
+  // nodes
+  for (NodeIt uv(_g); uv != lemon::INVALID; ++uv) {
+    Node u = _g_to_mol1[uv];
+    Node v = _g_to_mol2[uv];
+
+    out << "\t" << _g.id(uv);
+    out << "[style=\"filled\",fillcolor=" << _mol1.get_color_name(u);
+    out << ",label=\"" << _mol1.get_id(u) << "x" << _mol2.get_id(v) << "\"]";
+    out << std::endl;
+  }
+
+  // edges
+  for (EdgeIt e(_g); e != lemon::INVALID; ++e) {
+    out << "\t" << _g.id(_g.u(e)) << " -- " << _g.id(_g.v(e));
+    if (_connectivity[e]) {
+      out <<  std::endl;
+    } else {
+      out << "[style=\"dashed\"]" << std::endl;
+    }
+  }
+
+  out << "}" << std::endl;
+}
+
+const void Product::print_dot(std::ostream &out, const mogli::StringVector &properties) const {
+  // header
+  out << "graph G {" << std::endl
+      << "\toverlap=scale" << std::endl;
+
+  // nodes
+  for (NodeIt uv(_g); uv != lemon::INVALID; ++uv) {
+    Node u = _g_to_mol1[uv];
+    Node v = _g_to_mol2[uv];
+
+    out << "\t" << _g.id(uv);
+    out << "[style=\"filled\",fillcolor=" << _mol1.get_color_name(u);
+    out << ",label=\"";
+    bool first = true;
+    for (const auto prop : properties) {
+      if (!first) {
+        out << ",";
+      } else {
+        first = false;
+      }
+      Any value1 = _mol1.get_property(u, prop);
+      if (std::holds_alternative<bool>(value1)) {
+        out << std::get<bool>(value1);
+      } else if (std::holds_alternative<int>(value1)) {
+        out << std::get<int>(value1);
+      } else if (std::holds_alternative<double>(value1)) {
+        out << std::get<double>(value1);
+      } else if (std::holds_alternative<std::string>(value1)) {
+        out << std::get<std::string>(value1);
+      }
+      out << "x";
+      Any value2 = _mol2.get_property(v, prop);
+      if (std::holds_alternative<bool>(value2)) {
+        out << std::get<bool>(value2);
+      } else if (std::holds_alternative<int>(value2)) {
+        out << std::get<int>(value2);
+      } else if (std::holds_alternative<double>(value2)) {
+        out << std::get<double>(value2);
+      } else if (std::holds_alternative<std::string>(value2)) {
+        out << std::get<std::string>(value2);
+      }
+    }
+    out << "\"]";
+    out << std::endl;
+  }
+
+  // edges
+  for (EdgeIt e(_g); e != lemon::INVALID; ++e) {
+    out << "\t" << _g.id(_g.u(e)) << " -- " << _g.id(_g.v(e));
+    if (_connectivity[e]) {
+      out <<  std::endl;
+    } else {
+      out << "[style=\"dashed\"]" << std::endl;
+    }
+  }
+
+  out << "}" << std::endl;
+}
+
+// private methods
+
 void Product::determine_degrees(const Graph& g, IntToNodeMap& deg_to_node, NodeToIntMap& deg) {
   for (NodeIt v(g); v != lemon::INVALID; ++v) {
     int degree = 0;
@@ -200,8 +392,6 @@ int Product::generate_nodes_deg1() {
           // apply degree-1 rule to neighbors of u and v
           const ShortVector& order1 = canon1.get_node_order();
           const ShortVector& order2 = canon2.get_node_order();
-          int u_id = _mol1.get_id(u);
-          int v_id = _mol2.get_id(v);
           _g_to_mol1_canons[uv] = canon1;
           _g_to_mol2_canons[uv] = canon2;
 
@@ -226,9 +416,9 @@ int Product::generate_nodes_deg1() {
             NodeVector bar = it3.second.second;
             for (int i = 0; i < it3.second.first.size(); ++i) {
               for (int j = 0; j < it3.second.second.size(); ++j) {
-                Node u = it3.second.first[i];
-                Node v = it3.second.second[j];
-                reduced_nodes[it3.second.first[i]].insert(_mol2.get_id(it3.second.second[j]));
+                Node _u = it3.second.first[i];
+                Node _v = it3.second.second[j];
+                reduced_nodes[_u].insert(_mol2.get_id(_v));
               }
             }
           }
@@ -358,7 +548,7 @@ int Product::generate_edges() {
   return E;
 }
 
-int Product::generate_edges_connected(unsigned int min_core_size, unsigned int max_core_size) {
+int Product::generate_edges_connected(unsigned int min_core_size) {
   const Graph& g1 = _mol1.get_graph();
   const Graph& g2 = _mol2.get_graph();
 
@@ -411,8 +601,8 @@ int Product::generate_edges_connected(unsigned int min_core_size, unsigned int m
 
     // delete current component if it is too small
     if (comp_size < min_core_size) {
-      for (int i = 0; i < nodes.size(); ++i) {
-        _g.erase(nodes[i]);
+      for (auto node : nodes) {
+        _g.erase(node);
       }
       continue;
     }

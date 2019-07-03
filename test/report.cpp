@@ -92,7 +92,7 @@ int main(int argc, char** argv) {
 
   std::chrono::high_resolution_clock::time_point t1 = std::chrono::high_resolution_clock::now();
 
-  Product product(mol1, mol2, shell, gen_type, min_core, max_core);
+  Product product(mol1, mol2, shell, gen_type, min_core);
 
   std::chrono::high_resolution_clock::time_point t2 = std::chrono::high_resolution_clock::now();
   std::chrono::duration<float> pg_duration = t2 - t1;

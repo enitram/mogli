@@ -71,7 +71,7 @@ void mogli::maximal_common_fragments(Molecule &mol1, Molecule &mol2,
                                      Product::GenerationType prod_gen, bool reduce_subgraphs, bool maximum,
                                      int timeout_seconds) {
 
-  Product product(mol1, mol2, shell, prod_gen, min_core_size, max_core_size);
+  Product product(mol1, mol2, shell, prod_gen, min_core_size);
 
   std::chrono::high_resolution_clock::time_point start = std::chrono::high_resolution_clock::now();
   long microseconds = 1000l * timeout_seconds;
@@ -141,7 +141,7 @@ void mogli::maximal_common_fragments(Molecule &mol1, Molecule &mol2,
 
     int k = 0;
     for (auto & fragment : frags) {
-      deque.push_back(std::make_pair(k, (int) fragment->get_atom_count()));
+      deque.emplace_back(k, (int) fragment->get_atom_count());
       ++k;
     }
 

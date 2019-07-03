@@ -73,91 +73,9 @@ namespace mogli {
     bool _is_complete;
 
   public:
-    Product(const Product& parent, int component)
-      : _mol1(parent._mol1)
-      , _mol2(parent._mol2)
-      , _shell(parent._shell)
-      , _gen_type(parent._gen_type)
-      , _g()
-      , _node_sizes(_g)
-      , _reductions(_g)
-      , _g_to_mol1(_g)
-      , _g_to_mol2(_g)
-      , _g_to_mol1_canons(_g)
-      , _g_to_mol2_canons(_g)
-      , _connectivity(_g)
-      , _comp_map(_g)
-      , _comp_count(0)
-      , _comp_sizes()
-      , _is_complete(false) {
+    Product(const Product& parent, int component);
 
-      NodeToNodeMap nodes(_g);
-      int V = 0;
-      for (NodeIt orig(parent._g); orig != lemon::INVALID; ++orig) {
-        if (parent._comp_map[orig] == component) {
-          Node copy = _g.addNode();
-          ++V;
-          nodes[copy] = orig;
-          _node_sizes[copy] = parent._node_sizes[orig];
-          _reductions[copy] = parent._reductions[orig];
-          _g_to_mol1[copy] = parent._g_to_mol1[orig];
-          _g_to_mol2[copy] = parent._g_to_mol2[orig];
-          _g_to_mol1_canons[copy] = parent._g_to_mol1_canons[orig];
-          _g_to_mol2_canons[copy] = parent._g_to_mol2_canons[orig];
-        }
-      }
-
-      lemon::ArcLookUp<Graph> arcLookUp(parent._g);
-      int E = 0;
-      for (NodeIt v(_g); v != lemon::INVALID; ++v) {
-        for (NodeIt u = v; u != lemon::INVALID; ++u) {
-          if (v == u)
-            continue;
-
-          Edge e = arcLookUp(nodes[u], nodes[v]);
-          if (e != lemon::INVALID) {
-            _connectivity[_g.addEdge(u,v)] = parent._connectivity[e];
-            ++E;
-          }
-        }
-      }
-      _is_complete = E == ((V*(V-1))/2);
-
-    }
-
-    Product(const Molecule& mol1, const Molecule& mol2, int shell, GenerationType gen,
-            unsigned int min_core_size, unsigned int max_core_size)
-      : _mol1(mol1)
-      , _mol2(mol2)
-      , _shell(shell)
-      , _gen_type(gen)
-      , _g()
-      , _node_sizes(_g)
-      , _reductions(_g)
-      , _g_to_mol1(_g)
-      , _g_to_mol2(_g)
-      , _g_to_mol1_canons(_g)
-      , _g_to_mol2_canons(_g)
-      , _connectivity(_g)
-      , _comp_map(_g)
-      , _comp_count(1)
-      , _is_complete(false) {
-      int V, E;
-      if ((gen == DEG_1 || gen == UNCON_DEG_1) && shell > 0) {
-        V = generate_nodes_deg1();
-      } else if ((gen == SUB || gen == UNCON_SUB) && shell > 0) {
-        V = generate_nodes_sub();
-      } else {
-        V = generate_nodes();
-      }
-      if (gen == UNCON || gen == UNCON_DEG_1 || gen == UNCON_SUB) {
-        E = generate_edges_connected(min_core_size, max_core_size);
-      } else {
-        E = generate_edges();
-      }
-      _is_complete = E == ((V*(V-1))/2);
-
-    }
+    Product(const Molecule& mol1, const Molecule& mol2, int shell, GenerationType gen, unsigned int min_core_size);
 
     const Molecule& get_mol1() const {
       return _mol1;
@@ -223,105 +141,13 @@ namespace mogli {
       return _connectivity[e];
     }
 
-    const std::string print_dot() const {
-      std::stringstream buffer;
-      print_dot(buffer);
-      return buffer.str();
-    }
+    const std::string print_dot() const;
 
-    const std::string print_dot(const StringVector &properties) const {
-      std::stringstream buffer;
-      print_dot(buffer, properties);
-      return buffer.str();
-    }
+    const std::string print_dot(const StringVector &properties) const;
 
-    const void print_dot(std::ostream& out) const {
-      // header
-      out << "graph G {" << std::endl
-          << "\toverlap=scale" << std::endl;
+    const void print_dot(std::ostream& out) const;
 
-      // nodes
-      for (NodeIt uv(_g); uv != lemon::INVALID; ++uv) {
-        Node u = _g_to_mol1[uv];
-        Node v = _g_to_mol2[uv];
-
-        out << "\t" << _g.id(uv);
-        out << "[style=\"filled\",fillcolor=" << _mol1.get_color_name(u);
-        out << ",label=\"" << _mol1.get_id(u) << "x" << _mol2.get_id(v) << "\"]";
-        out << std::endl;
-      }
-
-      // edges
-      for (EdgeIt e(_g); e != lemon::INVALID; ++e) {
-        out << "\t" << _g.id(_g.u(e)) << " -- " << _g.id(_g.v(e));
-        if (_connectivity[e]) {
-          out <<  std::endl;
-        } else {
-          out << "[style=\"dashed\"]" << std::endl;
-        }
-      }
-
-      out << "}" << std::endl;
-    }
-
-    const void print_dot(std::ostream &out, const StringVector &properties) const {
-      // header
-      out << "graph G {" << std::endl
-          << "\toverlap=scale" << std::endl;
-
-      // nodes
-      for (NodeIt uv(_g); uv != lemon::INVALID; ++uv) {
-        Node u = _g_to_mol1[uv];
-        Node v = _g_to_mol2[uv];
-
-        out << "\t" << _g.id(uv);
-        out << "[style=\"filled\",fillcolor=" << _mol1.get_color_name(u);
-        out << ",label=\"";
-        bool first = true;
-        for (std::string prop : properties) {
-          if (!first) {
-            out << ",";
-          } else {
-            first = false;
-          }
-          Any value1 = _mol1.get_property(u, prop);
-          if (std::holds_alternative<bool>(value1)) {
-            out << std::get<bool>(value1);
-          } else if (std::holds_alternative<int>(value1)) {
-            out << std::get<int>(value1);
-          } else if (std::holds_alternative<double>(value1)) {
-            out << std::get<double>(value1);
-          } else if (std::holds_alternative<std::string>(value1)) {
-            out << std::get<std::string>(value1);
-          }
-          out << "x";
-          Any value2 = _mol2.get_property(v, prop);
-          if (std::holds_alternative<bool>(value2)) {
-            out << std::get<bool>(value2);
-          } else if (std::holds_alternative<int>(value2)) {
-            out << std::get<int>(value2);
-          } else if (std::holds_alternative<double>(value2)) {
-            out << std::get<double>(value2);
-          } else if (std::holds_alternative<std::string>(value2)) {
-            out << std::get<std::string>(value2);
-          }
-        }
-        out << "\"]";
-        out << std::endl;
-      }
-
-      // edges
-      for (EdgeIt e(_g); e != lemon::INVALID; ++e) {
-        out << "\t" << _g.id(_g.u(e)) << " -- " << _g.id(_g.v(e));
-        if (_connectivity[e]) {
-          out <<  std::endl;
-        } else {
-          out << "[style=\"dashed\"]" << std::endl;
-        }
-      }
-
-      out << "}" << std::endl;
-    }
+    const void print_dot(std::ostream &out, const StringVector &properties) const;
     
   private:
 
@@ -335,7 +161,7 @@ namespace mogli {
 
     int generate_edges();
 
-    int generate_edges_connected(unsigned int min_core_size, unsigned int max_core_size);
+    int generate_edges_connected(unsigned int min_core_size);
 
     void determine_degrees(const Graph& g, IntToNodeMap& deg_to_node, NodeToIntMap& deg);
 

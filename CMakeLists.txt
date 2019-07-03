@@ -79,45 +79,52 @@ set( CommonLibs
 )
 
 set(HEADER_FILES
+        include/bronkerbosch.h
         include/canonization.h
+        include/fcanonization.h
+        include/fragment.h
+        include/match.h
+        include/mcf.h
         include/molecule.h
+        include/orbits.h
         include/periodictable.h
         include/product.h
-        include/bronkerbosch.h
-        include/orbits.h
-        include/fragment.h
         include/subgraph_isomorphism.h
         include/types.h
         include/util/packing.h
-        include/mcf.h
-        include/match.h
-        include/fcanonization.h)
+        )
 
 set(SOURCE_FILES
-        src/canonization.cpp
-        src/molecule.cpp
-        src/product.cpp
         src/bronkerbosch.cpp
+        src/canonization.cpp
+        src/fcanonization.cpp
+        src/fragment.cpp
+        src/match.cpp
+        src/mcf.cpp
+        src/molecule.cpp
         src/orbits.cpp
+        src/product.cpp
         src/subgraph_isomorphism.cpp
-        src/mcf.cpp)
+        )
 
 set(NAUTY_SRC
-        lib/nauty/nauty.c
-        lib/nauty/nautil.c
         lib/nauty/naugraph.c
-        lib/nauty/schreier.c
+        lib/nauty/naugroup.c
         lib/nauty/naurng.c
-        lib/nauty/naugroup.c)
+        lib/nauty/nautil.c
+        lib/nauty/nauty.c
+        lib/nauty/schreier.c
+        )
 
 set(LAD_SRC
         lib/lad/allDiff.c
+        lib/lad/compatibility.c
         lib/lad/domains.c
         lib/lad/graph.c
         lib/lad/lad.c
         lib/lad/sublad.c
         lib/lad/sublad.h
-        lib/lad/compatibility.c)
+        )
 
 #############
 # C++ library
@@ -125,11 +132,11 @@ set(LAD_SRC
 
 include_directories(
         "include"
-        "${LIBLEMON_ROOT}/include"
-        "lib/nauty"
-        "lib/lad"
-        "${msgpack_SOURCE_DIR}/include"
         "lib/dynamic_bitset"
+        "lib/lad"
+        "lib/nauty"
+        "${LIBLEMON_ROOT}/include"
+        "${msgpack_SOURCE_DIR}/include"
 )
 link_directories( "${LIBLEMON_ROOT}/lib")
 
@@ -182,7 +189,7 @@ if (BUILD_PYTHON)
 endif()
 
 
-# TODO impl -> .cpp, organize #includes
+# TODO sort methods by name, organize #includes
 # TODO file headers
 # TODO catch2 unit tests
 # TODO python unit tests
