@@ -17,8 +17,11 @@
 //    along with this program.  If not, see <https://www.gnu.org/licenses/>.                                          //
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-#include <sublad.h>
-#include "../include/subgraph_isomorphism.h"
+#include "subgraph_isomorphism.h"
+
+#include <assert.h>
+#include <malloc.h>
+
 
 Tgraph* mogli::translate_graph(const Molecule &mol, IntVector &node_ids) {
   // reads data in fileName and create the corresponding graph

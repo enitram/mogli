@@ -24,6 +24,7 @@
 
 #include <chrono>
 #include <list>
+
 #include <boost/dynamic_bitset.hpp>
 #include "product.h"
 

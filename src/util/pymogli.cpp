@@ -22,9 +22,10 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 #include <pybind11/stl_bind.h>
-#include "../../include/canonization.h"
-#include "../../include/mcf.h"
-#include "../../include/util/packing.h"
+
+#include "mcf.h"
+#include "util/packing.h"
+
 
 namespace py = pybind11;
 

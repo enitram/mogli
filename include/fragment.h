@@ -22,7 +22,7 @@
 
 
 #include <deque>
-#include <cstring>
+
 #include "product.h"
 
 namespace mogli {

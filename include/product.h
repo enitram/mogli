@@ -21,12 +21,11 @@
 #ifndef MOGLI_PRODUCT_H
 #define MOGLI_PRODUCT_H
 
+#include <deque>
+
 #include "molecule.h"
 #include "canonization.h"
-#include "orbits.h"
-#include <set>
-#include <vector>
-#include <deque>
+
 
 namespace mogli {
 

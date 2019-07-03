@@ -17,9 +17,12 @@
 //    along with this program.  If not, see <https://www.gnu.org/licenses/>.                                          //
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-#include <sublad.h>
+#include "mcf.h"
+
 #include <numeric>
-#include "../include/mcf.h"
+
+#include <sublad.h>
+
 
 bool less(const std::pair<int, int>& a, const std::pair<int, int>& b) {
   return a.second < b.second;

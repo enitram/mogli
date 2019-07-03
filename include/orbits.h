@@ -22,8 +22,7 @@
 
 
 #include "molecule.h"
-#include <nauty.h>
-#include <malloc.h>
+
 
 namespace mogli {
 

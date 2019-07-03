@@ -17,7 +17,13 @@
 //    along with this program.  If not, see <https://www.gnu.org/licenses/>.                                          //
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-#include "../include/orbits.h"
+#include "orbits.h"
+
+#include <assert.h>
+#include <malloc.h>
+
+#include <nauty.h>
+
 
 using namespace mogli;
 

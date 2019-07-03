@@ -17,8 +17,14 @@
 //    along with this program.  If not, see <https://www.gnu.org/licenses/>.                                          //
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-#include "../include/molecule.h"
-#include "../include/canonization.h"
+#include "molecule.h"
+
+#include <assert.h>
+#include <deque>
+
+#include <lemon/connectivity.h>
+#include <lemon/lgf_reader.h>
+#include "canonization.h"
 
 using namespace mogli;
 

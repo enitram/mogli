@@ -17,7 +17,11 @@
 //    along with this program.  If not, see <https://www.gnu.org/licenses/>.                                          //
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-#include "../include/product.h"
+#include "product.h"
+
+#include <assert.h>
+
+#include <lemon/connectivity.h>
 
 using namespace mogli;
 

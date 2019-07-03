@@ -19,6 +19,7 @@
 
 #include "fcanonization.h"
 
+
 const bool mogli::FragmentCanonization::is_isomorphic(FragmentCanonization &other) const  {
   if (Canonization::is_isomorphic(other)) {
     const BoolVector & cores2 = other.get_core_nodes();

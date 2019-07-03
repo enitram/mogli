@@ -20,16 +20,13 @@
 #ifndef MOGLI_MOLECULE_H
 #define MOGLI_MOLECULE_H
 
-#include <map>
 #include <istream>
 #include <ostream>
-#include <assert.h>
+
 #include <lemon/adaptors.h>
-#include <lemon/lgf_reader.h>
-#include <lemon/connectivity.h>
-#include <queue>
 #include "periodictable.h"
 #include "types.h"
+
 
 namespace mogli {
 

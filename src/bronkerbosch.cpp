@@ -17,7 +17,8 @@
 //    along with this program.  If not, see <https://www.gnu.org/licenses/>.                                          //
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-#include "../include/bronkerbosch.h"
+#include "bronkerbosch.h"
+
 
 using namespace mogli;
 

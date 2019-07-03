@@ -21,8 +21,8 @@
 #define MOGLI_SUBGRAPH_ISOMORPHISM_H
 
 #include <sublad.h>
-#include <malloc.h>
 #include "molecule.h"
+
 
 namespace mogli {
 

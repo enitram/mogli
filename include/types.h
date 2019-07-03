@@ -20,11 +20,14 @@
 #ifndef MOGLI_TYPES_H
 #define MOGLI_TYPES_H
 
+#include <map>
+#include <memory>
+#include <set>
+#include <variant>
+#include <vector>
+
 #include <lemon/core.h>
 #include <lemon/list_graph.h>
-#include <map>
-#include <vector>
-#include <variant>
 
 namespace mogli {
 

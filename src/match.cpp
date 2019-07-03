@@ -19,6 +19,8 @@
 
 #include "match.h"
 
+#include <assert.h>
+
 // public functions
 
 void mogli::Match::merge(const Match &other, const IntToIntMap &isomorphism_map)  {

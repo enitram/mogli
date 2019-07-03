@@ -20,6 +20,8 @@
 #ifndef MOGLI_PERIODICTABLE_H
 #define MOGLI_PERIODICTABLE_H
 
+#include <map>
+
 namespace mogli {
 
   class PeriodicTable {

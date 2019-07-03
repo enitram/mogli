@@ -21,8 +21,6 @@
 #define MOGLI_CANONIZATION_H
 
 #include "molecule.h"
-#include <nauty.h>
-#include <malloc.h>
 
 namespace mogli {
 

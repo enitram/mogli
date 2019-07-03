@@ -17,7 +17,13 @@
 //    along with this program.  If not, see <https://www.gnu.org/licenses/>.                                          //
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-#include "../include/canonization.h"
+#include "canonization.h"
+
+#include <assert.h>
+#include <malloc.h>
+
+#include <nauty.h>
+
 
 // public functions
 

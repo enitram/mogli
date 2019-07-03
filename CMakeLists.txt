@@ -208,7 +208,7 @@ if (BUILD_PYTHON)
 endif()
 
 
-# TODO sort methods by name, organize #includes
+# TODO sort methods by name
 # TODO catch2 unit tests
 # TODO python unit tests
 # TODO documentation
