@@ -173,12 +173,6 @@ PYBIND11_MODULE(mogli, m) {
 
   m.def("atomic_fragments", &mogli::atomic_fragments, "Get all single-atom fragments");
 
-  m.def("pack_canonization", &mogli::pack_canonization, "Serialize molecule canonization");
-
-  m.def("pack_fcanonization", &mogli::pack_fcanonization, "Serialize fragment canonization");
-
-  m.def("hash_canonization", &mogli::hash_canonization, "Get molecule canonization hash");
-
   m.def("maximal_common_fragments", py::overload_cast<
       mogli::Molecule&, mogli::Molecule&, mogli::FragmentVector&, mogli::MatchVector&, mogli::MatchVector&,
       int, unsigned int, unsigned int, mogli::Product::GenerationType, bool, bool, int>(&mogli::maximal_common_fragments),
@@ -189,26 +183,44 @@ PYBIND11_MODULE(mogli, m) {
       int, unsigned int, mogli::Product::GenerationType, bool, bool, int>(&mogli::maximal_common_fragments),
       "Compute maximal common fragments");
 
+  // hashing methods
+
+  m.def("hash_canonization", &mogli::hash_canonization, "Get molecule canonization hash");
+
   m.def("hash_fcanonization", &mogli::hash_fcanonization, "Get fragment canonization hash");
 
-  m.def("pack_fragment", py::overload_cast<const mogli::Fragment&>(&mogli::pack_fragment), "Serialize a fragment");
+  // serializing methods
 
-  m.def("pack_fragment", py::overload_cast<const std::shared_ptr<mogli::Fragment> &>(&mogli::pack_fragment), "Serialize a fragment");
+  m.def("pack_canonization", py::overload_cast<const mogli::Canonization&>(&mogli::pack_object<mogli::Canonization>), "Serialize molecule canonization");
 
-  m.def("pack_match", &mogli::pack_match, "Serialize match object");
+  m.def("pack_canonization", py::overload_cast<const std::shared_ptr<mogli::Canonization>&>(&mogli::pack_object<mogli::Canonization>), "Serialize molecule canonization");
 
-  m.def("pack_molecule", py::overload_cast<const mogli::Molecule&>(&mogli::pack_molecule), "Serialize molecule");
+  m.def("pack_fcanonization", py::overload_cast<const mogli::FragmentCanonization&>(&mogli::pack_object<mogli::FragmentCanonization>), "Serialize fragment canonization");
 
-  m.def("pack_molecule", py::overload_cast<const std::shared_ptr<mogli::Molecule> &>(&mogli::pack_molecule), "Serialize molecule");
+  m.def("pack_fcanonization", py::overload_cast<const std::shared_ptr<mogli::FragmentCanonization>&>(&mogli::pack_object<mogli::FragmentCanonization>), "Serialize fragment canonization");
 
-  m.def("unpack_canonization", &mogli::unpack_canonization, "Deserialize molecule canonization");
+  m.def("pack_fragment", py::overload_cast<const mogli::Fragment&>(&mogli::pack_object<mogli::Fragment>), "Serialize fragment");
 
-  m.def("unpack_fcanonization", &mogli::unpack_fcanonization, "Deserizalize fragment canonization");
+  m.def("pack_fragment", py::overload_cast<const std::shared_ptr<mogli::Fragment>&>(&mogli::pack_object<mogli::Fragment>), "Serialize fragment");
 
-  m.def("unpack_fragment", &mogli::unpack_fragment, "Deserizalize fragment");
+  m.def("pack_match", py::overload_cast<const mogli::Match&>(&mogli::pack_object<mogli::Match>), "Serialize match object");
 
-  m.def("unpack_match", &mogli::unpack_match, "Deserialize match object");
+  m.def("pack_match", py::overload_cast<const std::shared_ptr<mogli::Match>&>(&mogli::pack_object<mogli::Match>), "Serialize match object");
 
-  m.def("unpack_molecule", &mogli::unpack_molecule, "Deserialize molecule");
+  m.def("pack_molecule", py::overload_cast<const mogli::Molecule&>(&mogli::pack_object<mogli::Molecule>), "Serialize molecule");
+
+  m.def("pack_molecule", py::overload_cast<const std::shared_ptr<mogli::Molecule>&>(&mogli::pack_object<mogli::Molecule>), "Serialize molecule");
+
+  // de-serializing methods
+
+  m.def("unpack_canonization", &mogli::unpack_object<mogli::Canonization>, "Deserialize molecule canonization");
+
+  m.def("unpack_fcanonization", &mogli::unpack_object<mogli::FragmentCanonization>, "Deserizalize fragment canonization");
+
+  m.def("unpack_fragment", &mogli::unpack_object<mogli::Fragment>, "Deserizalize fragment");
+
+  m.def("unpack_match", &mogli::unpack_object<mogli::Match>, "Deserialize match object");
+
+  m.def("unpack_molecule", &mogli::unpack_object<mogli::Molecule>, "Deserialize molecule");
 
 }
