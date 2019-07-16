@@ -255,7 +255,5 @@ if (BUILD_TESTS)
 endif()
 
 # TODO python unit tests
-# TODO sort methods (by name)
 # TODO documentation
-# TODO scripts -> py3
 # TODO check if all methods (except methods with stream parameters) are exposed to python
