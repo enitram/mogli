@@ -14,7 +14,7 @@
 #     GNU General Public License for more details.                                                                     #
 #                                                                                                                      #
 #     You should have received a copy of the GNU Lesser General Public License                                         #
-#     along with this program.  If not, see <https://www.gnu.org/licenses/>.                                            #
+#     along with this program.  If not, see <https://www.gnu.org/licenses/>.                                           #
 ########################################################################################################################
 
 cmake_minimum_required(VERSION 3.12)
@@ -126,6 +126,13 @@ set(SOURCE_FILES
         src/subgraph_isomorphism.cpp
         )
 
+set(TEST_FILES
+        tests/test_isomorphism.cpp
+        tests/test_matching.cpp
+        tests/test_packing.cpp
+        tests/test_fixtures.h
+        tests/test_io.cpp)
+
 set(NAUTY_SRC
         lib/nauty/naugraph.c
         lib/nauty/naugroup.c
@@ -164,23 +171,23 @@ target_link_libraries(mogli ${CommonLibs})
 target_compile_definitions(mogli PRIVATE TR2="${USE_TR2}")
 add_dependencies(mogli lemon)
 
-add_executable(report test/report.cpp ${SOURCE_FILES} ${NAUTY_SRC} ${LAD_SRC})
+add_executable(report tests/report.cpp ${SOURCE_FILES} ${NAUTY_SRC} ${LAD_SRC})
 target_link_libraries(report ${CommonLibs})
 add_dependencies(report lemon)
 
-#add_executable(bbpmcs_compare test/bbpmcs_compare.cpp ${SOURCE_FILES} ${NAUTY_SRC} ${LAD_SRC})
+#add_executable(bbpmcs_compare tests/bbpmcs_compare.cpp ${SOURCE_FILES} ${NAUTY_SRC} ${LAD_SRC})
 #target_link_libraries(bbpmcs_compare ${Boost_LIBRARIES} ${CommonLibs})
 #
-#add_executable(test_product test/test_product.cpp ${SOURCE_FILES} ${NAUTY_SRC} ${LAD_SRC})
+#add_executable(test_product tests/test_product.cpp ${SOURCE_FILES} ${NAUTY_SRC} ${LAD_SRC})
 #target_link_libraries(test_product ${Boost_LIBRARIES} ${CommonLibs})
 #
-#add_executable(test_all_combinations test/test_all_combinations.cpp ${SOURCE_FILES} ${NAUTY_SRC} ${LAD_SRC})
+#add_executable(test_all_combinations tests/test_all_combinations.cpp ${SOURCE_FILES} ${NAUTY_SRC} ${LAD_SRC})
 #target_link_libraries(test_all_combinations ${Boost_LIBRARIES} ${CommonLibs})
 #
-#add_executable(mcis test/mcis.cpp ${SOURCE_FILES} ${NAUTY_SRC} ${LAD_SRC})
+#add_executable(mcis tests/mcis.cpp ${SOURCE_FILES} ${NAUTY_SRC} ${LAD_SRC})
 #target_link_libraries(mcis ${Boost_LIBRARIES} ${CommonLibs})
 #
-#add_executable(timeout test/timeout.cpp ${SOURCE_FILES} ${NAUTY_SRC} ${LAD_SRC})
+#add_executable(timeout tests/timeout.cpp ${SOURCE_FILES} ${NAUTY_SRC} ${LAD_SRC})
 #target_link_libraries(timeout ${Boost_LIBRARIES} ${CommonLibs})
 
 #################
@@ -207,10 +214,48 @@ if (BUILD_PYTHON)
 
 endif()
 
+############
+# Unit tests
+############
 
-# TODO sort methods by name
-# TODO catch2 unit tests
+if (BUILD_TESTS)
+
+    include(FetchContent)
+    FetchContent_Declare(
+            catch2
+            GIT_REPOSITORY https://github.com/catchorg/Catch2.git
+            GIT_TAG        v2.8.0
+    )
+
+    FetchContent_GetProperties(catch2)
+    if(NOT catch2_POPULATED)
+        FetchContent_Populate(catch2)
+        add_subdirectory(${catch2_SOURCE_DIR} ${catch2_BINARY_DIR})
+    endif()
+
+    include(CTest)
+    enable_testing()
+
+    add_executable(unit_tests tests/test_main.cpp ${TEST_FILES})
+    target_link_libraries(unit_tests PRIVATE mogli Catch2::Catch2)
+    add_dependencies(unit_tests lemon)
+
+    add_test(NAME test_c COMMAND unit_tests)
+
+#    if (BUILD_PYTHON)
+#
+#        find_package(Python3 COMPONENTS Interpreter)
+#
+#        add_dependencies(unit_tests pymogli)
+#        add_test(NAME test_py COMMAND Python3::Interpreter -m unittest ${PROJECT_SOURCE_DIR}/tests/test_python.py)
+#
+#
+#    endif()
+
+endif()
+
 # TODO python unit tests
+# TODO sort methods (by name)
 # TODO documentation
 # TODO scripts -> py3
 # TODO check if all methods (except methods with stream parameters) are exposed to python
