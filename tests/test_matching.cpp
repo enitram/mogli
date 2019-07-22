@@ -211,7 +211,7 @@ TEST_CASE("bronkerbosch", "[algo]") {
   Product p(mol1, mol2, 1, Product::GenerationType::DEG_1, 0);
 
   BronKerbosch bk(p, 0, std::numeric_limits<int>::max(), false);
-  bk.run(10);
+  bk.run(TIMEOUT);
 
   auto cliques = bk.getMaxCliques();
 
@@ -234,19 +234,67 @@ TEST_CASE("mcf_isomorphic_graphs", "[algo]") {
   maximal_common_fragments(
       mol1, mol2, frag_noopt, matches1, matches2, 1, 0,
       Product::GenerationType::NO_OPT,
-      false, false, 10);
+      false, false, TIMEOUT);
   maximal_common_fragments(
       mol1, mol2, frag_deg1, matches1, matches2, 1, 0,
       Product::GenerationType::DEG_1,
-      false, false, 10);
+      false, false, TIMEOUT);
   maximal_common_fragments(
       mol1, mol2, frag_uncon, matches1, matches2, 1, 0,
       Product::GenerationType::UNCON,
-      false, false, 10);
+      false, false, TIMEOUT);
   maximal_common_fragments(
       mol1, mol2, frag_uncon_deg1, matches1, matches2, 1, 0,
       Product::GenerationType::UNCON_DEG_1,
-      false, false, 10);
+      false, false, TIMEOUT);
+
+  REQUIRE(!frag_noopt.empty());
+  REQUIRE(!frag_deg1.empty());
+  REQUIRE(!frag_uncon.empty());
+  REQUIRE(!frag_uncon_deg1.empty());
+
+  auto comparator = [](const std::shared_ptr<Fragment> & a, const std::shared_ptr<Fragment> & b) {
+    return a->get_atom_count() > b->get_atom_count();
+  };
+
+  std::sort(frag_noopt.begin(), frag_noopt.end(), comparator);
+  std::sort(frag_deg1.begin(), frag_deg1.end(), comparator);
+  std::sort(frag_uncon.begin(), frag_uncon.end(), comparator);
+  std::sort(frag_uncon_deg1.begin(), frag_uncon_deg1.end(), comparator);
+
+  REQUIRE(frag_noopt[0]->get_atom_count() == mol1.get_atom_count());
+  REQUIRE(frag_deg1[0]->get_atom_count() == mol1.get_atom_count());
+  REQUIRE(frag_uncon[0]->get_atom_count() == mol1.get_atom_count());
+  REQUIRE(frag_uncon_deg1[0]->get_atom_count() == mol1.get_atom_count());
+
+}
+
+TEST_CASE("mcf_isomorphic_graphs_big", "[algo]") {
+
+  Molecule mol1, mol2;
+
+  mol1.read_lgf(MOLID3246);
+  mol2.read_lgf(MOLID3246);
+
+  FragmentVector frag_noopt, frag_deg1, frag_uncon, frag_uncon_deg1;
+  MatchVector matches1, matches2;
+
+  maximal_common_fragments(
+      mol1, mol2, frag_noopt, matches1, matches2, 1, 0,
+      Product::GenerationType::NO_OPT,
+      false, false, TIMEOUT_BIG);
+  maximal_common_fragments(
+      mol1, mol2, frag_deg1, matches1, matches2, 1, 0,
+      Product::GenerationType::DEG_1,
+      false, false, TIMEOUT_BIG);
+  maximal_common_fragments(
+      mol1, mol2, frag_uncon, matches1, matches2, 1, 0,
+      Product::GenerationType::UNCON,
+      false, false, TIMEOUT_BIG);
+  maximal_common_fragments(
+      mol1, mol2, frag_uncon_deg1, matches1, matches2, 1, 0,
+      Product::GenerationType::UNCON_DEG_1,
+      false, false, TIMEOUT_BIG);
 
   REQUIRE(!frag_noopt.empty());
   REQUIRE(!frag_deg1.empty());
@@ -280,24 +328,14 @@ TEST_CASE("mcf_isomorphic_graphs_large", "[algo]") {
   MatchVector matches1, matches2;
 
   maximal_common_fragments(
-      mol1, mol2, frag_noopt, matches1, matches2, 1, 0,
-      Product::GenerationType::NO_OPT,
-      false, false, 360);
-  maximal_common_fragments(
-      mol1, mol2, frag_deg1, matches1, matches2, 1, 0,
-      Product::GenerationType::DEG_1,
-      false, false, 360);
-  maximal_common_fragments(
       mol1, mol2, frag_uncon, matches1, matches2, 1, 0,
       Product::GenerationType::UNCON,
-      false, false, 360);
+      false, false, TIMEOUT_LARGE);
   maximal_common_fragments(
       mol1, mol2, frag_uncon_deg1, matches1, matches2, 1, 0,
       Product::GenerationType::UNCON_DEG_1,
-      false, false, 360);
+      false, false, TIMEOUT_LARGE);
 
-  REQUIRE(!frag_noopt.empty());
-  REQUIRE(!frag_deg1.empty());
   REQUIRE(!frag_uncon.empty());
   REQUIRE(!frag_uncon_deg1.empty());
 
@@ -305,15 +343,9 @@ TEST_CASE("mcf_isomorphic_graphs_large", "[algo]") {
     return a->get_atom_count() > b->get_atom_count();
   };
 
-  std::sort(frag_noopt.begin(), frag_noopt.end(), comparator);
-  std::sort(frag_deg1.begin(), frag_deg1.end(), comparator);
   std::sort(frag_uncon.begin(), frag_uncon.end(), comparator);
   std::sort(frag_uncon_deg1.begin(), frag_uncon_deg1.end(), comparator);
 
-  // FIXME 4 == 113
-  CHECK(frag_noopt[0]->get_atom_count() == mol1.get_atom_count());
-  // FIXME 5 == 113
-  CHECK(frag_deg1[0]->get_atom_count() == mol1.get_atom_count());
   REQUIRE(frag_uncon[0]->get_atom_count() == mol1.get_atom_count());
   REQUIRE(frag_uncon_deg1[0]->get_atom_count() == mol1.get_atom_count());
 
@@ -330,21 +362,21 @@ TEST_CASE("mcf_subisomorphic_graphs", "[algo]") {
   MatchVector matches1, matches2;
 
   maximal_common_fragments(
-      mol1, mol2, frag_noopt, matches1, matches2, 1, 0,
+      mol1, mol2, frag_noopt, matches1, matches2, 0, 0,
       Product::GenerationType::NO_OPT,
-      false, false, 60);
+      false, false, TIMEOUT_BIG);
   maximal_common_fragments(
-      mol1, mol2, frag_deg1, matches1, matches2, 1, 0,
+      mol1, mol2, frag_deg1, matches1, matches2, 0, 0,
       Product::GenerationType::DEG_1,
-      false, false, 60);
+      false, false, TIMEOUT_BIG);
   maximal_common_fragments(
-      mol1, mol2, frag_uncon, matches1, matches2, 1, 0,
+      mol1, mol2, frag_uncon, matches1, matches2, 0, 0,
       Product::GenerationType::UNCON,
-      false, false, 60);
+      false, false, TIMEOUT_BIG);
   maximal_common_fragments(
-      mol1, mol2, frag_uncon_deg1, matches1, matches2, 1, 0,
+      mol1, mol2, frag_uncon_deg1, matches1, matches2, 0, 0,
       Product::GenerationType::UNCON_DEG_1,
-      false, false, 60);
+      false, false, TIMEOUT_BIG);
 
   REQUIRE(!frag_noopt.empty());
   REQUIRE(!frag_deg1.empty());
@@ -360,18 +392,58 @@ TEST_CASE("mcf_subisomorphic_graphs", "[algo]") {
   std::sort(frag_uncon.begin(), frag_uncon.end(), comparator);
   std::sort(frag_uncon_deg1.begin(), frag_uncon_deg1.end(), comparator);
 
-  // FIXME 2 == 4
-
-  CHECK(frag_noopt[0]->get_atom_count() == mol1.get_atom_count());
-  CHECK(frag_deg1[0]->get_atom_count() == mol1.get_atom_count());
-  CHECK(frag_uncon[0]->get_atom_count() == mol1.get_atom_count());
-  CHECK(frag_uncon_deg1[0]->get_atom_count() == mol1.get_atom_count());
+  REQUIRE(frag_noopt[0]->get_atom_count() == mol1.get_atom_count());
+  REQUIRE(frag_deg1[0]->get_atom_count() == mol1.get_atom_count());
+  REQUIRE(frag_uncon[0]->get_atom_count() == mol1.get_atom_count());
+  REQUIRE(frag_uncon_deg1[0]->get_atom_count() == mol1.get_atom_count());
 
 }
 
-TEST_CASE("mcf_subisomorphic_graphs_large", "[algo]") {
+TEST_CASE("mcf_subisomorphic_graphs_2", "[algo]") {
 
-  // TODO large subisomorphisms
+  Molecule mol1, mol2;
+
+  mol1.read_lgf(ETHYL);
+  mol2.read_lgf(ETHANE_2);
+
+  FragmentVector frag_noopt, frag_deg1, frag_uncon, frag_uncon_deg1;
+  MatchVector matches1, matches2;
+
+  maximal_common_fragments(
+      mol1, mol2, frag_noopt, matches1, matches2, 1, 0,
+      Product::GenerationType::NO_OPT,
+      false, false, TIMEOUT_BIG);
+  maximal_common_fragments(
+      mol1, mol2, frag_deg1, matches1, matches2, 1, 0,
+      Product::GenerationType::DEG_1,
+      false, false, TIMEOUT_BIG);
+  maximal_common_fragments(
+      mol1, mol2, frag_uncon, matches1, matches2, 1, 0,
+      Product::GenerationType::UNCON,
+      false, false, TIMEOUT_BIG);
+  maximal_common_fragments(
+      mol1, mol2, frag_uncon_deg1, matches1, matches2, 1, 0,
+      Product::GenerationType::UNCON_DEG_1,
+      false, false, TIMEOUT_BIG);
+
+  REQUIRE(!frag_noopt.empty());
+  REQUIRE(!frag_deg1.empty());
+  REQUIRE(!frag_uncon.empty());
+  REQUIRE(!frag_uncon_deg1.empty());
+
+  auto comparator = [](const std::shared_ptr<Fragment> & a, const std::shared_ptr<Fragment> & b) {
+    return a->get_atom_count() > b->get_atom_count();
+  };
+
+  std::sort(frag_noopt.begin(), frag_noopt.end(), comparator);
+  std::sort(frag_deg1.begin(), frag_deg1.end(), comparator);
+  std::sort(frag_uncon.begin(), frag_uncon.end(), comparator);
+  std::sort(frag_uncon_deg1.begin(), frag_uncon_deg1.end(), comparator);
+
+  REQUIRE(frag_noopt[0]->get_atom_count() == 2);
+  REQUIRE(frag_deg1[0]->get_atom_count() == 2);
+  REQUIRE(frag_uncon[0]->get_atom_count() == 2);
+  REQUIRE(frag_uncon_deg1[0]->get_atom_count() == 2);
 
 }
 
@@ -389,19 +461,19 @@ TEST_CASE("mcf_graphs_no_match", "[algo]") {
   maximal_common_fragments(
       mol1, mol2, frag_noopt, matches1, matches2, 1, 0,
       Product::GenerationType::NO_OPT,
-      false, false, 10);
+      false, false, TIMEOUT);
   maximal_common_fragments(
       mol1, mol2, frag_deg1, matches1, matches2, 1, 0,
       Product::GenerationType::DEG_1,
-      false, false, 10);
+      false, false, TIMEOUT);
   maximal_common_fragments(
       mol1, mol2, frag_uncon, matches1, matches2, 1, 0,
       Product::GenerationType::UNCON,
-      false, false, 10);
+      false, false, TIMEOUT);
   maximal_common_fragments(
       mol1, mol2, frag_uncon_deg1, matches1, matches2, 1, 0,
       Product::GenerationType::UNCON_DEG_1,
-      false, false, 10);
+      false, false, TIMEOUT);
 
   REQUIRE(frag_noopt.empty());
   REQUIRE(frag_deg1.empty());

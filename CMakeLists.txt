@@ -254,6 +254,7 @@ if (BUILD_TESTS)
 
 endif()
 
+# TODO pythonic returns
 # TODO python unit tests
 # TODO documentation
 # TODO check if all methods (except methods with stream parameters) are exposed to python
