@@ -41,6 +41,13 @@ PYBIND11_MAKE_OPAQUE(mogli::NodeVector);
 
 inline py::object pass_through(py::object const& o) { return o; }
 
+template <typename T>
+static std::shared_ptr<T> deserialize(std::string str) {
+  auto obj = std::make_shared<T>();
+  mogli::unpack_object(str, *obj);
+  return obj;
+}
+
 template <typename T, typename E>
 struct ItWrapper {
 
@@ -93,9 +100,9 @@ PYBIND11_MODULE(mogli, m) {
 
   py::class_<mogli::Canonization>(m, "Canonization")
       .def(py::init<const mogli::Molecule&>())
-      .def("get_colors", &mogli::Canonization::get_colors, py::return_value_policy::move, "Get element numbers of the ordered atoms")
-      .def("get_canonization", &mogli::Canonization::get_canonization, py::return_value_policy::move, "Get canonization")
-      .def("get_node_order", &mogli::Canonization::get_node_order, py::return_value_policy::move, "Get ordered atom ids")
+      .def("get_colors", &mogli::Canonization::get_colors, py::return_value_policy::reference_internal, "Get element numbers of the ordered atoms")
+      .def("get_canonization", &mogli::Canonization::get_canonization, py::return_value_policy::reference_internal, "Get canonization")
+      .def("get_node_order", &mogli::Canonization::get_node_order, py::return_value_policy::reference_internal, "Get ordered atom ids")
       .def("is_isomorphic", &mogli::Canonization::is_isomorphic, "Isomorphism test");
 
   py::class_<mogli::Edge>(m, "Edge")
@@ -105,7 +112,7 @@ PYBIND11_MODULE(mogli, m) {
 
   py::class_<mogli::FragmentCanonization, mogli::Canonization>(m, "FragmentCanonization")
       .def(py::init<const mogli::Fragment&>())
-      .def("get_core_nodes", &mogli::FragmentCanonization::get_core_nodes, py::return_value_policy::move, "Get atom ids of the ordered core atoms")
+      .def("get_core_nodes", &mogli::FragmentCanonization::get_core_nodes, py::return_value_policy::reference_internal, "Get atom ids of the ordered core atoms")
       .def("is_isomorphic", &mogli::FragmentCanonization::is_isomorphic, "Isomorphism test");
 
   py::class_<mogli::LGFIOConfig>(m, "LGFIOConfig")
@@ -117,8 +124,22 @@ PYBIND11_MODULE(mogli, m) {
 
   py::class_<mogli::Match, std::shared_ptr<mogli::Match>>(m, "Match")
       .def("frag_to_mol", &mogli::Match::frag_to_mol)
-      .def("merged_frag_to_mol", &mogli::Match::merged_frag_to_mol)
-      .def("get_atom_ids", &mogli::Match::get_atom_ids)
+      .def("merged_frag_to_mol",
+          [](const mogli::Match &self, const int id) {
+            mogli::IntVector ids;
+            self.merged_frag_to_mol(id, ids);
+            return ids;
+          },
+          py::return_value_policy::move
+          )
+      .def("get_atom_ids",
+          [](const mogli::Match & self) {
+            mogli::IntVector ids;
+            self.get_atom_ids(ids);
+            return ids;
+          },
+          py::return_value_policy::move
+          )
       .def("map_ids", &mogli::Match::map_ids);
 
   py::class_<mogli::Molecule, std::shared_ptr<mogli::Molecule>> molecule(m, "Molecule");
@@ -129,30 +150,45 @@ PYBIND11_MODULE(mogli, m) {
       .def("add_atom", py::overload_cast<unsigned short>(&mogli::Molecule::add_atom), "Add atom with element number")
       .def("add_atom", py::overload_cast<int, unsigned short>(&mogli::Molecule::add_atom), "Add atom with element number and node id")
       .def("add_edge", &mogli::Molecule::add_edge, "Add bond")
-      .def("get_node_iter", &mogli::Molecule::get_node_iter, "Get atom iterator")
+      .def("get_atom_count", &mogli::Molecule::get_atom_count, "Get number of atoms")
+      .def("get_color", &mogli::Molecule::get_color, "Get element number of this atom")
+      .def("get_connected_components",
+          [](mogli::Molecule &self) {
+            mogli::SharedPtrVector<mogli::Molecule>::type components;
+            self.get_connected_components(components);
+            return components;
+          },
+          py::return_value_policy::move,
+          "Get connected components of the molecular graph")
       .def("get_edge_iter", &mogli::Molecule::get_edge_iter, "Get bond iterator")
+      .def("get_element", &mogli::Molecule::get_element, "Get element of this atom")
+      .def("get_id", &mogli::Molecule::get_id, "Get id of this atom")
       .def("get_inc_edge_iter", &mogli::Molecule::get_inc_edge_iter, "Get incident bonds iterator")
+      .def("get_node_by_id", &mogli::Molecule::get_node_by_id, "Get atom by id")
+      .def("get_node_iter", &mogli::Molecule::get_node_iter, "Get atom iterator")
       .def("get_opposite_node", &mogli::Molecule::get_opposite_node, "Get atom on the opposite side of the bond")
+      .def("get_properties",
+          [](const mogli::Molecule &self) {
+            mogli::StringVector properties;
+            self.get_properties(properties);
+            return properties;
+          },
+          py::return_value_policy::move,
+          "Get all property names")
+      .def("get_property", &mogli::Molecule::get_property, "Get atom property")
       .def("get_u", &mogli::Molecule::get_u, "Get first atom of the bond")
       .def("get_v", &mogli::Molecule::get_v, "Get second atom of the bond")
-      .def("get_atom_count", &mogli::Molecule::get_atom_count, "Get number of atoms")
       .def("has_node_with_id", &mogli::Molecule::has_node_with_id, "Tests if atom with this id exists")
-      .def("get_node_by_id", &mogli::Molecule::get_node_by_id, "Get atom by id")
-      .def("get_id", &mogli::Molecule::get_id, "Get id of this atom")
-      .def("get_color", &mogli::Molecule::get_color, "Get element number of this atom")
-      .def("get_element", &mogli::Molecule::get_element, "Get element of this atom")
       .def("is_connected", &mogli::Molecule::is_connected, "Test if molecular graph is connected")
-      .def("get_connected_components", &mogli::Molecule::get_connected_components, "Get connected components of the molecular graph")
-      .def("split", &mogli::Molecule::split, "Balanced split of the molecule")
       .def("is_isomorphic", &mogli::Molecule::is_isomorphic, "Isomorphisms test")
-      .def("write_lgf", py::overload_cast<>(&mogli::Molecule::write_lgf), "Write default formatted LGF file")
-      .def("write_lgf", py::overload_cast<const mogli::LGFIOConfig&>(&mogli::Molecule::write_lgf), "Write LGF file")
-      .def("read_lgf", py::overload_cast<const std::string &>(&mogli::Molecule::read_lgf), "Read default formatted LGF file")
-      .def("read_lgf", py::overload_cast<const std::string &, const mogli::LGFIOConfig&>(&mogli::Molecule::read_lgf), "Read LGF file")
       .def("print_dot", py::overload_cast<>(&mogli::Molecule::print_dot, py::const_), "Print dot (graphviz file)")
       .def("print_dot", py::overload_cast<const mogli::StringVector&>(&mogli::Molecule::print_dot, py::const_), "Print dot (graphviz) file with atom properties")
+      .def("read_lgf", py::overload_cast<const std::string &>(&mogli::Molecule::read_lgf), "Read default formatted LGF file")
+      .def("read_lgf", py::overload_cast<const std::string &, const mogli::LGFIOConfig&>(&mogli::Molecule::read_lgf), "Read LGF file")
       .def("set_property", &mogli::Molecule::set_property, "Set atom property")
-      .def("get_property", &mogli::Molecule::get_property, "Get atom property");
+      .def("split", &mogli::Molecule::split, "Balanced split of the molecule")
+      .def("write_lgf", py::overload_cast<>(&mogli::Molecule::write_lgf), "Write default formatted LGF file")
+      .def("write_lgf", py::overload_cast<const mogli::LGFIOConfig&>(&mogli::Molecule::write_lgf), "Write LGF file");
 
   py::class_<mogli::Fragment, std::shared_ptr<mogli::Fragment>>(m, "Fragment", molecule)
       .def("get_core_atom_count", &mogli::Fragment::get_core_atom_count, "Get number of core atoms")
@@ -171,16 +207,40 @@ PYBIND11_MODULE(mogli, m) {
 
   // methods
 
-  m.def("atomic_fragments", &mogli::atomic_fragments, "Get all single-atom fragments");
+  m.def("atomic_fragments",
+      [](mogli::Molecule &mol, int shell) {
+        mogli::FragmentVector fragments;
+        mogli::MatchVector matches;
+        mogli::atomic_fragments(mol, fragments, matches, shell);
+        return py::make_tuple(fragments, matches);
+      },
+      py::return_value_policy::move,
+      "Get all single-atom fragments");
 
-  m.def("maximal_common_fragments", py::overload_cast<
-      mogli::Molecule&, mogli::Molecule&, mogli::FragmentVector&, mogli::MatchVector&, mogli::MatchVector&,
-      int, unsigned int, unsigned int, mogli::Product::GenerationType, bool, bool, int>(&mogli::maximal_common_fragments),
+  m.def("maximal_common_fragments",
+      [](mogli::Molecule &mol1, mogli::Molecule &mol2,
+          int shell, unsigned int min_core_size, unsigned int max_core_size,
+          mogli::Product::GenerationType prod_gen, bool maximum, int timeout_seconds){
+        mogli::FragmentVector fragments;
+        mogli::MatchVector matches_mol1, matches_mol2;
+        mogli::maximal_common_fragments(mol1, mol2, fragments, matches_mol1, matches_mol2,
+            shell, min_core_size, max_core_size, prod_gen, false, maximum, timeout_seconds);
+        return py::make_tuple(fragments, matches_mol1, matches_mol2);
+      },
+      py::return_value_policy::move,
       "Compute maximal common fragments");
 
-  m.def("maximal_common_fragments", py::overload_cast<
-      mogli::Molecule&, mogli::Molecule&, mogli::FragmentVector&, mogli::MatchVector&, mogli::MatchVector&,
-      int, unsigned int, mogli::Product::GenerationType, bool, bool, int>(&mogli::maximal_common_fragments),
+  m.def("maximal_common_fragments",
+      [](mogli::Molecule &mol1, mogli::Molecule &mol2,
+         int shell, unsigned int min_core_size,
+         mogli::Product::GenerationType prod_gen, bool maximum, int timeout_seconds){
+        mogli::FragmentVector fragments;
+        mogli::MatchVector matches_mol1, matches_mol2;
+        mogli::maximal_common_fragments(mol1, mol2, fragments, matches_mol1, matches_mol2,
+                                        shell, min_core_size, prod_gen, false, maximum, timeout_seconds);
+        return py::make_tuple(fragments, matches_mol1, matches_mol2);
+      },
+      py::return_value_policy::move,
       "Compute maximal common fragments");
 
   // hashing methods
@@ -213,14 +273,14 @@ PYBIND11_MODULE(mogli, m) {
 
   // de-serializing methods
 
-  m.def("unpack_canonization", &mogli::unpack_object<mogli::Canonization>, "Deserialize molecule canonization");
+  m.def("unpack_canonization", &deserialize<mogli::Canonization>, "Deserialize molecule canonization");
 
-  m.def("unpack_fcanonization", &mogli::unpack_object<mogli::FragmentCanonization>, "Deserizalize fragment canonization");
+  m.def("unpack_fcanonization", &deserialize<mogli::FragmentCanonization>, "Deserizalize fragment canonization");
 
-  m.def("unpack_fragment", &mogli::unpack_object<mogli::Fragment>, "Deserizalize fragment");
+  m.def("unpack_fragment", &deserialize<mogli::Fragment>, "Deserizalize fragment");
 
-  m.def("unpack_match", &mogli::unpack_object<mogli::Match>, "Deserialize match object");
+  m.def("unpack_match", &deserialize<mogli::Match>, "Deserialize match object");
 
-  m.def("unpack_molecule", &mogli::unpack_object<mogli::Molecule>, "Deserialize molecule");
+  m.def("unpack_molecule", &deserialize<mogli::Molecule>, "Deserialize molecule");
 
 }
