@@ -320,7 +320,7 @@ namespace mogli {
   }
 
   template <typename T>
-  void unpack_object(std::string str, T &obj) {
+  void unpack_object(const std::string & str, T &obj) {
     unpacked msg_unpacked = unpack(str.data(), str.size());
     object msg_object = msg_unpacked.get();
     msg_object.convert(obj);
