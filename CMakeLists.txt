@@ -166,29 +166,14 @@ include_directories(
 )
 link_directories( "${LIBLEMON_ROOT}/lib")
 
-add_library(mogli SHARED ${HEADER_FILES} ${SOURCE_FILES} ${NAUTY_SRC} ${LAD_SRC})
-target_link_libraries(mogli ${CommonLibs})
-target_compile_definitions(mogli PRIVATE TR2="${USE_TR2}")
-add_dependencies(mogli lemon)
+add_library(cmogli SHARED ${HEADER_FILES} ${SOURCE_FILES} ${NAUTY_SRC} ${LAD_SRC})
+target_link_libraries(cmogli ${CommonLibs})
+target_compile_definitions(cmogli PRIVATE TR2="${USE_TR2}")
+add_dependencies(cmogli lemon)
 
 add_executable(report tests/report.cpp ${SOURCE_FILES} ${NAUTY_SRC} ${LAD_SRC})
 target_link_libraries(report ${CommonLibs})
 add_dependencies(report lemon)
-
-#add_executable(bbpmcs_compare tests/bbpmcs_compare.cpp ${SOURCE_FILES} ${NAUTY_SRC} ${LAD_SRC})
-#target_link_libraries(bbpmcs_compare ${Boost_LIBRARIES} ${CommonLibs})
-#
-#add_executable(test_product tests/test_product.cpp ${SOURCE_FILES} ${NAUTY_SRC} ${LAD_SRC})
-#target_link_libraries(test_product ${Boost_LIBRARIES} ${CommonLibs})
-#
-#add_executable(test_all_combinations tests/test_all_combinations.cpp ${SOURCE_FILES} ${NAUTY_SRC} ${LAD_SRC})
-#target_link_libraries(test_all_combinations ${Boost_LIBRARIES} ${CommonLibs})
-#
-#add_executable(mcis tests/mcis.cpp ${SOURCE_FILES} ${NAUTY_SRC} ${LAD_SRC})
-#target_link_libraries(mcis ${Boost_LIBRARIES} ${CommonLibs})
-#
-#add_executable(timeout tests/timeout.cpp ${SOURCE_FILES} ${NAUTY_SRC} ${LAD_SRC})
-#target_link_libraries(timeout ${Boost_LIBRARIES} ${CommonLibs})
 
 #################
 # Python bindings
@@ -208,9 +193,9 @@ if (BUILD_PYTHON)
         add_subdirectory(${pybind11_SOURCE_DIR} ${pybind11_BINARY_DIR})
     endif()
 
-    pybind11_add_module(pymogli src/util/pymogli.cpp)
-    target_link_libraries(pymogli PRIVATE mogli)
-    add_dependencies(pymogli lemon)
+    pybind11_add_module(mogli src/util/pymogli.cpp)
+    target_link_libraries(mogli PRIVATE cmogli)
+    add_dependencies(mogli lemon)
 
 endif()
 
@@ -237,24 +222,43 @@ if (BUILD_TESTS)
     enable_testing()
 
     add_executable(unit_tests tests/test_main.cpp ${TEST_FILES})
-    target_link_libraries(unit_tests PRIVATE mogli Catch2::Catch2)
+    target_link_libraries(unit_tests PRIVATE cmogli Catch2::Catch2)
     add_dependencies(unit_tests lemon)
 
-    add_test(NAME test_c COMMAND unit_tests)
+    execute_process(
+            COMMAND ./unit_tests --list-tests-names-only
+            WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+            OUTPUT_VARIABLE output)
+    string(REPLACE "\n" ";" output "${output}")
+    foreach(test ${output})
+        add_test(NAME ${test} COMMAND unit_tests ${test})
+        set_tests_properties(${test} PROPERTIES LABELS "cpp")
+    endforeach()
 
-#    if (BUILD_PYTHON)
-#
-#        find_package(Python3 COMPONENTS Interpreter)
-#
-#        add_dependencies(unit_tests pymogli)
-#        add_test(NAME test_py COMMAND Python3::Interpreter -m unittest ${PROJECT_SOURCE_DIR}/tests/test_python.py)
-#
-#
-#    endif()
+    if (BUILD_PYTHON)
+
+        add_dependencies(unit_tests mogli)
+
+        execute_process(
+                COMMAND python3 -m discover_python_tests
+                WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/tests
+                OUTPUT_VARIABLE output
+                RESULT_VARIABLE result
+        )
+        string(REPLACE "\n" ";" output "${output}")
+        foreach(test ${output})
+            add_test(
+                    NAME ${test}
+                    COMMAND python3 -m unittest ${test}
+                    WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/tests
+            )
+            set_tests_properties(${test} PROPERTIES LABELS "python")
+        endforeach()
+
+    endif()
 
 endif()
 
-# TODO pythonic returns
-# TODO python unit tests
+# TODO python arg names
 # TODO documentation
 # TODO check if all methods (except methods with stream parameters) are exposed to python
