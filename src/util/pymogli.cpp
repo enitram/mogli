@@ -64,6 +64,7 @@ struct ItWrapper {
   static void wrap(py::handle handle, const char * name) {
     py::class_<T>(handle, name)
         .def("next", next)
+        .def("__next__", next)
         .def("__iter__", pass_through);
   }
 };
