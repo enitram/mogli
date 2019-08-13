@@ -20,6 +20,10 @@
 import unittest
 
 
+TIMEOUT = 10
+TIMEOUT_BIG = 60
+TIMEOUT_LARGE = 360
+
 ETHYL = """@nodes
 partial_charge label label2 atomType coordX coordY coordZ initColor
 -0.048         0     C1     12       -0.765 -0.000 0.000  1
@@ -598,9 +602,9 @@ class TestIsomorphism(unittest.TestCase):
         mol3.read_lgf(ETHANE_1)
         mol4.read_lgf(ETHYL, config)
 
-        frag1, _, _ = maximal_common_fragments(mol1, mol2, 1, 0, GenerationType.NO_OPT, False, 10)
-        frag2, _ ,_ = maximal_common_fragments(mol1, mol3, 1, 0, GenerationType.NO_OPT, False, 10)
-        frag3, _ ,_ = maximal_common_fragments(mol1, mol4, 1, 0, GenerationType.NO_OPT, False, 10)
+        frag1, _, _ = maximal_common_fragments(mol1, mol2, 1, 0, GenerationType.NO_OPT, False, TIMEOUT)
+        frag2, _ ,_ = maximal_common_fragments(mol1, mol3, 1, 0, GenerationType.NO_OPT, False, TIMEOUT)
+        frag3, _ ,_ = maximal_common_fragments(mol1, mol4, 1, 0, GenerationType.NO_OPT, False, TIMEOUT)
 
         self.assertTrue(len(frag1) > 0)
         self.assertTrue(len(frag2) > 0)
@@ -689,9 +693,9 @@ class TestPacking(unittest.TestCase):
         mol3.read_lgf(ETHANE_1)
         mol4.read_lgf(ETHYL, config)
 
-        frag1, _, _ = maximal_common_fragments(mol1, mol2, 1, 0, GenerationType.NO_OPT, False, 10)
-        frag2, _ ,_ = maximal_common_fragments(mol1, mol3, 1, 0, GenerationType.NO_OPT, False, 10)
-        frag3, _ ,_ = maximal_common_fragments(mol1, mol4, 1, 0, GenerationType.NO_OPT, False, 10)
+        frag1, _, _ = maximal_common_fragments(mol1, mol2, 1, 0, GenerationType.NO_OPT, False, TIMEOUT)
+        frag2, _ ,_ = maximal_common_fragments(mol1, mol3, 1, 0, GenerationType.NO_OPT, False, TIMEOUT)
+        frag3, _ ,_ = maximal_common_fragments(mol1, mol4, 1, 0, GenerationType.NO_OPT, False, TIMEOUT)
 
         self.assertTrue(len(frag1) > 0)
         self.assertTrue(len(frag2) > 0)
@@ -732,7 +736,7 @@ class TestPacking(unittest.TestCase):
         mol1.read_lgf(ETHANE_1)
         mol2.read_lgf(ETHANE_2)
 
-        frag, _, _ = maximal_common_fragments(mol1, mol2, 1, 0, GenerationType.NO_OPT, False, 10)
+        frag, _, _ = maximal_common_fragments(mol1, mol2, 1, 0, GenerationType.NO_OPT, False, TIMEOUT)
 
         frag = sorted(frag, key=lambda x: x.get_atom_count())
 
@@ -754,7 +758,7 @@ class TestPacking(unittest.TestCase):
         mol1.read_lgf(ETHANE_1)
         mol2.read_lgf(ETHANE_2)
 
-        frag, _, _ = maximal_common_fragments(mol1, mol2, 1, 0, GenerationType.NO_OPT, False, 10)
+        frag, _, _ = maximal_common_fragments(mol1, mol2, 1, 0, GenerationType.NO_OPT, False, TIMEOUT)
 
         frag = sorted(frag, key=lambda x: x.get_atom_count())
 
