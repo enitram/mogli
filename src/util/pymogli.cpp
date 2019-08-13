@@ -782,8 +782,9 @@ PYBIND11_MODULE(mogli, m) {
           )")
       .def(
           "add",
+          &mogli::PeriodicTable::add,
           "num"_a, "name"_a, "color"_a,
-          &mogli::PeriodicTable::add, py::return_value_policy::reference_internal,
+          py::return_value_policy::reference_internal,
           R"(
           Add a new element.
 
