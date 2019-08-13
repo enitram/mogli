@@ -269,6 +269,53 @@ TEST_CASE("mcf_isomorphic_graphs", "[algo]") {
 
 }
 
+TEST_CASE("mcf_isomorphic_graphs_max", "[algo]") {
+
+  Molecule mol1, mol2;
+
+  mol1.read_lgf(ETHANE_1);
+  mol2.read_lgf(ETHANE_2);
+
+  FragmentVector frag_noopt, frag_deg1, frag_uncon, frag_uncon_deg1;
+  MatchVector matches1, matches2;
+
+  maximal_common_fragments(
+      mol1, mol2, frag_noopt, matches1, matches2, 1, 0,
+      Product::GenerationType::NO_OPT,
+      false, true, TIMEOUT);
+  maximal_common_fragments(
+      mol1, mol2, frag_deg1, matches1, matches2, 1, 0,
+      Product::GenerationType::DEG_1,
+      false, true, TIMEOUT);
+  maximal_common_fragments(
+      mol1, mol2, frag_uncon, matches1, matches2, 1, 0,
+      Product::GenerationType::UNCON,
+      false, true, TIMEOUT);
+  maximal_common_fragments(
+      mol1, mol2, frag_uncon_deg1, matches1, matches2, 1, 0,
+      Product::GenerationType::UNCON_DEG_1,
+      false, true, TIMEOUT);
+
+  REQUIRE(!frag_noopt.empty());
+  REQUIRE(!frag_deg1.empty());
+  REQUIRE(!frag_uncon.empty());
+  REQUIRE(!frag_uncon_deg1.empty());
+
+  for (const auto & f : frag_noopt) {
+    REQUIRE(f->get_atom_count() == mol1.get_atom_count());
+  }
+  for (const auto & f : frag_deg1) {
+    REQUIRE(f->get_atom_count() == mol1.get_atom_count());
+  }
+  for (const auto & f : frag_uncon) {
+    REQUIRE(f->get_atom_count() == mol1.get_atom_count());
+  }
+  for (const auto & f : frag_uncon_deg1) {
+    REQUIRE(f->get_atom_count() == mol1.get_atom_count());
+  }
+
+}
+
 TEST_CASE("mcf_isomorphic_graphs_big", "[algo]") {
 
   Molecule mol1, mol2;
@@ -356,7 +403,7 @@ TEST_CASE("mcf_subisomorphic_graphs", "[algo]") {
   Molecule mol1, mol2;
 
   mol1.read_lgf(ETHYL);
-  mol2.read_lgf(ETHANE_2);
+  mol2.read_lgf(ETHANE_1);
 
   FragmentVector frag_noopt, frag_deg1, frag_uncon, frag_uncon_deg1;
   MatchVector matches1, matches2;
