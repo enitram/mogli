@@ -29,6 +29,9 @@ namespace mogli {
 
   typedef typename lemon::FilterNodes<const Graph, const NodeToBoolMap> FilterNodes;
 
+  /**
+   * Molecular fragment.
+   */
   class Fragment : public Molecule {
 
   private:
@@ -41,34 +44,82 @@ namespace mogli {
 
   public:
 
+    /**
+     * Empty constructor.
+     */
     Fragment() :
         Molecule(),
         _is_core(_g, false),
         _shell_size(0),
         _core_node_count(0) {}
 
+    /**
+     * Constructs a molecular fragment from a clique in the product graph.
+     *
+     * @param[in] product   Product graph of two molecules.
+     * @param[in] clique    Clique in the product graph.
+     * @param[in] g_to_mol1 Mapping of product graph nodes to the first molecule.
+     * @param[in] g_to_mol2 Mapping of product graph nodes to the second molecule.
+     */
     Fragment(const Product &product, const NodeVector &clique, IntToIntMap &g_to_mol1, IntToIntMap &g_to_mol2);
 
+    /**
+     * Returns the number of core atoms.
+     *
+     * @return  Number of core atoms.
+     */
     int get_core_atom_count() const {
       return _core_node_count;
     }
 
+    /**
+     * Test if the given atom is a core atom.
+     *
+     * @param[in] node  Atom.
+     * @return          True, if the atom is a core atom, false otherwise.
+     */
     bool is_core(const Node node) const {
       return _is_core[node];
     }
 
+    /**
+     * Set the core atom property for the given atom.
+     *
+     * @param[in] u     Atom.
+     * @param[in] core  Core atom property.
+     */
     void set_core(const Node &u, bool core);
 
+    /**
+     * Returns the shell size of this fragment.
+     *
+     * @return  Shell size.
+     */
     int get_shell_size() const {
       return _shell_size;
     }
 
+    /**
+     * Sets the shell size of this fragment.
+     *
+     * @param[in] shell_size    Shell size.
+     */
     void set_shell_size(int shell_size) {
       _shell_size = shell_size;
     }
 
+    /**
+     * Export molecular fragment to dot (graphviz) format.
+     *
+     * @return  Fragment in dot format.
+     */
     const std::string print_dot() const override;
 
+    /**
+     * Export molecular fragment to dot (graphviz) format.
+     *
+     * @param[out] out  Output stream.
+     */
     const void print_dot(std::ostream &out) const override;
 
   private:

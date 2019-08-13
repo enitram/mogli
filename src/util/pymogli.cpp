@@ -719,9 +719,42 @@ PYBIND11_MODULE(mogli, m) {
           )");
 
   py::class_<mogli::Fragment, std::shared_ptr<mogli::Fragment>>(m, "Fragment", molecule)
-      .def("get_core_atom_count", &mogli::Fragment::get_core_atom_count, "Get number of core atoms")
-      .def("is_core", &mogli::Fragment::is_core, "Is this node a core atom?")
-      .def("print_dot", py::overload_cast<>(&mogli::Fragment::print_dot,  py::const_), "Print dot (graphviz) file");
+      .def("get_core_atom_count",
+          &mogli::Fragment::get_core_atom_count,
+          R"(
+          Returns the number of core atoms.
+
+          Returns:
+              int. Number of core atoms.
+          )")
+      .def("get_shell_size",
+          &mogli::Fragment::get_shell_size,
+          R"(
+          Returns the shell size of this fragment.
+
+          Returns:
+              int. Shell size.
+          )")
+      .def("is_core",
+          &mogli::Fragment::is_core,
+          "node"_a,
+          R"(
+          Test if the given atom is a core atom.
+
+          Args:
+              node (Node): Atom.
+
+          Returns:
+              bool. True, if the atom is a core atom, false otherwise.
+          )")
+      .def("print_dot",
+          py::overload_cast<>(&mogli::Fragment::print_dot,  py::const_),
+          R"(
+          Export molecular fragment to dot (graphviz) format.
+
+          Returns:
+              str. Fragment in dot format.
+          )");
 
   py::class_<mogli::PeriodicTable>(m, "PeriodicTable")
       .def(py::init<>())
