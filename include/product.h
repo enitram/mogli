@@ -38,6 +38,12 @@ namespace mogli {
 
   public:
 
+    /**
+     * @brief Product graph data reduction rules.
+     *
+     * The data reduction rule with the most speedup is UNCON_DEG_1. It is recommended to always use this rule,
+     * the other rules are mainly for evaluation.
+     */
     enum GenerationType {
       NO_OPT = 0,
       UNCON = 1,

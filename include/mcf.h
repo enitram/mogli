@@ -29,6 +29,26 @@ namespace mogli {
   typedef SharedPtrVector<Fragment>::type FragmentVector;
   typedef std::vector<Match> MatchVector;
 
+  /**
+   * @brief Computes maximal common fragments of two molecular graphs.
+   *
+   * The heart and soul of this library. See <a href="https://doi.org/10.7287/peerj.preprints.3250v1">this paper</a>
+   * for more information. The data reduction rule with the most speedup is Product::GenerationType::UNCON_DEG_1. It is
+   * recommended to always use this rule, the other rules are mainly for evaluation.
+   *
+   * @param[in]  mol1               First molecular graph.
+   * @param[in]  mol2               Second molecular graph.
+   * @param[out] fragments          Maximal common fragments.
+   * @param[out] matches_mol1       Match objects mapping from fragments to the first molecular graph.
+   * @param[out] matches_mol2       Match objects mapping from fragments to the second molecular graph.
+   * @param[in]  shell              Shell size. Maximal number of bonds from any core atom in the fragments.
+   * @param[in]  min_core_size      Minimal number of core atoms for each fragment.
+   * @param[in]  max_core_size      Maximal number of core atoms for each fragment.
+   * @param[in]  prod_gen           Product graph data reduction rule.
+   * @param[in]  reduce_subgraphs   Merges resulting fragments, if one is a subgraph of the other.
+   * @param[in]  maximum            If true, reports only the largest fragments.
+   * @param[in]  timeout_seconds    Timeout in seconds.
+   */
   void maximal_common_fragments(Molecule &mol1, Molecule &mol2,
                                 FragmentVector &fragments,
                                 MatchVector &matches_mol1, MatchVector &matches_mol2,
@@ -36,7 +56,25 @@ namespace mogli {
                                 Product::GenerationType prod_gen,
                                 bool reduce_subgraphs, bool maximum,
                                 int timeout_seconds);
-
+  /**
+   * @brief Computes maximal common fragments of two molecular graphs.
+   *
+   * The heart and soul of this library. See <a href="https://doi.org/10.7287/peerj.preprints.3250v1">this paper</a>
+   * for more information. The data reduction rule with the most speedup is Product::GenerationType::UNCON_DEG_1. It is
+   * recommended to always use this rule, the other rules are mainly for evaluation.
+   *
+   * @param[in]  mol1               First molecular graph.
+   * @param[in]  mol2               Second molecular graph.
+   * @param[out] fragments          Maximal common fragments.
+   * @param[out] matches_mol1       Match objects mapping from fragments to the first molecular graph.
+   * @param[out] matches_mol2       Match objects mapping from fragments to the second molecular graph.
+   * @param[in]  shell              Shell size. Maximal number of bonds from any core atom in the fragments.
+   * @param[in]  min_core_size      Minimal number of core atoms for each fragment.
+   * @param[in]  prod_gen           Product graph data reduction rule.
+   * @param[in]  reduce_subgraphs   Merges resulting fragments, if one is a subgraph of the other.
+   * @param[in]  maximum            If true, reports only the largest fragments.
+   * @param[in]  timeout_seconds    Timeout in seconds.
+   */
   void maximal_common_fragments(Molecule &mol1, Molecule &mol2,
                                 FragmentVector &fragments,
                                 MatchVector &matches_mol1, MatchVector &matches_mol2,
@@ -45,6 +83,14 @@ namespace mogli {
                                 bool reduce_subgraphs, bool maximum,
                                 int timeout_seconds);
 
+  /**
+   * Iterates all atoms of a molecular graph and returns them as fragments with a single-atom core.
+   *
+   * @param[in]  mol          Molecular graph.
+   * @param[out] fragments    Atomic fragments.
+   * @param[out] matches      Match objects mapping from fragments to the molecular graph.
+   * @param[in]  shell        Shell size of the subgraphs. Maximal number of bonds from the center atom.
+   */
   void atomic_fragments(Molecule &mol, FragmentVector &fragments, MatchVector &matches, int shell);
 
 }

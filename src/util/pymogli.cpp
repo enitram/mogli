@@ -818,13 +818,25 @@ PYBIND11_MODULE(mogli, m) {
   // methods
 
   m.def("are_subgraph_isomorphic",
-      [](mogli::Molecule &small, mogli::Molecule &large) {
+      [](mogli::Molecule &mol_small, mogli::Molecule &mol_large) {
         mogli::IntToIntMap isomorphism_map;
-        bool sub = mogli::are_subgraph_isomorphic(small, large, isomorphism_map);
+        bool sub = mogli::are_subgraph_isomorphic(mol_small, mol_large, isomorphism_map);
         return py::make_tuple(sub, isomorphism_map);
       },
+      "mol_small"_a, "mol_large"_a,
       py::return_value_policy::move,
-      "Subgraph isomorphism test.");
+      R"(
+      Test for subgraph isomorphism of two molecular graphs.
+
+      Args:
+          mol_small (Molecule): Smaller molecular graph.
+          mol_large (Molecule): Larger molecular graph.
+
+      Returns:
+          (bool, IntToIntMap):
+               * subgraph (bool):               True, if the smaller graph is a subgraph of the larger graph, false otherwise.
+               * isomorphism_map (IntToIntMap): Mapping from the smaller graph to the larger graph.
+      )");
 
   m.def("atomic_fragments",
       [](mogli::Molecule &mol, int shell) {
@@ -833,8 +845,20 @@ PYBIND11_MODULE(mogli, m) {
         mogli::atomic_fragments(mol, fragments, matches, shell);
         return py::make_tuple(fragments, matches);
       },
+      "mol"_a, "shell"_a,
       py::return_value_policy::move,
-      "Get all single-atom fragments");
+      R"(
+      Iterates all atoms of a molecular graph and returns them as fragments a singe-atom core.
+
+      Args:
+          mol (Molecule): Molecular graph.
+          shell (int):    Shell size of the fragments. Maximal number of bonds from the center atom.
+
+      Returns:
+          (FragmentVector, MatchVector)
+              * fragments (FragmentVector): Atomic fragments.
+              * matches (MatchVector):      Match objects mapping from fragments to the molecular graph.
+      )");
 
   m.def("maximal_common_fragments",
       [](mogli::Molecule &mol1, mogli::Molecule &mol2,
@@ -846,8 +870,32 @@ PYBIND11_MODULE(mogli, m) {
             shell, min_core_size, max_core_size, prod_gen, false, maximum, timeout_seconds);
         return py::make_tuple(fragments, matches_mol1, matches_mol2);
       },
+      "mol1"_a, "mol2"_a, "shell"_a, "min_core_size"_a, "max_core_size"_a,
+      "prod_gen"_a, "maximum"_a, "timeout_seconds"_a,
       py::return_value_policy::move,
-      "Compute maximal common fragments");
+      R"(
+      Computes maximal common fragments of two molecular graphs.
+
+      Args:
+          mol1 (Molecule):           First molecular graph.
+          mol2 (Molecule):           Second molecular graph.
+          shell (int):               Shell size. Maximal number of bonds from any core atom in the fragments.
+          min_core_size (int):       Minimal number of core atoms for each fragment.
+          max_core_size (int):       Maximal number of core atoms for each fragment.
+          prod_gen (GenerationType): Product graph data reduction rule.
+          maximum (bool):            If true, reports only the largest fragments.
+          timeout_seconds (int):     Timeout in seconds.
+
+      Returns:
+          (FragmentVector, MatchVector, MatchVector)
+              * fragments (FragmentVector): Maximal common fragments.
+              * matches_mol1 (MatchVector): Match objects mapping from fragments to the first molecular graph.
+              * matches_mol2 (MatchVector): Match objects mapping from fragments to the second molecular graph.
+
+      The heart and soul of this library. See `this paper <https://doi.org/10.7287/peerj.preprints.3250v1>`_
+      for more information. The data reduction rule with the most speedup is GenerationType.UNCON_DEG_1. It is
+      recommended to always use this rule, the other rules are mainly for evaluation.
+      )");
 
   m.def("maximal_common_fragments",
       [](mogli::Molecule &mol1, mogli::Molecule &mol2,
@@ -859,8 +907,32 @@ PYBIND11_MODULE(mogli, m) {
                                         shell, min_core_size, prod_gen, false, maximum, timeout_seconds);
         return py::make_tuple(fragments, matches_mol1, matches_mol2);
       },
+        "mol1"_a, "mol2"_a, "shell"_a, "max_core_size"_a,
+        "prod_gen"_a, "maximum"_a, "timeout_seconds"_a,
       py::return_value_policy::move,
-      "Compute maximal common fragments");
+        R"(
+      Computes maximal common fragments of two molecular graphs.
+
+      Args:
+          mol1 (Molecule):           First molecular graph.
+          mol2 (Molecule):           Second molecular graph.
+          shell (int):               Shell size. Maximal number of bonds from any core atom in the fragments.
+          min_core_size (int):       Minimal number of core atoms for each fragment.
+          max_core_size (int):       Maximal number of core atoms for each fragment.
+          prod_gen (GenerationType): Product graph data reduction rule.
+          maximum (bool):            If true, reports only the largest fragments.
+          timeout_seconds (int):     Timeout in seconds.
+
+      Returns:
+          (FragmentVector, MatchVector, MatchVector)
+              * fragments (FragmentVector): Maximal common fragments.
+              * matches_mol1 (MatchVector): Match objects mapping from fragments to the first molecular graph.
+              * matches_mol2 (MatchVector): Match objects mapping from fragments to the second molecular graph.
+
+      The heart and soul of this library. See `this paper <https://doi.org/10.7287/peerj.preprints.3250v1>`_
+      for more information. The data reduction rule with the most speedup is GenerationType.UNCON_DEG_1. It is
+      recommended to always use this rule, the other rules are mainly for evaluation.
+      )");
 
   // hashing methods
 
