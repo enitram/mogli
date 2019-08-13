@@ -358,15 +358,103 @@ PYBIND11_MODULE(mogli, m) {
           )");
 
   py::class_<mogli::Molecule, std::shared_ptr<mogli::Molecule>> molecule(m, "Molecule");
-  molecule.def(py::init<>())
-      .def(py::init<mogli::PeriodicTable&>())
-      .def("add_atom", py::overload_cast<std::string>(&mogli::Molecule::add_atom), "Add atom with element string")
-      .def("add_atom", py::overload_cast<int, std::string>(&mogli::Molecule::add_atom), "Add atom with element string and node id")
-      .def("add_atom", py::overload_cast<unsigned short>(&mogli::Molecule::add_atom), "Add atom with element number")
-      .def("add_atom", py::overload_cast<int, unsigned short>(&mogli::Molecule::add_atom), "Add atom with element number and node id")
-      .def("add_edge", &mogli::Molecule::add_edge, "Add bond")
-      .def("get_atom_count", &mogli::Molecule::get_atom_count, "Get number of atoms")
-      .def("get_color", &mogli::Molecule::get_color, "Get element number of this atom")
+
+  molecule.doc() = "Molecular graph.";
+
+  molecule.def(
+          py::init<>(),
+          R"(
+          Empty constructor.
+          )")
+      .def(
+          py::init<mogli::PeriodicTable&>(),
+          "periodic_table"_a,
+          R"(
+          Constructor with custom periodic table.
+
+          Args:
+              periodic_table (PeriodicTable): Periodic table.
+          )")
+      .def("add_atom",
+          py::overload_cast<std::string>(&mogli::Molecule::add_atom),
+          "element"_a,
+          R"(
+          Add new atom.
+
+          Args:
+              element (str): Element type.
+
+          Returns:
+              Node. Atom.
+          )")
+      .def("add_atom",
+          py::overload_cast<int, std::string>(&mogli::Molecule::add_atom),
+          "id"_a, "element"_a,
+               R"(
+          Add new atom.
+
+          Args:
+              id (int):      Atom ID.
+              element (str): Element type.
+
+          Returns:
+              Node. Atom.
+          )")
+      .def("add_atom",
+          py::overload_cast<unsigned short>(&mogli::Molecule::add_atom),
+          "color"_a,
+           R"(
+          Add new atom.
+
+          Args:
+              color (int): Element number.
+
+          Returns:
+              Node. Atom.
+          )")
+      .def("add_atom",
+          py::overload_cast<int, unsigned short>(&mogli::Molecule::add_atom),
+          "id"_a, "color"_a,
+           R"(
+          Add new atom.
+
+          Args:
+              id (int):    Atom ID.
+              color (int): Element number.
+
+          Returns:
+              Node. Atom.
+          )")
+      .def("add_edge",
+          &mogli::Molecule::add_edge,
+          "u"_a, "v"_a,
+          R"(
+          Add bond.
+
+          Args:
+              u (Node): Atom.
+              v (Node): Atom.
+          )")
+      .def("get_atom_count",
+          &mogli::Molecule::get_atom_count,
+          R"(
+          Returns the number of atoms.
+
+          Returns:
+              int. Number of atoms.
+          )")
+      .def("get_color",
+          &mogli::Molecule::get_color,
+          "node"_a,
+          R"(
+          Returns the element number of this atom.
+
+          Args:
+              node (Node): Atom.
+
+          Returns:
+              int. Element number.
+          )")
       .def("get_connected_components",
           [](mogli::Molecule &self) {
             mogli::SharedPtrVector<mogli::Molecule>::type components;
@@ -374,14 +462,89 @@ PYBIND11_MODULE(mogli, m) {
             return components;
           },
           py::return_value_policy::move,
-          "Get connected components of the molecular graph")
-      .def("get_edge_iter", &mogli::Molecule::get_edge_iter, "Get bond iterator")
-      .def("get_element", &mogli::Molecule::get_element, "Get element of this atom")
-      .def("get_id", &mogli::Molecule::get_id, "Get id of this atom")
-      .def("get_inc_edge_iter", &mogli::Molecule::get_inc_edge_iter, "Get incident bonds iterator")
-      .def("get_node_by_id", &mogli::Molecule::get_node_by_id, "Get atom by id")
-      .def("get_node_iter", &mogli::Molecule::get_node_iter, "Get atom iterator")
-      .def("get_opposite_node", &mogli::Molecule::get_opposite_node, "Get atom on the opposite side of the bond")
+          R"(
+          Returns the connected components of the molecular graph.
+
+          Returns:
+               components (MoleculeVector): Connected components.
+          )")
+      .def("get_edge_iter",
+          &mogli::Molecule::get_edge_iter,
+          R"(
+          Returns an iterator over all bonds.
+
+          Returns:
+              Iterable[Edge]. Bond iterator.
+          )")
+      .def("get_element",
+          &mogli::Molecule::get_element,
+          "node"_a,
+          R"(
+          Returns the element type of this atom.
+
+          Args:
+              node (Node): Atom.
+
+          Returns:
+              str. Element type.
+          )")
+      .def("get_id",
+          &mogli::Molecule::get_id,
+          "node"_a
+          R"(
+          Returns the ID of this atom.
+
+          Args:
+              node (Node): Atom.
+
+          Returns:
+              int. Atom ID.
+          )")
+      .def("get_inc_edge_iter",
+          &mogli::Molecule::get_inc_edge_iter,
+          "node"_a,
+          R"(
+          Returns an iterator over all incident bonds.
+
+          Args:
+              node (Node): Atom.
+
+          Returns:
+              Iterable[Edge]. Bond iterator.
+          )")
+      .def("get_node_by_id",
+          &mogli::Molecule::get_node_by_id,
+          "id"_a,
+          R"(
+          Returns atom with this ID.
+
+          Args:
+              id (int): Atom ID.
+
+          Returns:
+              Node. Atom.
+          )")
+      .def("get_node_iter",
+          &mogli::Molecule::get_node_iter,
+          R"(
+          Returns an iterator over all atoms.
+
+          Returns:
+              Iterable[Node]. Atom iterator.
+          )")
+      .def("get_opposite_node",
+          &mogli::Molecule::get_opposite_node,
+          "node"_a, "edge"_a,
+          R"(
+          Returns the atom on the opposite side of the bond.
+
+          Args:
+              node (Node): Atom.
+              edge (Edge): Bond.
+
+          Returns:
+              Node. Opposite atom.
+          )")
       .def("get_properties",
           [](const mogli::Molecule &self) {
             mogli::StringVector properties;
@@ -389,21 +552,171 @@ PYBIND11_MODULE(mogli, m) {
             return properties;
           },
           py::return_value_policy::move,
-          "Get all property names")
-      .def("get_property", &mogli::Molecule::get_property, "Get atom property")
-      .def("get_u", &mogli::Molecule::get_u, "Get first atom of the bond")
-      .def("get_v", &mogli::Molecule::get_v, "Get second atom of the bond")
-      .def("has_node_with_id", &mogli::Molecule::has_node_with_id, "Tests if atom with this id exists")
-      .def("is_connected", &mogli::Molecule::is_connected, "Test if molecular graph is connected")
-      .def("is_isomorphic", &mogli::Molecule::is_isomorphic, "Isomorphisms test")
-      .def("print_dot", py::overload_cast<>(&mogli::Molecule::print_dot, py::const_), "Print dot (graphviz file)")
-      .def("print_dot", py::overload_cast<const mogli::StringVector&>(&mogli::Molecule::print_dot, py::const_), "Print dot (graphviz) file with atom properties")
-      .def("read_lgf", py::overload_cast<const std::string &>(&mogli::Molecule::read_lgf), "Read default formatted LGF file")
-      .def("read_lgf", py::overload_cast<const std::string &, const mogli::LGFIOConfig&>(&mogli::Molecule::read_lgf), "Read LGF file")
-      .def("set_property", &mogli::Molecule::set_property, "Set atom property")
-      .def("split", &mogli::Molecule::split, "Balanced split of the molecule")
-      .def("write_lgf", py::overload_cast<>(&mogli::Molecule::write_lgf), "Write default formatted LGF file")
-      .def("write_lgf", py::overload_cast<const mogli::LGFIOConfig&>(&mogli::Molecule::write_lgf), "Write LGF file");
+          R"(
+          Returns the names of all atom properties.
+
+          Returns:
+              StringVector. Property names.
+          )")
+      .def("get_property",
+          &mogli::Molecule::get_property,
+          "node"_a, "property"_a,
+          R"(
+          Returns atom property with this name.
+
+          Args:
+              node (Node):    Atom.
+              property (str): Property name.
+
+          Returns:
+              Union[bool, int, float, str]. Property value.
+          )")
+      .def("get_u",
+          &mogli::Molecule::get_u,
+          "edge"_a,
+          R"(
+          Returns the first atom of this bond.
+
+          Args:
+              edge (Edge): Bond.
+
+          Returns:
+              Node. First atom.
+          )")
+      .def("get_v",
+          &mogli::Molecule::get_v,
+          "edge"_a,
+           R"(
+          Returns the second atom of this bond.
+
+          Args:
+              edge (Edge): Bond.
+
+          Returns:
+              Node. Second atom.
+          )")
+      .def("has_node_with_id",
+          &mogli::Molecule::has_node_with_id,
+          "id"_a,
+          R"(
+          Test if atom with this ID exists.
+
+          Args:
+              id (int): Atom ID.
+
+          Returns:
+              bool. True, if atom with this ID exists, false otherwise.
+          )")
+      .def("is_connected",
+          &mogli::Molecule::is_connected,
+          R"(
+          Test if molecular graph is connected.
+
+          Returns:
+              bool. True, if molecular graph is connected, false otherwise.
+          )")
+      .def("is_isomorphic",
+          &mogli::Molecule::is_isomorphic,
+          "other"_a,
+          R"(
+          Test if this molecular graph is isomorphic to another molecular graph.
+
+          Args:
+              other (Molecule): Other molecular graph.
+
+          Returns:
+              bool. True, if they are isomorphic, false otherwise.
+          )")
+      .def("print_dot",
+          py::overload_cast<>(&mogli::Molecule::print_dot, py::const_),
+          R"(
+          Export molecular graph to dot (graphviz) format.
+
+          Returns:
+              str. Graph in dot format.
+          )")
+      .def("print_dot",
+          py::overload_cast<const mogli::StringVector&>(&mogli::Molecule::print_dot, py::const_),
+          "properties"_a,
+          R"(
+          Export molecular graph to dot (graphviz) format with selected atom properties.
+
+          Args:
+              properties (StringVector): Atom properties to print.
+
+          Returns:
+              str. Graph in dot format.
+          )")
+      .def("read_lgf",
+          py::overload_cast<const std::string &>(&mogli::Molecule::read_lgf),
+          "in"_a,
+           R"(
+          Import default formatted LGF.
+
+          Args:
+              in (str): Molecular graph in LGF format.
+          )")
+      .def("read_lgf",
+          py::overload_cast<const std::string &, const mogli::LGFIOConfig&>(&mogli::Molecule::read_lgf),
+          "in"_a, "config"_a,
+          R"(
+          Import LGF in given format.
+
+          Args:
+              in (str):             Molecular graph in LGF format.
+              config (LGFIOConfig): LGF formatter.
+          )")
+      .def("set_property",
+          &mogli::Molecule::set_property,
+          "node"_a, "property"_a, "value"_a,
+          R"(
+          Set atom property.
+
+          Args:
+              node (Node):                          Atom.
+              property (str):                       Property name.
+              value (Union[bool, int, float, str]): Property value.
+          )")
+      .def("split",
+           [](mogli::Molecule &self, int max_size, int shell) {
+             mogli::SharedPtrVector<mogli::Molecule>::type components;
+             self.split(max_size, shell, components);
+             return components;
+           },
+          "max_size"_a, "shell"_a,
+          py::return_value_policy::move,
+          R"(
+          Balanced split of the molecular graph.
+
+          Args:
+              max_size (int): Maximal size of the resulting components.
+              shell (int):    Shell size (Overlap at the split-regions).
+
+          Returns:
+              MoleculeVector. Resulting components.
+
+          Tries to split the molecule into overlapping smaller components of roughly equal size (less or equal max_size),
+          )")
+      .def("write_lgf",
+          py::overload_cast<>(&mogli::Molecule::write_lgf),
+          R"(
+          Export default formatted LGF.
+
+          Returns:
+              str. Molecular graph in default LGF format.
+          )")
+      .def("write_lgf",
+          py::overload_cast<const mogli::LGFIOConfig&>(&mogli::Molecule::write_lgf),
+          "config"_a,
+          R"(
+          Export LGF in given format.
+
+          Args:
+              config (LGFIOConfig): LGF formatter.
+
+          Returns:
+              str. Molecular graph in given LGF format.
+          )");
 
   py::class_<mogli::Fragment, std::shared_ptr<mogli::Fragment>>(m, "Fragment", molecule)
       .def("get_core_atom_count", &mogli::Fragment::get_core_atom_count, "Get number of core atoms")

@@ -199,6 +199,9 @@ namespace mogli {
     }
   };
 
+  /**
+   * Molecular graph.
+   */
   class Molecule {
 
   public:
@@ -231,6 +234,10 @@ namespace mogli {
     short _is_connected;
 
   public:
+
+    /**
+     * Empty constructor.
+     */
     Molecule() : _g(),
                  _colors(_g),
                  _node_to_id(_g),
@@ -240,6 +247,11 @@ namespace mogli {
                  _properties(),
                  _perdiodic_table(PeriodicTable::get_default()) {}
 
+    /**
+     * Constructor with custom periodic table.
+     *
+     * @param[in] periodic_table    Periodic table.
+     */
     explicit Molecule(PeriodicTable &periodic_table) : _g(),
                                              _colors(_g),
                                              _node_to_id(_g),
@@ -253,6 +265,11 @@ namespace mogli {
       return _perdiodic_table;
     }
 
+    /**
+     * Returns the names of all atom properties.
+     *
+     * @param[out] properties   Property names.
+     */
     void get_properties(StringVector& properties) const {
       for (const auto & it : _properties) {
         properties.push_back(it.first);
@@ -260,11 +277,24 @@ namespace mogli {
 
     }
 
-    // set properties
+    /**
+     * Returns atom property with this name.
+     *
+     * @param[in] node      Atom.
+     * @param[in] property  Property name.
+     * @return              Property value.
+     */
     const Any get_property(Node node, const std::string& property) const {
       return _properties.at(property)->operator[](node);
     }
 
+    /**
+     * Set atom property.
+     *
+     * @param[in] node      Atom.
+     * @param[in] property  Property name.
+     * @param[in] value     Property value.
+     */
     void set_property(Node node, const std::string& property, Any value) {
       if (_properties.count(property) == 0) {
         _properties[property] = std::make_unique<NodeToAnyMap>(_g);
@@ -274,20 +304,52 @@ namespace mogli {
 
     // add atoms & edges
 
+    /**
+     * Add new atom.
+     *
+     * @param[in] element   Element type.
+     * @return              Atom.
+     */
     const Node add_atom(std::string element) {
       return add_atom(_perdiodic_table.get_number(std::move(element)));
     }
 
+    /**
+     * Add new atom.
+     *
+     * @param[in] id        Atom ID.
+     * @param[in] element   Element type.
+     * @return              Atom.
+     */
     const Node add_atom(int id, std::string element) {
       return add_atom(id, _perdiodic_table.get_number(std::move(element)));
     }
 
+    /**
+     * Add new atom.
+     *
+     * @param[in] color Element number.
+     * @return          Atom.
+     */
     const Node add_atom(unsigned short color) {
       return add_atom(_max_uid+1, color);
     }
 
+    /**
+     * Add new atom.
+     *
+     * @param[in] id    Atom ID.
+     * @param[in] color Element type.
+     * @return          Atom.
+     */
     const Node add_atom(int id, unsigned short color);
 
+    /**
+     * Add bond.
+     *
+     * @param[in] u Atom.
+     * @param[in] v Atom.
+     */
     const Edge add_edge(const Node &u, const Node &v) {
       _is_connected = -1;
       return _g.addEdge(u,v);
@@ -295,6 +357,11 @@ namespace mogli {
 
     // getters & iterators
 
+    /**
+     * Returns the number of atoms.
+     *
+     * @return  Number of atoms.
+     */
     const unsigned int get_atom_count() const {
       return _atom_count;
     }
@@ -303,46 +370,110 @@ namespace mogli {
       return _g;
     }
 
+    /**
+     * Returns an iterator over all atoms.
+     *
+     * @return  Atom iterator.
+     */
     const NodeIt get_node_iter() const {
       return NodeIt(_g);
     }
 
+    /**
+     * Returns an iterator over all bonds.
+     *
+     * @return  Bond iterator.
+     */
     const EdgeIt get_edge_iter() const {
       return EdgeIt(_g);
     }
 
+    /**
+     * Returns an iterator over all incident bonds.
+     *
+     * @return  Bond iterator.
+     */
     const IncEdgeIt get_inc_edge_iter(const Node &node) const {
       return IncEdgeIt(_g, node);
     }
 
+    /**
+     * Returns the atom on the opposite side of the bond.
+     *
+     * @param[in] node  Atom.
+     * @param[in] edge  Bond.
+     * @return          Opposite atom.
+     */
     const Node get_opposite_node(const Node &node, const Edge &edge) const {
       return _g.oppositeNode(node, edge);
     }
 
+    /**
+     * Returns the first atom of this bond.
+     *
+     * @param[in] edge  Bond.
+     * @return          First atom.
+     */
     const Node get_u(const Edge &edge) const {
       return _g.u(edge);
     }
 
+    /**
+     * Returns the second atom of this bond.
+     *
+     * @param[in] edge  Bond.
+     * @return          Second atom.
+     */
     const Node get_v(const Edge &edge) const {
       return _g.v(edge);
     }
 
+    /**
+     * Test if atom with this ID exists.
+     *
+     * @param[in] id    Atom ID.
+     * @return          True, if atom with this ID exists, false otherwise.
+     */
     const bool has_node_with_id(int id) const {
       return _id_to_node.find(id) != _id_to_node.end();
     }
 
+    /**
+     * Returns atom with this ID.
+     *
+     * @param[in] id    Atom ID.
+     * @return          Atom.
+     */
     const Node get_node_by_id(int id) const {
       return *_id_to_node.at(id);
     }
 
+    /**
+     * Returns the ID of this atom.
+     *
+     * @param[in] node  Atom.
+     * @return          Atom ID.
+     */
     const int get_id(const Node &node) const {
       return _node_to_id[node];
     }
 
+    /**
+     * Returns the element number of this atom.
+     *
+     * @param[in] node  Atom.
+     * @return          Element number.
+     */
     const unsigned short get_color(const Node &node) const {
       return _colors[node];
     }
 
+    /**
+     * Returns the element type of this atom.
+     *
+     * @param[in] node  Atom.
+     * @return          Element type.
+     */
     const std::string get_element(const Node &node) const {
       return _perdiodic_table.get_element(get_color(node));
     }
@@ -353,28 +484,90 @@ namespace mogli {
 
     // I/O
 
+    /**
+     * Export GML.
+     *
+     * @param[in]  label Graph name.
+     * @param[out] out   Output stream.
+     * @param[in]  raw   Write raw strings.
+     */
     void write_gml_stream(const std::string& label, std::ostream &out, bool raw = false);
 
+    /**
+     * Export GML.
+     *
+     * @param[in] label Graph name.
+     * @return          Molecular graph in default LGF format.
+     */
     std::string write_gml(const std::string& label);
 
+    /**
+     * Export default formatted LGF.
+     *
+     * @param[out] out  Output stream.
+     */
     void write_lgf_stream(std::ostream &out);
 
+    /**
+     * Export LGF in given format.
+     *
+     * @param[out] out  Output stream.
+     * @param[in] config    LGF formatter.
+     */
     void write_lgf_stream(std::ostream &out, const LGFIOConfig& config);
 
+    /**
+     * Export default formatted LGF.
+     *
+     * @return Molecular graph in default LGF format.
+     */
     std::string write_lgf();
 
+    /**
+     * Export LGF in given format.
+     *
+     * @param[in] config    LGF formatter.
+     * @return              Molecular graph in given LGF format.
+     */
     std::string write_lgf(const LGFIOConfig &config);
 
+    /**
+     * Import default formatted LGF.
+     *
+     * @param[in] in    Input stream.
+     */
     void read_lgf_stream(std::istream &in);
 
+    /**
+     * Import LGF in given format.
+     *
+     * @param[in] in        Input stream.
+     * @param[in] config    LGF formatter.
+     */
     void read_lgf_stream(std::istream &in, const LGFIOConfig &config);
 
+    /**
+     * Import default formatted LGF.
+     *
+     * @param[in] in    Molecular graph in LGF format.
+     */
     void read_lgf(const std::string &in);
 
+    /**
+     * Import LGF in given format.
+     *
+     * @param[in] in        Molecular graph in LGF format.
+     * @param[in] config    LGF formatter.
+     */
     void read_lgf(const std::string &in, const LGFIOConfig &config);
 
     // connected?
 
+    /**
+     * Test if molecular graph is connected.
+     *
+     * @return  True, if molecular graph is connected, false otherwise.
+     */
     const bool is_connected() {
       if (_is_connected < 0) {
         _is_connected = is_connected0();
@@ -382,18 +575,60 @@ namespace mogli {
       return _is_connected == 1;
     }
 
+    /**
+     * Returns the connected components of the molecular graph.
+     *
+     * @param[out] components   Connected components.
+     */
     void get_connected_components(SharedPtrVector<Molecule>::type &components);
 
+    /**
+     * @brief Balanced split of the molecular graph.
+     *
+     * Tries to split the molecule into overlapping smaller components of roughly equal size (less or equal max_size),
+     *
+     * @param[in] max_size      Maximal size of the resulting components.
+     * @param[in] shell         Shell size (Overlap at the split-regions).
+     * @param[out] components   Resulting components.
+     */
     int split(int max_size, int shell, SharedPtrVector<Molecule>::type &components);
 
+    /**
+     * Test if this molecular graph is isomorphic to another molecular graph.
+     *
+     * @param[in] other Other molecular graph.
+     * @return          True, if they are isomorphic, false otherwise.
+     */
     const bool is_isomorphic(Molecule &other) const;
 
+    /**
+     * Export molecular graph to dot (graphviz) format.
+     *
+     * @return  Graph in dot format.
+     */
     virtual const std::string print_dot() const;
 
+    /**
+     * Export molecular graph to dot (graphviz) format with selected atom properties.
+     *
+     * @param[in] properties    Atom properties to print.
+     * @return                  Graph in dot format.
+     */
     const std::string print_dot(const StringVector &properties) const;
 
+    /**
+     * Export molecular graph to dot (graphviz) format.
+     *
+     * @param[out] out  Output stream.
+     */
     virtual const void print_dot(std::ostream& out) const;
 
+    /**
+     * Export molecular graph to dot (graphviz) format with selected atom properties.
+     *
+     * @param[out] out          Output stream.
+     * @param[in]  properties   Atom properties to print.
+     */
     const void print_dot(std::ostream &out, const StringVector &properties) const;
 
   protected:
