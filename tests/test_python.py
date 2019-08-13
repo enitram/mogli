@@ -20,9 +20,8 @@
 import unittest
 
 
-TIMEOUT = 10
-TIMEOUT_BIG = 60
-TIMEOUT_LARGE = 360
+TIMEOUT = 60
+TIMEOUT_BIG = 360
 
 ETHYL = """@nodes
 partial_charge label label2 atomType coordX coordY coordZ initColor
@@ -602,9 +601,13 @@ class TestIsomorphism(unittest.TestCase):
         mol3.read_lgf(ETHANE_1)
         mol4.read_lgf(ETHYL, config)
 
-        frag1, _, _ = maximal_common_fragments(mol1, mol2, 1, 0, GenerationType.NO_OPT, False, TIMEOUT)
-        frag2, _ ,_ = maximal_common_fragments(mol1, mol3, 1, 0, GenerationType.NO_OPT, False, TIMEOUT)
-        frag3, _ ,_ = maximal_common_fragments(mol1, mol4, 1, 0, GenerationType.NO_OPT, False, TIMEOUT)
+        t1, frag1, _, _ = maximal_common_fragments(mol1, mol2, 1, 0, GenerationType.NO_OPT, False, TIMEOUT)
+        t2, frag2, _ ,_ = maximal_common_fragments(mol1, mol3, 1, 0, GenerationType.NO_OPT, False, TIMEOUT)
+        t3, frag3, _ ,_ = maximal_common_fragments(mol1, mol4, 1, 0, GenerationType.NO_OPT, False, TIMEOUT)
+
+        self.assertTrue(t1)
+        self.assertTrue(t2)
+        self.assertTrue(t3)
 
         self.assertTrue(len(frag1) > 0)
         self.assertTrue(len(frag2) > 0)
@@ -660,10 +663,15 @@ class TestMatching(unittest.TestCase):
         mol1.read_lgf(ETHANE_1)
         mol2.read_lgf(ETHANE_2)
 
-        frag_noopt, _, _ = maximal_common_fragments(mol1, mol2, 1, 0, GenerationType.NO_OPT, False, TIMEOUT)
-        frag_deg1, _, _ = maximal_common_fragments(mol1, mol2, 1, 0, GenerationType.DEG_1, False, TIMEOUT)
-        frag_uncon, _, _ = maximal_common_fragments(mol1, mol2, 1, 0, GenerationType.UNCON, False, TIMEOUT)
-        frag_uncon_deg1, _, _ = maximal_common_fragments(mol1, mol2, 1, 0, GenerationType.UNCON_DEG_1, False, TIMEOUT)
+        t1, frag_noopt, _, _ = maximal_common_fragments(mol1, mol2, 1, 0, GenerationType.NO_OPT, False, TIMEOUT)
+        t2, frag_deg1, _, _ = maximal_common_fragments(mol1, mol2, 1, 0, GenerationType.DEG_1, False, TIMEOUT)
+        t3, frag_uncon, _, _ = maximal_common_fragments(mol1, mol2, 1, 0, GenerationType.UNCON, False, TIMEOUT)
+        t4, frag_uncon_deg1, _, _ = maximal_common_fragments(mol1, mol2, 1, 0, GenerationType.UNCON_DEG_1, False, TIMEOUT)
+
+        self.assertTrue(t1)
+        self.assertTrue(t2)
+        self.assertTrue(t3)
+        self.assertTrue(t4)
 
         self.assertTrue(len(frag_noopt) > 0)
         self.assertTrue(len(frag_deg1) > 0)
@@ -688,10 +696,15 @@ class TestMatching(unittest.TestCase):
         mol1.read_lgf(ETHANE_1)
         mol2.read_lgf(ETHANE_2)
 
-        frag_noopt, _, _ = maximal_common_fragments(mol1, mol2, 1, 0, GenerationType.NO_OPT, True, TIMEOUT)
-        frag_deg1, _, _ = maximal_common_fragments(mol1, mol2, 1, 0, GenerationType.DEG_1, True, TIMEOUT)
-        frag_uncon, _, _ = maximal_common_fragments(mol1, mol2, 1, 0, GenerationType.UNCON, True, TIMEOUT)
-        frag_uncon_deg1, _, _ = maximal_common_fragments(mol1, mol2, 1, 0, GenerationType.UNCON_DEG_1, True, TIMEOUT)
+        t1, frag_noopt, _, _ = maximal_common_fragments(mol1, mol2, 1, 0, GenerationType.NO_OPT, True, TIMEOUT)
+        t2, frag_deg1, _, _ = maximal_common_fragments(mol1, mol2, 1, 0, GenerationType.DEG_1, True, TIMEOUT)
+        t3, frag_uncon, _, _ = maximal_common_fragments(mol1, mol2, 1, 0, GenerationType.UNCON, True, TIMEOUT)
+        t4, frag_uncon_deg1, _, _ = maximal_common_fragments(mol1, mol2, 1, 0, GenerationType.UNCON_DEG_1, True, TIMEOUT)
+
+        self.assertTrue(t1)
+        self.assertTrue(t2)
+        self.assertTrue(t3)
+        self.assertTrue(t4)
 
         self.assertTrue(len(frag_noopt) > 0)
         self.assertTrue(len(frag_deg1) > 0)
@@ -715,24 +728,24 @@ class TestMatching(unittest.TestCase):
         mol1.read_lgf(MOLID3246)
         mol2.read_lgf(MOLID3246)
 
-        frag_noopt, _, _ = maximal_common_fragments(mol1, mol2, 1, 0, GenerationType.NO_OPT, False, TIMEOUT_BIG)
-        frag_deg1, _, _ = maximal_common_fragments(mol1, mol2, 1, 0, GenerationType.DEG_1, False, TIMEOUT_BIG)
-        frag_uncon, _, _ = maximal_common_fragments(mol1, mol2, 1, 0, GenerationType.UNCON, False, TIMEOUT_BIG)
-        frag_uncon_deg1, _, _ = maximal_common_fragments(mol1, mol2, 1, 0, GenerationType.UNCON_DEG_1, False, TIMEOUT_BIG)
+        t1, frag_noopt, _, _ = maximal_common_fragments(mol1, mol2, 1, 0, GenerationType.NO_OPT, False, TIMEOUT_BIG)
+        t2, frag_deg1, _, _ = maximal_common_fragments(mol1, mol2, 1, 0, GenerationType.DEG_1, False, TIMEOUT_BIG)
+        t3, frag_uncon_deg1, _, _ = maximal_common_fragments(mol1, mol2, 1, 0, GenerationType.UNCON_DEG_1, False, TIMEOUT_BIG)
+
+        self.assertTrue(t1)
+        self.assertTrue(t2)
+        self.assertTrue(t3)
 
         self.assertTrue(len(frag_noopt) > 0)
         self.assertTrue(len(frag_deg1) > 0)
-        self.assertTrue(len(frag_uncon) > 0)
         self.assertTrue(len(frag_uncon_deg1) > 0)
 
         frag_noopt = sorted(frag_noopt, key=lambda x: x.get_atom_count(), reverse=True)
         frag_deg1 = sorted(frag_deg1, key=lambda x: x.get_atom_count(), reverse=True)
-        frag_uncon = sorted(frag_uncon, key=lambda x: x.get_atom_count(), reverse=True)
         frag_uncon_deg1 = sorted(frag_uncon_deg1, key=lambda x: x.get_atom_count(), reverse=True)
 
         self.assertEqual(frag_noopt[0].get_atom_count(), mol1.get_atom_count())
         self.assertEqual(frag_deg1[0].get_atom_count(), mol1.get_atom_count())
-        self.assertEqual(frag_uncon[0].get_atom_count(), mol1.get_atom_count())
         self.assertEqual(frag_uncon_deg1[0].get_atom_count(), mol1.get_atom_count())
 
     def test_mcf_isomorphic_graphs_large(self):
@@ -743,16 +756,16 @@ class TestMatching(unittest.TestCase):
         mol1.read_lgf(PACLITAXEL)
         mol2.read_lgf(PACLITAXEL)
 
-        frag_uncon, _, _ = maximal_common_fragments(mol1, mol2, 1, 0, GenerationType.UNCON, False, TIMEOUT_LARGE)
-        frag_uncon_deg1, _, _ = maximal_common_fragments(mol1, mol2, 1, 0, GenerationType.UNCON_DEG_1, False, TIMEOUT_LARGE)
+        t1, _, _, _ = maximal_common_fragments(mol1, mol2, 1, 0, GenerationType.UNCON, False, TIMEOUT)
+        t2, frag_uncon_deg1, _, _ = maximal_common_fragments(mol1, mol2, 1, 0, GenerationType.UNCON_DEG_1, True, TIMEOUT_BIG)
 
-        self.assertTrue(len(frag_uncon) > 0)
+        self.assertFalse(t1)
+        self.assertTrue(t2)
+
         self.assertTrue(len(frag_uncon_deg1) > 0)
 
-        frag_uncon = sorted(frag_uncon, key=lambda x: x.get_atom_count(), reverse=True)
         frag_uncon_deg1 = sorted(frag_uncon_deg1, key=lambda x: x.get_atom_count(), reverse=True)
 
-        self.assertEqual(frag_uncon[0].get_atom_count(), mol1.get_atom_count())
         self.assertEqual(frag_uncon_deg1[0].get_atom_count(), mol1.get_atom_count())
 
     def test_mcf_subisomorphic_graphs_1(self):
@@ -763,10 +776,15 @@ class TestMatching(unittest.TestCase):
         mol1.read_lgf(ETHYL)
         mol2.read_lgf(ETHANE_1)
 
-        frag_noopt, _, _ = maximal_common_fragments(mol1, mol2, 0, 0, GenerationType.NO_OPT, False, TIMEOUT)
-        frag_deg1, _, _ = maximal_common_fragments(mol1, mol2, 0, 0, GenerationType.DEG_1, False, TIMEOUT)
-        frag_uncon, _, _ = maximal_common_fragments(mol1, mol2, 0, 0, GenerationType.UNCON, False, TIMEOUT)
-        frag_uncon_deg1, _, _ = maximal_common_fragments(mol1, mol2, 0, 0, GenerationType.UNCON_DEG_1, False, TIMEOUT)
+        t1, frag_noopt, _, _ = maximal_common_fragments(mol1, mol2, 0, 0, GenerationType.NO_OPT, False, TIMEOUT)
+        t2, frag_deg1, _, _ = maximal_common_fragments(mol1, mol2, 0, 0, GenerationType.DEG_1, False, TIMEOUT)
+        t3, frag_uncon, _, _ = maximal_common_fragments(mol1, mol2, 0, 0, GenerationType.UNCON, False, TIMEOUT)
+        t4, frag_uncon_deg1, _, _ = maximal_common_fragments(mol1, mol2, 0, 0, GenerationType.UNCON_DEG_1, False, TIMEOUT)
+
+        self.assertTrue(t1)
+        self.assertTrue(t2)
+        self.assertTrue(t3)
+        self.assertTrue(t4)
 
         self.assertTrue(len(frag_noopt) > 0)
         self.assertTrue(len(frag_deg1) > 0)
@@ -791,10 +809,15 @@ class TestMatching(unittest.TestCase):
         mol1.read_lgf(ETHYL)
         mol2.read_lgf(ETHANE_2)
 
-        frag_noopt, _, _ = maximal_common_fragments(mol1, mol2, 1, 0, GenerationType.NO_OPT, False, TIMEOUT)
-        frag_deg1, _, _ = maximal_common_fragments(mol1, mol2, 1, 0, GenerationType.DEG_1, False, TIMEOUT)
-        frag_uncon, _, _ = maximal_common_fragments(mol1, mol2, 1, 0, GenerationType.UNCON, False, TIMEOUT)
-        frag_uncon_deg1, _, _ = maximal_common_fragments(mol1, mol2, 1, 0, GenerationType.UNCON_DEG_1, False, TIMEOUT)
+        t1, frag_noopt, _, _ = maximal_common_fragments(mol1, mol2, 1, 0, GenerationType.NO_OPT, False, TIMEOUT)
+        t2, frag_deg1, _, _ = maximal_common_fragments(mol1, mol2, 1, 0, GenerationType.DEG_1, False, TIMEOUT)
+        t3, frag_uncon, _, _ = maximal_common_fragments(mol1, mol2, 1, 0, GenerationType.UNCON, False, TIMEOUT)
+        t4, frag_uncon_deg1, _, _ = maximal_common_fragments(mol1, mol2, 1, 0, GenerationType.UNCON_DEG_1, False, TIMEOUT)
+
+        self.assertTrue(t1)
+        self.assertTrue(t2)
+        self.assertTrue(t3)
+        self.assertTrue(t4)
 
         self.assertTrue(len(frag_noopt) > 0)
         self.assertTrue(len(frag_deg1) > 0)
@@ -820,10 +843,15 @@ class TestMatching(unittest.TestCase):
         mol1.read_lgf(ETHANE_1)
         mol2.read_lgf(GENERIC_1, config)
 
-        frag_noopt, _, _ = maximal_common_fragments(mol1, mol2, 1, 0, GenerationType.NO_OPT, False, TIMEOUT)
-        frag_deg1, _, _ = maximal_common_fragments(mol1, mol2, 1, 0, GenerationType.DEG_1, False, TIMEOUT)
-        frag_uncon, _, _ = maximal_common_fragments(mol1, mol2, 1, 0, GenerationType.UNCON, False, TIMEOUT)
-        frag_uncon_deg1, _, _ = maximal_common_fragments(mol1, mol2, 1, 0, GenerationType.UNCON_DEG_1, False, TIMEOUT)
+        t1, frag_noopt, _, _ = maximal_common_fragments(mol1, mol2, 1, 0, GenerationType.NO_OPT, False, TIMEOUT)
+        t2, frag_deg1, _, _ = maximal_common_fragments(mol1, mol2, 1, 0, GenerationType.DEG_1, False, TIMEOUT)
+        t3, frag_uncon, _, _ = maximal_common_fragments(mol1, mol2, 1, 0, GenerationType.UNCON, False, TIMEOUT)
+        t4, frag_uncon_deg1, _, _ = maximal_common_fragments(mol1, mol2, 1, 0, GenerationType.UNCON_DEG_1, False, TIMEOUT)
+
+        self.assertTrue(t1)
+        self.assertTrue(t2)
+        self.assertTrue(t3)
+        self.assertTrue(t4)
 
         self.assertEqual(len(frag_noopt), 0)
         self.assertEqual(len(frag_deg1), 0)
@@ -881,9 +909,13 @@ class TestPacking(unittest.TestCase):
         mol3.read_lgf(ETHANE_1)
         mol4.read_lgf(ETHYL, config)
 
-        frag1, _, _ = maximal_common_fragments(mol1, mol2, 1, 0, GenerationType.NO_OPT, False, TIMEOUT)
-        frag2, _ ,_ = maximal_common_fragments(mol1, mol3, 1, 0, GenerationType.NO_OPT, False, TIMEOUT)
-        frag3, _ ,_ = maximal_common_fragments(mol1, mol4, 1, 0, GenerationType.NO_OPT, False, TIMEOUT)
+        t1, frag1, _, _ = maximal_common_fragments(mol1, mol2, 1, 0, GenerationType.NO_OPT, False, TIMEOUT)
+        t2, frag2, _ ,_ = maximal_common_fragments(mol1, mol3, 1, 0, GenerationType.NO_OPT, False, TIMEOUT)
+        t3, frag3, _ ,_ = maximal_common_fragments(mol1, mol4, 1, 0, GenerationType.NO_OPT, False, TIMEOUT)
+
+        self.assertTrue(t1)
+        self.assertTrue(t2)
+        self.assertTrue(t3)
 
         self.assertTrue(len(frag1) > 0)
         self.assertTrue(len(frag2) > 0)
@@ -924,7 +956,9 @@ class TestPacking(unittest.TestCase):
         mol1.read_lgf(ETHANE_1)
         mol2.read_lgf(ETHANE_2)
 
-        frag, _, _ = maximal_common_fragments(mol1, mol2, 1, 0, GenerationType.NO_OPT, False, TIMEOUT)
+        t1, frag, _, _ = maximal_common_fragments(mol1, mol2, 1, 0, GenerationType.NO_OPT, False, TIMEOUT)
+
+        self.assertTrue(t1)
 
         frag = sorted(frag, key=lambda x: x.get_atom_count(), reverse=True)
 
@@ -946,7 +980,9 @@ class TestPacking(unittest.TestCase):
         mol1.read_lgf(ETHANE_1)
         mol2.read_lgf(ETHANE_2)
 
-        frag, _, _ = maximal_common_fragments(mol1, mol2, 1, 0, GenerationType.NO_OPT, False, TIMEOUT)
+        t1, frag, _, _ = maximal_common_fragments(mol1, mol2, 1, 0, GenerationType.NO_OPT, False, TIMEOUT)
+
+        self.assertTrue(t1)
 
         frag = sorted(frag, key=lambda x: x.get_atom_count(), reverse=True)
 

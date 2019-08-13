@@ -867,9 +867,9 @@ PYBIND11_MODULE(mogli, m) {
           mogli::Product::GenerationType prod_gen, bool maximum, int timeout_seconds){
         mogli::FragmentVector fragments;
         mogli::MatchVector matches_mol1, matches_mol2;
-        mogli::maximal_common_fragments(mol1, mol2, fragments, matches_mol1, matches_mol2,
+        bool t = mogli::maximal_common_fragments(mol1, mol2, fragments, matches_mol1, matches_mol2,
             shell, min_core_size, max_core_size, prod_gen, false, maximum, timeout_seconds);
-        return py::make_tuple(fragments, matches_mol1, matches_mol2);
+        return py::make_tuple(t, fragments, matches_mol1, matches_mol2);
       },
       "mol1"_a, "mol2"_a, "shell"_a, "min_core_size"_a, "max_core_size"_a,
       "prod_gen"_a, "maximum"_a, "timeout_seconds"_a,
@@ -888,7 +888,8 @@ PYBIND11_MODULE(mogli, m) {
           timeout_seconds (int):     Timeout in seconds.
 
       Returns:
-          (FragmentVector, MatchVector, MatchVector)
+          (bool, FragmentVector, MatchVector, MatchVector)
+              * success (bool):             False, if timeout occurred, true otherwise.
               * fragments (FragmentVector): Maximal common fragments.
               * matches_mol1 (MatchVector): Match objects mapping from fragments to the first molecular graph.
               * matches_mol2 (MatchVector): Match objects mapping from fragments to the second molecular graph.
@@ -904,9 +905,9 @@ PYBIND11_MODULE(mogli, m) {
          mogli::Product::GenerationType prod_gen, bool maximum, int timeout_seconds){
         mogli::FragmentVector fragments;
         mogli::MatchVector matches_mol1, matches_mol2;
-        mogli::maximal_common_fragments(mol1, mol2, fragments, matches_mol1, matches_mol2,
+        bool t = mogli::maximal_common_fragments(mol1, mol2, fragments, matches_mol1, matches_mol2,
                                         shell, min_core_size, prod_gen, false, maximum, timeout_seconds);
-        return py::make_tuple(fragments, matches_mol1, matches_mol2);
+        return py::make_tuple(t, fragments, matches_mol1, matches_mol2);
       },
         "mol1"_a, "mol2"_a, "shell"_a, "max_core_size"_a,
         "prod_gen"_a, "maximum"_a, "timeout_seconds"_a,
@@ -925,7 +926,8 @@ PYBIND11_MODULE(mogli, m) {
           timeout_seconds (int):     Timeout in seconds.
 
       Returns:
-          (FragmentVector, MatchVector, MatchVector)
+          (bool, FragmentVector, MatchVector, MatchVector)
+              * success (bool):             False, if timeout occurred, true otherwise.
               * fragments (FragmentVector): Maximal common fragments.
               * matches_mol1 (MatchVector): Match objects mapping from fragments to the first molecular graph.
               * matches_mol2 (MatchVector): Match objects mapping from fragments to the second molecular graph.
