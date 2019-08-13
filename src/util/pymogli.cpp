@@ -940,68 +940,176 @@ PYBIND11_MODULE(mogli, m) {
       [](const mogli::Canonization & canonization) {
         return py::bytes(mogli::hash_canonization(canonization));
       },
+      "canonization"_a,
       py::return_value_policy::move,
-      "Get molecule canonization hash");
+      R"(
+      Hashes a canonical representation of a molecular graph.
+
+      Args:
+          canonization (Canonization): Canonical representation.
+
+      Returns:
+          str. Hash.
+      )");
 
   m.def("hash_fcanonization",
       [](const mogli::FragmentCanonization & fcanonization) {
         return py::bytes(mogli::hash_fcanonization(fcanonization));
       },
+      "fcanonization"_a,
       py::return_value_policy::move,
-      "Get fragment canonization hash");
+      R"(
+      Hashes a canonical representation of a molecular fragment.
+
+      Args:
+          fcanonization (FragmentCanonization): Canonical representation.
+
+      Returns:
+          str. Hash.
+      )");
 
   // serializing methods
 
   m.def("pack_canonization",
       py::overload_cast<const mogli::Canonization&>(&serialize<const mogli::Canonization&>),
+      "obj"_a,
       py::return_value_policy::move,
-      "Serialize molecule canonization");
+      R"(
+      Serialize a canonical representation of a molecular graph.
+
+      Args:
+          obj (Canonization): Canonical representation.
+
+      Returns:
+          str. Serialized object.
+      )");
 
   m.def("pack_fcanonization",
       py::overload_cast<const mogli::FragmentCanonization&>(&serialize<const mogli::FragmentCanonization&>),
+      "obj"_a,
       py::return_value_policy::move,
-      "Serialize fragment canonization");
+      R"(
+      Serialize a canonical representation of a molecular fragment.
+
+      Args:
+          obj (FragmentCanonization): Canonical representation.
+
+      Returns:
+          str. Serialized object.
+      )");
 
   m.def("pack_fragment",
       py::overload_cast<const mogli::Fragment&>(&serialize<mogli::Fragment>),
+      "obj"_a,
       py::return_value_policy::move,
-      "Serialize fragment");
+      R"(
+      Serialize a molecular fragment.
+
+      Args:
+          obj (Fragment): Fragment.
+
+      Returns:
+          str. Serialized object.
+      )");
 
   m.def("pack_match",
       py::overload_cast<const mogli::Match&>(&serialize<mogli::Match>),
+      "obj"_a,
       py::return_value_policy::move,
-      "Serialize match object");
+        R"(
+      Serialize a match object.
+
+      Args:
+          obj (Match): Match object.
+
+      Returns:
+          str. Serialized object.
+      )");
 
   m.def("pack_molecule",
       py::overload_cast<const mogli::Molecule&>(&serialize<mogli::Molecule>),
+      "obj"_a,
       py::return_value_policy::move,
-      "Serialize molecule");
+      R"(
+      Serialize a molecular graph.
+
+      Args:
+          obj (Molecule): Molecular graph.
+
+      Returns:
+          str. Serialized object.
+      )");
 
   // de-serializing methods
 
   m.def("unpack_canonization",
       &deserialize<mogli::Canonization>,
+      "str"_a,
       py::return_value_policy::move,
-      "Deserialize molecule canonization");
+      R"(
+      Deserialize a canonical representation of a molecular graph.
+
+      Args:
+          str (str): Serialized object.
+
+      Returns:
+          Canonization. Canonical representation.
+      )");
 
   m.def("unpack_fcanonization",
       &deserialize<mogli::FragmentCanonization>,
+      "str"_a,
       py::return_value_policy::move,
-      "Deserizalize fragment canonization");
+      R"(
+      Deserialize a canonical representation of a molecular fragment.
+
+      Args:
+          str (str): Serialized object.
+
+      Returns:
+          FragmentCanonization. Canonical representation.
+      )");
 
   m.def("unpack_fragment",
       &deserialize_ptr<mogli::Fragment>,
+      "str"_a,
       py::return_value_policy::reference_internal,
-      "Deserizalize fragment");
+      R"(
+      Deserialize a fragment.
+
+      Args:
+          str (str): Serialized object.
+
+      Returns:
+          Fragment. Molecular fragment.
+      )");
 
   m.def("unpack_match",
       &deserialize<mogli::Match>,
+      "str"_a,
       py::return_value_policy::move,
-      "Deserialize match object");
+      R"(
+      Deserialize a match object.
+
+      Args:
+          str (str): Serialized object.
+
+      Returns:
+          Match. Match object.
+      )");
 
   m.def("unpack_molecule",
       &deserialize_ptr<mogli::Molecule>,
+      "str"_a,
       py::return_value_policy::reference_internal,
-      "Deserialize molecule");
+      R"(
+      Deserialize a molecular graph.
+
+      Args:
+          str (str): Serialized object.
+
+      Returns:
+          Molecule. Molecular graph.
+      )");
 
 }

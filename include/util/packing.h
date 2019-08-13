@@ -293,6 +293,12 @@ namespace mogli {
 
   using namespace msgpack;
 
+  /**
+   * Hashes a canonical representation of a molecular graph.
+   *
+   * @param[in] obj Canonical representation.
+   * @return        Hash.
+   */
   std::string hash_canonization(const Canonization &obj) {
     std::stringstream buffer;
     packer<std::stringstream> p(buffer);
@@ -300,6 +306,12 @@ namespace mogli {
     return buffer.str();
   }
 
+  /**
+   * Hashes a canonical representation of a molecular fragment.
+   *
+   * @param[in] obj Canonical representation.
+   * @return        Hash.
+   */
   std::string hash_fcanonization(const FragmentCanonization &obj) {
     std::stringstream buffer;
     packer<std::stringstream> p(buffer);
@@ -307,6 +319,15 @@ namespace mogli {
     return buffer.str();
   }
 
+  /**
+   * @brief Serialize an object.
+   *
+   * Works with mogli::Canonization, mogli::FragmentCanonization, mogli::Fragment, mogli::Match, mogli::Molecule.
+   *
+   * @param[in] obj Object.
+   * @tparam    T   Type of the object.
+   * @return        Serialized object.
+   */
   template <typename T>
   std::string pack_object(const T &obj) {
     std::stringstream buffer;
@@ -314,11 +335,29 @@ namespace mogli {
     return buffer.str();
   }
 
+  /**
+   * @brief Serialize an object.
+   *
+   * Works with mogli::Canonization, mogli::FragmentCanonization, mogli::Fragment, mogli::Match, mogli::Molecule.
+   *
+   * @param[in] obj Object.
+   * @tparam    T   Type of the object.
+   * @return        Serialized object.
+   */
   template <typename T>
   std::string pack_object(const std::shared_ptr<T> &obj) {
     return pack_object(*obj);
   }
 
+  /**
+   * @brief Deserialize an object.
+   *
+   * Works with mogli::Canonization, mogli::FragmentCanonization, mogli::Fragment, mogli::Match, mogli::Molecule.
+   *
+   * @param[in]  str    Serialized object.
+   * @param[out] obj    Empty object.
+   * @tparam     T      Type of the object.
+   */
   template <typename T>
   void unpack_object(const std::string & str, T &obj) {
     unpacked msg_unpacked = unpack(str.data(), str.size());
