@@ -610,9 +610,9 @@ class TestIsomorphism(unittest.TestCase):
         self.assertTrue(len(frag2) > 0)
         self.assertTrue(len(frag3) > 0)
 
-        frag1 = sorted(frag1, key=lambda x: x.get_atom_count())
-        frag2 = sorted(frag2, key=lambda x: x.get_atom_count())
-        frag3 = sorted(frag3, key=lambda x: x.get_atom_count())
+        frag1 = sorted(frag1, key=lambda x: x.get_atom_count(), reverse=True)
+        frag2 = sorted(frag2, key=lambda x: x.get_atom_count(), reverse=True)
+        frag3 = sorted(frag3, key=lambda x: x.get_atom_count(), reverse=True)
 
         f1 = FragmentCanonization(frag1[0])
         f2 = FragmentCanonization(frag2[0])
@@ -670,10 +670,10 @@ class TestMatching(unittest.TestCase):
         self.assertTrue(len(frag_uncon) > 0)
         self.assertTrue(len(frag_uncon_deg1) > 0)
 
-        frag_noopt = sorted(frag_noopt, key=lambda x: x.get_atom_count())
-        frag_deg1 = sorted(frag_deg1, key=lambda x: x.get_atom_count())
-        frag_uncon = sorted(frag_uncon, key=lambda x: x.get_atom_count())
-        frag_uncon_deg1 = sorted(frag_uncon_deg1, key=lambda x: x.get_atom_count())
+        frag_noopt = sorted(frag_noopt, key=lambda x: x.get_atom_count(), reverse=True)
+        frag_deg1 = sorted(frag_deg1, key=lambda x: x.get_atom_count(), reverse=True)
+        frag_uncon = sorted(frag_uncon, key=lambda x: x.get_atom_count(), reverse=True)
+        frag_uncon_deg1 = sorted(frag_uncon_deg1, key=lambda x: x.get_atom_count(), reverse=True)
 
         self.assertEqual(frag_noopt[0].get_atom_count(), mol1.get_atom_count())
         self.assertEqual(frag_deg1[0].get_atom_count(), mol1.get_atom_count())
@@ -725,10 +725,10 @@ class TestMatching(unittest.TestCase):
         self.assertTrue(len(frag_uncon) > 0)
         self.assertTrue(len(frag_uncon_deg1) > 0)
 
-        frag_noopt = sorted(frag_noopt, key=lambda x: x.get_atom_count())
-        frag_deg1 = sorted(frag_deg1, key=lambda x: x.get_atom_count())
-        frag_uncon = sorted(frag_uncon, key=lambda x: x.get_atom_count())
-        frag_uncon_deg1 = sorted(frag_uncon_deg1, key=lambda x: x.get_atom_count())
+        frag_noopt = sorted(frag_noopt, key=lambda x: x.get_atom_count(), reverse=True)
+        frag_deg1 = sorted(frag_deg1, key=lambda x: x.get_atom_count(), reverse=True)
+        frag_uncon = sorted(frag_uncon, key=lambda x: x.get_atom_count(), reverse=True)
+        frag_uncon_deg1 = sorted(frag_uncon_deg1, key=lambda x: x.get_atom_count(), reverse=True)
 
         self.assertEqual(frag_noopt[0].get_atom_count(), mol1.get_atom_count())
         self.assertEqual(frag_deg1[0].get_atom_count(), mol1.get_atom_count())
@@ -749,8 +749,8 @@ class TestMatching(unittest.TestCase):
         self.assertTrue(len(frag_uncon) > 0)
         self.assertTrue(len(frag_uncon_deg1) > 0)
 
-        frag_uncon = sorted(frag_uncon, key=lambda x: x.get_atom_count())
-        frag_uncon_deg1 = sorted(frag_uncon_deg1, key=lambda x: x.get_atom_count())
+        frag_uncon = sorted(frag_uncon, key=lambda x: x.get_atom_count(), reverse=True)
+        frag_uncon_deg1 = sorted(frag_uncon_deg1, key=lambda x: x.get_atom_count(), reverse=True)
 
         self.assertEqual(frag_uncon[0].get_atom_count(), mol1.get_atom_count())
         self.assertEqual(frag_uncon_deg1[0].get_atom_count(), mol1.get_atom_count())
@@ -763,20 +763,20 @@ class TestMatching(unittest.TestCase):
         mol1.read_lgf(ETHYL)
         mol2.read_lgf(ETHANE_1)
 
-        frag_noopt, _, _ = maximal_common_fragments(mol1, mol2, 1, 0, GenerationType.NO_OPT, False, TIMEOUT)
-        frag_deg1, _, _ = maximal_common_fragments(mol1, mol2, 1, 0, GenerationType.DEG_1, False, TIMEOUT)
-        frag_uncon, _, _ = maximal_common_fragments(mol1, mol2, 1, 0, GenerationType.UNCON, False, TIMEOUT)
-        frag_uncon_deg1, _, _ = maximal_common_fragments(mol1, mol2, 1, 0, GenerationType.UNCON_DEG_1, False, TIMEOUT)
+        frag_noopt, _, _ = maximal_common_fragments(mol1, mol2, 0, 0, GenerationType.NO_OPT, False, TIMEOUT)
+        frag_deg1, _, _ = maximal_common_fragments(mol1, mol2, 0, 0, GenerationType.DEG_1, False, TIMEOUT)
+        frag_uncon, _, _ = maximal_common_fragments(mol1, mol2, 0, 0, GenerationType.UNCON, False, TIMEOUT)
+        frag_uncon_deg1, _, _ = maximal_common_fragments(mol1, mol2, 0, 0, GenerationType.UNCON_DEG_1, False, TIMEOUT)
 
         self.assertTrue(len(frag_noopt) > 0)
         self.assertTrue(len(frag_deg1) > 0)
         self.assertTrue(len(frag_uncon) > 0)
         self.assertTrue(len(frag_uncon_deg1) > 0)
 
-        frag_noopt = sorted(frag_noopt, key=lambda x: x.get_atom_count())
-        frag_deg1 = sorted(frag_deg1, key=lambda x: x.get_atom_count())
-        frag_uncon = sorted(frag_uncon, key=lambda x: x.get_atom_count())
-        frag_uncon_deg1 = sorted(frag_uncon_deg1, key=lambda x: x.get_atom_count())
+        frag_noopt = sorted(frag_noopt, key=lambda x: x.get_atom_count(), reverse=True)
+        frag_deg1 = sorted(frag_deg1, key=lambda x: x.get_atom_count(), reverse=True)
+        frag_uncon = sorted(frag_uncon, key=lambda x: x.get_atom_count(), reverse=True)
+        frag_uncon_deg1 = sorted(frag_uncon_deg1, key=lambda x: x.get_atom_count(), reverse=True)
 
         self.assertEqual(frag_noopt[0].get_atom_count(), mol1.get_atom_count())
         self.assertEqual(frag_deg1[0].get_atom_count(), mol1.get_atom_count())
@@ -801,15 +801,15 @@ class TestMatching(unittest.TestCase):
         self.assertTrue(len(frag_uncon) > 0)
         self.assertTrue(len(frag_uncon_deg1) > 0)
 
-        frag_noopt = sorted(frag_noopt, key=lambda x: x.get_atom_count())
-        frag_deg1 = sorted(frag_deg1, key=lambda x: x.get_atom_count())
-        frag_uncon = sorted(frag_uncon, key=lambda x: x.get_atom_count())
-        frag_uncon_deg1 = sorted(frag_uncon_deg1, key=lambda x: x.get_atom_count())
+        frag_noopt = sorted(frag_noopt, key=lambda x: x.get_atom_count(), reverse=True)
+        frag_deg1 = sorted(frag_deg1, key=lambda x: x.get_atom_count(), reverse=True)
+        frag_uncon = sorted(frag_uncon, key=lambda x: x.get_atom_count(), reverse=True)
+        frag_uncon_deg1 = sorted(frag_uncon_deg1, key=lambda x: x.get_atom_count(), reverse=True)
 
-        self.assertEqual(frag_noopt[0].get_atom_count(), mol1.get_atom_count())
-        self.assertEqual(frag_deg1[0].get_atom_count(), mol1.get_atom_count())
-        self.assertEqual(frag_uncon[0].get_atom_count(), mol1.get_atom_count())
-        self.assertEqual(frag_uncon_deg1[0].get_atom_count(), mol1.get_atom_count())
+        self.assertEqual(frag_noopt[0].get_atom_count(), 2)
+        self.assertEqual(frag_deg1[0].get_atom_count(), 2)
+        self.assertEqual(frag_uncon[0].get_atom_count(), 2)
+        self.assertEqual(frag_uncon_deg1[0].get_atom_count(), 2)
 
     def test_mcf_graphs_no_match(self):
         from mogli import Molecule, LGFIOConfig, maximal_common_fragments, GenerationType
@@ -889,9 +889,9 @@ class TestPacking(unittest.TestCase):
         self.assertTrue(len(frag2) > 0)
         self.assertTrue(len(frag3) > 0)
 
-        frag1 = sorted(frag1, key=lambda x: x.get_atom_count())
-        frag2 = sorted(frag2, key=lambda x: x.get_atom_count())
-        frag3 = sorted(frag3, key=lambda x: x.get_atom_count())
+        frag1 = sorted(frag1, key=lambda x: x.get_atom_count(), reverse=True)
+        frag2 = sorted(frag2, key=lambda x: x.get_atom_count(), reverse=True)
+        frag3 = sorted(frag3, key=lambda x: x.get_atom_count(), reverse=True)
 
         f1 = hash_fcanonization(FragmentCanonization(frag1[0]))
         f2 = hash_fcanonization(FragmentCanonization(frag2[0]))
@@ -926,7 +926,7 @@ class TestPacking(unittest.TestCase):
 
         frag, _, _ = maximal_common_fragments(mol1, mol2, 1, 0, GenerationType.NO_OPT, False, TIMEOUT)
 
-        frag = sorted(frag, key=lambda x: x.get_atom_count())
+        frag = sorted(frag, key=lambda x: x.get_atom_count(), reverse=True)
 
         f1 = FragmentCanonization(frag[0])
         foo = pack_fcanonization(f1)
@@ -948,7 +948,7 @@ class TestPacking(unittest.TestCase):
 
         frag, _, _ = maximal_common_fragments(mol1, mol2, 1, 0, GenerationType.NO_OPT, False, TIMEOUT)
 
-        frag = sorted(frag, key=lambda x: x.get_atom_count())
+        frag = sorted(frag, key=lambda x: x.get_atom_count(), reverse=True)
 
         f1 = frag[0]
         f2 = unpack_fragment(pack_fragment(f1))
