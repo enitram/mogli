@@ -234,6 +234,9 @@ PYBIND11_MODULE(mogli, m) {
 
           Args:
               property (str): Column name.
+
+          Returns:
+             LGFIOConfig. Updated LGF formatter.
           )")
       .def(
           "add_int_node_prop",
@@ -245,6 +248,9 @@ PYBIND11_MODULE(mogli, m) {
 
           Args:
               property (str): Column name.
+
+          Returns:
+             LGFIOConfig. Updated LGF formatter.
           )")
       .def(
           "add_double_node_prop",
@@ -256,6 +262,9 @@ PYBIND11_MODULE(mogli, m) {
 
           Args:
               property (str): Column name.
+
+          Returns:
+             LGFIOConfig. Updated LGF formatter.
           )")
       .def("add_string_node_prop",
           &mogli::LGFIOConfig::add_string_node_prop,
@@ -266,6 +275,9 @@ PYBIND11_MODULE(mogli, m) {
 
           Args:
               property (str): Column name.
+
+          Returns:
+             LGFIOConfig. Updated LGF formatter.
           )");
 
   py::class_<mogli::Match, std::shared_ptr<mogli::Match>> match(m, "Match");
@@ -718,8 +730,11 @@ PYBIND11_MODULE(mogli, m) {
               str. Molecular graph in given LGF format.
           )");
 
-  py::class_<mogli::Fragment, std::shared_ptr<mogli::Fragment>>(m, "Fragment", molecule)
-      .def("get_core_atom_count",
+  py::class_<mogli::Fragment, std::shared_ptr<mogli::Fragment>> fragment(m, "Fragment", molecule);
+
+  fragment.doc() = "Molecular fragment.";
+
+  fragment.def("get_core_atom_count",
           &mogli::Fragment::get_core_atom_count,
           R"(
           Returns the number of core atoms.
@@ -756,10 +771,44 @@ PYBIND11_MODULE(mogli, m) {
               str. Fragment in dot format.
           )");
 
-  py::class_<mogli::PeriodicTable>(m, "PeriodicTable")
-      .def(py::init<>())
-      .def("add", &mogli::PeriodicTable::add, py::return_value_policy::reference_internal, "Add a new element")
-      .def("add_uncolored", &mogli::PeriodicTable::add_uncolored, py::return_value_policy::reference_internal, "Add a new element with an associated color string (for dot printing)");
+  py::class_<mogli::PeriodicTable> table(m, "PeriodicTable");
+
+  table.doc() = "Periodic table of elements.";
+
+  table.def(
+          py::init<>(),
+          R"(
+          Empty constructor.
+          )")
+      .def(
+          "add",
+          "num"_a, "name"_a, "color"_a,
+          &mogli::PeriodicTable::add, py::return_value_policy::reference_internal,
+          R"(
+          Add a new element.
+
+          Args:
+              num (int):   Element number.
+              name (str):  Element type.
+              color (str): Color string for dot (graphviz) export.
+
+          Returns:
+              PeriodicTable. Update periodic table.
+          )")
+      .def("add_uncolored",
+          &mogli::PeriodicTable::add_uncolored,
+           "num"_a, "name"_a,
+          py::return_value_policy::reference_internal,
+           R"(
+          Add a new element.
+
+          Args:
+              num (int):   Element number.
+              name (str):  Element type.
+
+          Returns:
+              PeriodicTable. Update periodic table.
+          )");
 
   py::class_<mogli::Node>(m, "Node")
       .def(py::self == py::self)

@@ -24,6 +24,9 @@
 
 namespace mogli {
 
+  /**
+   * Periodic table of elements.
+   */
   class PeriodicTable {
 
 
@@ -46,12 +49,27 @@ namespace mogli {
         UNKNOWN_COLOR("pink"),
         UNKNOWN_NUMBER(std::numeric_limits<unsigned short>::max()) {}
 
+    /**
+     * Add a new element.
+     *
+     * @param[in] num   Element number.
+     * @param[in] name  Element type.
+     * @return          Update periodic table.
+     */
     PeriodicTable &add_uncolored(unsigned short num, std::string name) {
       ELEMENTS[name] = num;
       ELEMENT_NUMBERS[num] = name;
       return *this;
     }
 
+    /**
+     * Add a new element.
+     *
+     * @param[in] num   Element number.
+     * @param[in] name  Element type.
+     * @param[in] color Color string for dot (graphviz) export.
+     * @return          Update periodic table.
+     */
     PeriodicTable &add(unsigned short num, std::string name, std::string color) {
       ELEMENTS[name] = num;
       ELEMENT_NUMBERS[num] = name;
@@ -59,6 +77,12 @@ namespace mogli {
       return *this;
     }
 
+    /**
+     * Returns the element type.
+     *
+     * @param[in] num   Element number.
+     * @return          Element type.
+     */
     const std::string get_element(unsigned short num) {
       auto it = ELEMENT_NUMBERS.find(num);
       if (it != ELEMENT_NUMBERS.end())
@@ -66,6 +90,12 @@ namespace mogli {
       return UNKNOWN;
     }
 
+    /**
+     * Returns the element color.
+     *
+     * @param[in] num   Element number.
+     * @return          Element color.
+     */
     const std::string get_color(unsigned short num) {
       auto it = COLORS.find(num);
       if (it != COLORS.end())
@@ -73,6 +103,12 @@ namespace mogli {
       else return UNKNOWN_COLOR;
     }
 
+    /**
+     * Returns the element number.
+     *
+     * @param[in] element   Element type.
+     * @return              Element number.
+     */
     const unsigned short get_number(std::string element) {
       auto it = ELEMENTS.find(element);
       if (it != ELEMENTS.end())
@@ -80,6 +116,11 @@ namespace mogli {
       else return UNKNOWN_NUMBER;
     }
 
+    /**
+     * Returns the default periodic table of IACM elements.
+     *
+     * @return  Default periodic table.
+     */
     static PeriodicTable &get_default() {
       static PeriodicTable _instance;
       if (_instance.ELEMENTS.empty()) {
