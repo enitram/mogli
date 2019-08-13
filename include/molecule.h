@@ -86,6 +86,7 @@ namespace mogli {
      * Add a bool atom property column.
      *
      * @param[in] property  Column name.
+     * @return              Updated LGF formatter.
      */
     LGFIOConfig& add_bool_node_prop(const std::string& property) {
       _bool_node_props.insert(property);
@@ -96,6 +97,7 @@ namespace mogli {
      * Add an int atom property column.
      *
      * @param[in] property  Column name.
+     * @return              Updated LGF formatter.
      */
     LGFIOConfig& add_int_node_prop(const std::string& property) {
       _int_node_props.insert(property);
@@ -106,6 +108,7 @@ namespace mogli {
      * Add a double atom property column
      *
      * @param[in] property  Column name.
+     * @return              Updated LGF formatter.
      */
     LGFIOConfig& add_double_node_prop(const std::string& property) {
       _double_node_props.insert(property);
@@ -116,6 +119,7 @@ namespace mogli {
      * Add a string atom property column.
      *
      * @param[in] property  Column name.
+     * @return              Updated LGF formatter.
      */
     LGFIOConfig& add_string_node_prop(const std::string& property) {
       _string_node_props.insert(property);
