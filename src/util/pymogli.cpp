@@ -210,12 +210,63 @@ PYBIND11_MODULE(mogli, m) {
 
           )");
 
-  py::class_<mogli::LGFIOConfig>(m, "LGFIOConfig")
-      .def(py::init<std::string, std::string>())
-      .def("add_bool_node_prop", &mogli::LGFIOConfig::add_bool_node_prop, py::return_value_policy::reference_internal, "Add a node property that will be cast to a bool")
-      .def("add_int_node_prop", &mogli::LGFIOConfig::add_int_node_prop, py::return_value_policy::reference_internal, "Add a node property that will be cast to an int")
-      .def("add_double_node_prop", &mogli::LGFIOConfig::add_double_node_prop, py::return_value_policy::reference_internal, "Add a node property that will be cast to a double")
-      .def("add_string_node_prop", &mogli::LGFIOConfig::add_string_node_prop, py::return_value_policy::reference_internal, "Add a node property that will be cast to a str");
+  py::class_<mogli::LGFIOConfig> conf(m, "LGFIOConfig");
+
+  conf.doc() = "LGF-formatter for reading and writing molecular graphs.";
+
+  conf.def(
+          py::init<std::string, std::string>(),
+          "id_property"_a, "color_property"_a,
+          R"(
+          Initialize an LGF formatter.
+
+          Args:
+              id_property (str):    Name of the atom ID column.
+              color_property (str): Name of the element number column.
+          )")
+      .def(
+          "add_bool_node_prop",
+          &mogli::LGFIOConfig::add_bool_node_prop,
+          "property"_a,
+          py::return_value_policy::reference_internal,
+          R"(
+          Add a bool atom property column.
+
+          Args:
+              property (str): Column name.
+          )")
+      .def(
+          "add_int_node_prop",
+          &mogli::LGFIOConfig::add_int_node_prop,
+          "property"_a,
+          py::return_value_policy::reference_internal,
+          R"(
+          Add an int atom property column.
+
+          Args:
+              property (str): Column name.
+          )")
+      .def(
+          "add_double_node_prop",
+          &mogli::LGFIOConfig::add_double_node_prop,
+          "property"_a,
+          py::return_value_policy::reference_internal,
+          R"(
+          Add a double atom property column.
+
+          Args:
+              property (str): Column name.
+          )")
+      .def("add_string_node_prop",
+          &mogli::LGFIOConfig::add_string_node_prop,
+          "property"_a,
+          py::return_value_policy::reference_internal,
+           R"(
+          Add a string atom property column.
+
+          Args:
+              property (str): Column name.
+          )");
 
   py::class_<mogli::Match, std::shared_ptr<mogli::Match>>(m, "Match")
       .def(py::init<>())

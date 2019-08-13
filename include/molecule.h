@@ -35,10 +35,19 @@ namespace mogli {
   typedef typename Graph::template EdgeMap<IntSet> EdgeToIntSetMap;
   typedef lemon::SubGraph<Graph, NodeToBoolMap, EdgeToBoolMap> SubGraph;
 
+  /**
+   * LGF-formatter for reading and writing molecular graphs.
+   */
   class LGFIOConfig {
 
   public:
 
+    /**
+     * Initialize an LGF formatter.
+     *
+     * @param[in] id_property       Name of the atom ID column.
+     * @param[in] color_property    Name of the element number column.
+     */
     LGFIOConfig(std::string id_property, std::string color_property) :
         _id_property(std::move(id_property)),
         _color_property(std::move(color_property)),
@@ -73,50 +82,107 @@ namespace mogli {
 
   public:
 
+    /**
+     * Add a bool atom property column.
+     *
+     * @param[in] property  Column name.
+     */
     LGFIOConfig& add_bool_node_prop(const std::string& property) {
       _bool_node_props.insert(property);
       return *this;
     }
 
+    /**
+     * Add an int atom property column.
+     *
+     * @param[in] property  Column name.
+     */
     LGFIOConfig& add_int_node_prop(const std::string& property) {
       _int_node_props.insert(property);
       return *this;
     }
 
+    /**
+     * Add a double atom property column
+     *
+     * @param[in] property  Column name.
+     */
     LGFIOConfig& add_double_node_prop(const std::string& property) {
       _double_node_props.insert(property);
       return *this;
     }
 
+    /**
+     * Add a string atom property column.
+     *
+     * @param[in] property  Column name.
+     */
     LGFIOConfig& add_string_node_prop(const std::string& property) {
       _string_node_props.insert(property);
       return *this;
     }
 
+    /**
+     * Returns the name of the atom ID column.
+     *
+     * @return  Column name.
+     */
     const std::string &get_id_property() const {
       return _id_property;
     }
 
+    /**
+     * Returns the name of the element number column.
+     *
+     * @return  Column name.
+     */
     const std::string &get_color_property() const {
       return _color_property;
     }
 
+    /**
+     * Returns the names of all bool atom property columns.
+     *
+     * @return  Column names.
+     */
     const StringSet &get_bool_node_props() const {
       return _bool_node_props;
     }
 
+    /**
+     * Returns the names of all int atom property columns.
+     *
+     * @return  Column names.
+     */
     const StringSet &get_int_node_props() const {
       return _int_node_props;
     }
 
+    /**
+     * Returns the names of all double atom property columns.
+     *
+     * @return  Column names.
+     */
     const StringSet &get_double_node_props() const {
       return _double_node_props;
     }
 
+    /**
+     * Returns the names of all string atom property columns.
+     *
+     * @return  Column names.
+     */
     const StringSet &get_string_node_props() const {
       return _string_node_props;
     }
 
+    /**
+     * @brief Returns the default LGF formatter.
+     *
+     * Default formatting is: label | atomType | partial_charge | label2 | coordX | coordY | coordZ | initColor
+     *
+     * @return  Default LGF formatter.
+     */
     static LGFIOConfig &get_default() {
       static LGFIOConfig instance;
       return instance;
