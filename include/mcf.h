@@ -48,8 +48,9 @@ namespace mogli {
    * @param[in]  reduce_subgraphs   Merges resulting fragments, if one is a subgraph of the other.
    * @param[in]  maximum            If true, reports only the largest fragments.
    * @param[in]  timeout_seconds    Timeout in seconds.
+   * @return                        False, if timeout occured, true otherwise.
    */
-  void maximal_common_fragments(Molecule &mol1, Molecule &mol2,
+  bool maximal_common_fragments(Molecule &mol1, Molecule &mol2,
                                 FragmentVector &fragments,
                                 MatchVector &matches_mol1, MatchVector &matches_mol2,
                                 int shell, unsigned int min_core_size, unsigned int max_core_size,
@@ -74,8 +75,9 @@ namespace mogli {
    * @param[in]  reduce_subgraphs   Merges resulting fragments, if one is a subgraph of the other.
    * @param[in]  maximum            If true, reports only the largest fragments.
    * @param[in]  timeout_seconds    Timeout in seconds.
+   * @return                        False, if timeout occured, true otherwise.
    */
-  void maximal_common_fragments(Molecule &mol1, Molecule &mol2,
+  bool maximal_common_fragments(Molecule &mol1, Molecule &mol2,
                                 FragmentVector &fragments,
                                 MatchVector &matches_mol1, MatchVector &matches_mol2,
                                 int shell, unsigned int min_core_size,

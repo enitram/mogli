@@ -22,11 +22,8 @@
 
 #include <string>
 
-static const int TIMEOUT = 10;
-
-static const int TIMEOUT_BIG = 60;
-
-static const int TIMEOUT_LARGE = 360;
+static const int TIMEOUT = 60;
+static const int TIMEOUT_BIG = 360;
 
 static const std::string ETHYL = R"(@nodes
 partial_charge	label	label2	atomType	coordX	coordY	coordZ	initColor

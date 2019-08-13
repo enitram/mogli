@@ -54,18 +54,22 @@ TEST_CASE("fcanonization", "[algo]") {
   FragmentVector frag1, frag2, frag3;
   MatchVector matches1, matches2;
 
-  maximal_common_fragments(
+  auto t1 = maximal_common_fragments(
       mol1, mol2, frag1, matches1, matches2, 1, 0,
       Product::GenerationType::NO_OPT,
       false, false, TIMEOUT);
-  maximal_common_fragments(
+  auto t2 = maximal_common_fragments(
       mol1, mol3, frag2, matches1, matches2, 1, 0,
       Product::GenerationType::NO_OPT,
       false, false, TIMEOUT);
-  maximal_common_fragments(
+  auto t3 = maximal_common_fragments(
       mol1, mol4, frag3, matches1, matches2, 1, 0,
       Product::GenerationType::NO_OPT,
       false, false, TIMEOUT);
+
+  REQUIRE(t1);
+  REQUIRE(t2);
+  REQUIRE(t3);
 
   REQUIRE(!frag1.empty());
   REQUIRE(!frag2.empty());

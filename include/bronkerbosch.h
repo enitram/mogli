@@ -61,7 +61,7 @@ namespace mogli {
 
     void run(int seconds);
 
-    void run(std::chrono::high_resolution_clock::time_point start, long microseconds);
+    bool run(std::chrono::high_resolution_clock::time_point start, long microseconds);
 
     const NodeVectorVector& getMaxCliques() const {
       return _cliques;
@@ -73,7 +73,7 @@ namespace mogli {
 
     size_t computeDegeneracy(NodeVector& order);
 
-    void bkPivot(BitSet P, const BitSet & D, const BitSet & R, BitSet X, const BitSet & S,
+    bool bkPivot(BitSet P, const BitSet & D, const BitSet & R, BitSet X, const BitSet & S,
                  std::chrono::high_resolution_clock::time_point start, long microseconds);
 
     void report(const BitSet& R);

@@ -69,7 +69,7 @@ void BronKerbosch::run(int seconds) {
   run(start, microseconds);
 }
 
-void BronKerbosch::run(std::chrono::high_resolution_clock::time_point start, long microseconds) {
+bool BronKerbosch::run(std::chrono::high_resolution_clock::time_point start, long microseconds) {
 
   // the productgraph is a complete graph with a spanning tree of c-edges, we don't actually need to run BK!
   if ((_product.get_gen_type() == Product::GenerationType::UNCON ||
@@ -84,7 +84,7 @@ void BronKerbosch::run(std::chrono::high_resolution_clock::time_point start, lon
     if (_min_core_size <= size && size <= _max_core_size) {
       _cliques.push_back(clique);
     }
-    return;
+    return false;
   }
 
   NodeVector order;
@@ -92,6 +92,7 @@ void BronKerbosch::run(std::chrono::high_resolution_clock::time_point start, lon
 
   BitSet mask(_n);
 
+  bool timeout = false;
   for (auto & v : order) {
     const BitSet& N_v = _bitNeighborhood[v];
     const BitSet& Nc_v = _restrictedBitNeighborhood[v];
@@ -106,9 +107,15 @@ void BronKerbosch::run(std::chrono::high_resolution_clock::time_point start, lon
     BitSet R(_n);
     R.set(_nodeToBit[v]);
 
-    bkPivot(P, D, R, X, S, start, microseconds);
+    timeout |= bkPivot(P, D, R, X, S, start, microseconds);
     mask.set(_nodeToBit[v]);
+
+    if (timeout) {
+      break;
+    }
   }
+
+  return timeout;
 
 }
 
@@ -181,7 +188,7 @@ size_t BronKerbosch::computeDegeneracy(NodeVector& order) {
   return degeneracy;
 }
 
-void BronKerbosch::bkPivot(BitSet P, const BitSet & D,
+bool BronKerbosch::bkPivot(BitSet P, const BitSet & D,
                            const BitSet & R,
                            BitSet X, const BitSet & S,
                            std::chrono::high_resolution_clock::time_point start,
@@ -205,8 +212,10 @@ void BronKerbosch::bkPivot(BitSet P, const BitSet & D,
   BitSet P_cup_X = P | X;
   if (P_cup_X.none()) {
     report(R);
+    return false;
   } else {
     if (microseconds > 0 && duration < microseconds) {
+      bool timeout = false;
       // choose a pivot u from (P | X) s.t |P & N(u)| is maximum, Tomita et al. (2006)
       size_t maxBitCount = 0;
       Node max_u = lemon::INVALID;
@@ -240,17 +249,20 @@ void BronKerbosch::bkPivot(BitSet P, const BitSet & D,
           BitSet S_ = S - Nc_v;
 
           // report all maximal cliques in ( (P | N[v]) & R) \ (X & N[v]) )
-          bkPivot(P_ & N_v,
-                  D_ & N_v,
-                  R_,
-                  X_ & N_v,
-                  S_ & N_v,
-                  start,
-                  microseconds);
+          timeout |= bkPivot(P_ & N_v,
+                             D_ & N_v,
+                             R_,
+                             X_ & N_v,
+                             S_ & N_v,
+                             start,
+                             microseconds);
           P[i] = false;
           X[i] = true;
         }
       }
+      return timeout;
+    } else {
+      return true;
     }
   }
 
