@@ -268,29 +268,94 @@ PYBIND11_MODULE(mogli, m) {
               property (str): Column name.
           )");
 
-  py::class_<mogli::Match, std::shared_ptr<mogli::Match>>(m, "Match")
-      .def(py::init<>())
-      .def("add_frag_to_mol", &mogli::Match::add_frag_to_mol)
-      .def("add_merged_frag_to_mol", &mogli::Match::add_merged_frag_to_mol)
-      .def("frag_to_mol", &mogli::Match::frag_to_mol)
+  py::class_<mogli::Match, std::shared_ptr<mogli::Match>> match(m, "Match");
+
+  match.doc() = "Maps fragment atom IDs to molecule atom IDs.";
+
+  match.def(
+          py::init<>(),
+          R"(
+          Empty constructor.
+          )")
+      .def(
+          "add_frag_to_mol",
+          &mogli::Match::add_frag_to_mol,
+          "from"_a, "to"_a,
+          R"(
+          Add a new fragment to molecule atom mapping.
+
+          Args:
+              from (int): Fragment atom ID.
+              to (int):   Molecule atom ID.)")
+      .def("add_merged_frag_to_mol",
+          &mogli::Match::add_merged_frag_to_mol,
+          "ftm"_a,
+          R"(
+          Add new fragment to molecule atom mappings.
+
+          Args:
+              ftm (IntToIntMap): Fragment to molecule atom mappings.
+          )")
+      .def("frag_to_mol",
+          &mogli::Match::frag_to_mol,
+          "id"_a,
+          R"(
+          Map fragment atom ID to molecule atom ID.
+
+          Args:
+              id (int): Fragment atom ID.
+
+          Returns:
+              int. Molecule atom ID.)")
       .def("merged_frag_to_mol",
           [](const mogli::Match &self, const int id) {
             mogli::IntVector ids;
             self.merged_frag_to_mol(id, ids);
             return ids;
           },
-          py::return_value_policy::move
-          )
+          "id"_a,
+          py::return_value_policy::move,
+          R"(
+          Map fragment atom ID to molecule atom IDs.
+
+          Args:
+              id (int): Fragment atom ID.
+
+          Returns:
+              IntVector. Molecule atom IDs.
+          )")
       .def("get_atom_ids",
           [](const mogli::Match & self) {
             mogli::IntVector ids;
             self.get_atom_ids(ids);
             return ids;
           },
-          py::return_value_policy::move
-          )
-      .def("merge", &mogli::Match::merge)
-      .def("map_ids", &mogli::Match::map_ids);
+          py::return_value_policy::move,
+          R"(
+          Returns all mapped molecule IDs.
+
+          Returns:
+              IntVector. Mapped molecule IDs.
+          )")
+      .def("merge",
+          &mogli::Match::merge,
+          "other"_a, "isomorphism_map"_a,
+          R"(
+          Merge with another match object.
+
+          Args:
+              other (Match):                 Other match object.
+              isomorphism_map (IntToIntMap): Isomorphism map.)")
+      .def("map_ids",
+          &mogli::Match::map_ids,
+          "this_canon"_a, "other_canon"_a,
+          R"(
+          Transform fragment to molecule atom mapping to match another molecular graph.
+
+          Args:
+              this_canon (Canonization):  Canonization of the molecular graph this match object maps to.
+              other_canon (Canonization): Canonization of another molecular graph.
+          )");
 
   py::class_<mogli::Molecule, std::shared_ptr<mogli::Molecule>> molecule(m, "Molecule");
   molecule.def(py::init<>())
