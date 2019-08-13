@@ -59,15 +59,15 @@ TEST_CASE("hash_fcanonization", "[packing]") {
   maximal_common_fragments(
       mol1, mol2, frag1, matches1, matches2, 1, 0,
       Product::GenerationType::NO_OPT,
-      false, false, 10);
+      false, false, TIMEOUT);
   maximal_common_fragments(
       mol1, mol3, frag2, matches1, matches2, 1, 0,
       Product::GenerationType::NO_OPT,
-      false, false, 10);
+      false, false, TIMEOUT);
   maximal_common_fragments(
       mol1, mol4, frag3, matches1, matches2, 1, 0,
       Product::GenerationType::NO_OPT,
-      false, false, 10);
+      false, false, TIMEOUT);
 
   REQUIRE(!frag1.empty());
   REQUIRE(!frag2.empty());
@@ -119,7 +119,7 @@ TEST_CASE("pack_fcanonization", "[packing]") {
   maximal_common_fragments(
       mol1, mol2, frag, matches1, matches2, 1, 0,
       Product::GenerationType::NO_OPT,
-      false, false, 10);
+      false, false, TIMEOUT);
 
   auto comparator = [](const std::shared_ptr<Fragment> & a, const std::shared_ptr<Fragment> & b) {
     return a->get_atom_count() > b->get_atom_count();
@@ -150,7 +150,7 @@ TEST_CASE("pack_fragment", "[packing]") {
   maximal_common_fragments(
       mol1, mol2, frag, matches1, matches2, 1, 0,
       Product::GenerationType::NO_OPT,
-      false, false, 10);
+      false, false, TIMEOUT);
 
   auto comparator = [](const std::shared_ptr<Fragment> & a, const std::shared_ptr<Fragment> & b) {
     return a->get_atom_count() > b->get_atom_count();

@@ -57,15 +57,15 @@ TEST_CASE("fcanonization", "[algo]") {
   maximal_common_fragments(
       mol1, mol2, frag1, matches1, matches2, 1, 0,
       Product::GenerationType::NO_OPT,
-      false, false, 10);
+      false, false, TIMEOUT);
   maximal_common_fragments(
       mol1, mol3, frag2, matches1, matches2, 1, 0,
       Product::GenerationType::NO_OPT,
-      false, false, 10);
+      false, false, TIMEOUT);
   maximal_common_fragments(
       mol1, mol4, frag3, matches1, matches2, 1, 0,
       Product::GenerationType::NO_OPT,
-      false, false, 10);
+      false, false, TIMEOUT);
 
   REQUIRE(!frag1.empty());
   REQUIRE(!frag2.empty());
