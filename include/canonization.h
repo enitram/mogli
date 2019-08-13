@@ -25,38 +25,84 @@
 namespace mogli {
 
 
+  /**
+   * Canonical representation of a molecular graph.
+   */
   class Canonization {
 
   public:
 
+    /**
+     * Initialize an empty canonization.
+     */
     Canonization() = default;
 
+    /**
+     * Create a canonical representation of a molecular graph.
+     *
+     * @param[in] mol   Molecular graph.
+     */
     explicit Canonization(const Molecule& mol) : _colors(), _canonization(), _node_order() {
       init(mol);
     }
 
+    /**
+     * Create a canonical representation of a subgraph of a molecular graph.
+     *
+     * @param[in] mol       Molecular graph.
+     * @param[in] filter    Subgraph filter.
+     * @param[in] root      Special atom, always first in canonical representation.
+     */
     Canonization(const Molecule& mol, const NodeToBoolMap& filter, const Node& root) :
         _colors(), _canonization(), _node_order() {
       init(mol, filter, root);
     }
 
+    /**
+     * Move constructor.
+     *
+     * @param[in] _colors           Element numbers.
+     * @param[in] _canonization     Canonical representations.
+     * @param[in] _node_order       Atom IDs.
+     */
     Canonization(ShortVector _colors, LongVector _canonization, ShortVector _node_order) :
         _colors(std::move(_colors)),
         _canonization(std::move(_canonization)),
         _node_order(std::move(_node_order)) {}
 
+    /**
+     * Returns the element numbers of the atoms in canonical order.
+     *
+     * @return  Element numbers.
+     */
     const ShortVector &get_colors() const {
       return _colors;
     }
 
+    /**
+     * Returns the canonical representations of the atoms.
+     *
+     * @return  Canonical representations.
+     */
     const LongVector &get_canonization() const {
       return _canonization;
     }
 
+    /**
+     * Returns the atom IDs in canonical order.
+     *
+     * @return  Atom IDs.
+     */
     const ShortVector &get_node_order() const {
       return _node_order;
     }
 
+    /**
+     * Isomorphism test.
+     *
+     * @param[in] other Other canonization.
+     * @return          True, if isomorphic to other canonization, false otherwise.
+     */
     const bool is_isomorphic(const Canonization &other) const;
 
   protected:

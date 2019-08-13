@@ -28,6 +28,7 @@
 
 
 namespace py = pybind11;
+using namespace py::literals;
 
 PYBIND11_MAKE_OPAQUE(mogli::BoolVector);
 PYBIND11_MAKE_OPAQUE(mogli::ShortVector);
@@ -112,22 +113,102 @@ PYBIND11_MODULE(mogli, m) {
 
   // classes
 
-  py::class_<mogli::Canonization>(m, "Canonization")
-      .def(py::init<const mogli::Molecule&>())
-      .def("get_colors", &mogli::Canonization::get_colors, py::return_value_policy::reference_internal, "Get element numbers of the ordered atoms")
-      .def("get_canonization", &mogli::Canonization::get_canonization, py::return_value_policy::reference_internal, "Get canonization")
-      .def("get_node_order", &mogli::Canonization::get_node_order, py::return_value_policy::reference_internal, "Get ordered atom ids")
-      .def("is_isomorphic", &mogli::Canonization::is_isomorphic, "Isomorphism test");
+  py::class_<mogli::Canonization> canon(m, "Canonization");
+
+  canon.doc() = "Canonical representation of a molecular graph.";
+
+  canon.def(
+          py::init<const mogli::Molecule&>(),
+          "mol"_a,
+          R"(
+          Create a canonical representation of a molecular graph.
+
+          Args:
+              mol (Molecule): Molecular graph.
+          )")
+      .def(
+          "get_colors",
+          &mogli::Canonization::get_colors,
+          py::return_value_policy::reference_internal,
+          R"(
+          Returns the element numbers of the atoms in canonical order.
+
+          Returns:
+              ShortVector. Element numbers.
+          )")
+      .def("get_canonization",
+          &mogli::Canonization::get_canonization,
+          py::return_value_policy::reference_internal,
+          R"(
+          Returns the canonical representations of the atoms.
+
+          Returns:
+              LongVector. Canonical representations.
+          )")
+      .def("get_node_order",
+          &mogli::Canonization::get_node_order,
+          py::return_value_policy::reference_internal,
+          R"(
+          Returns the atom IDs in canonical order.
+
+          Returns:
+              ShortVector. Atom IDs.
+          )")
+      .def("is_isomorphic",
+          &mogli::Canonization::is_isomorphic,
+          "other"_a,
+          R"(
+          Isomorphism test.
+
+          Args:
+              other (Canonization): Other canonization.
+
+          Returns:
+              bool. True, if isomorphic to other canonization, false otherwise.
+          )");
 
   py::class_<mogli::Edge>(m, "Edge")
       .def(py::self == py::self)
       .def(py::self != py::self)
       .def(py::self < py::self);
 
-  py::class_<mogli::FragmentCanonization, mogli::Canonization>(m, "FragmentCanonization")
-      .def(py::init<const mogli::Fragment&>())
-      .def("get_core_nodes", &mogli::FragmentCanonization::get_core_nodes, py::return_value_policy::reference_internal, "Get atom ids of the ordered core atoms")
-      .def("is_isomorphic", &mogli::FragmentCanonization::is_isomorphic, "Isomorphism test");
+  py::class_<mogli::FragmentCanonization, mogli::Canonization> fcanon(m, "FragmentCanonization");
+
+  fcanon.doc() = "Canonical representation of a molecular fragment.";
+
+  fcanon.def(
+          py::init<const mogli::Fragment&>(),
+          "fragment"_a,
+          R"(
+          Create a canonical representation of a molecular fragment.
+
+          Args:
+              fragment (Fragment): Molecular fragment.
+          )")
+      .def(
+          "get_core_nodes",
+          &mogli::FragmentCanonization::get_core_nodes,
+          py::return_value_policy::reference_internal,
+          R"(
+          Returns a bool vector indicating the core atoms in canonical order.
+
+          Returns:
+              BoolVector. Core atoms.
+          )")
+      .def(
+          "is_isomorphic",
+          &mogli::FragmentCanonization::is_isomorphic,
+          "other"_a,
+          R"(
+          Isomorphism test.
+
+          Args:
+              other (Canonization): Other canonization.
+
+          Returns:
+              bool. True, if isomorphic to other canonization, false otherwise.
+
+          )");
 
   py::class_<mogli::LGFIOConfig>(m, "LGFIOConfig")
       .def(py::init<std::string, std::string>())

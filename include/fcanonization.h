@@ -25,6 +25,9 @@
 
 namespace mogli {
 
+  /**
+   * Canonical representation of a molecular fragment.
+   */
   class FragmentCanonization : public Canonization {
   private:
 
@@ -32,23 +35,50 @@ namespace mogli {
 
   public:
 
+    /**
+     * Initialize an empty fragment canonization.
+     */
     FragmentCanonization() : Canonization() {}
 
+    /**
+     * Create a canonical representation of a molecular fragment.
+     *
+     * @param[in] fragment   Molecular fragment.
+     */
     explicit FragmentCanonization(const Fragment &fragment) : Canonization(fragment) {
       for (auto & it : _node_order) {
         _core_nodes.push_back(fragment.is_core(fragment.get_node_by_id(it)));
       }
     }
 
+    /**
+     * Move constructor.
+     *
+     * @param[in] _colors           Element numbers.
+     * @param[in] _canonization     Canonical representations.
+     * @param[in] _node_order       Atom IDs.
+     * @param[in] _core_nodes       Core atoms.
+     */
     FragmentCanonization(const ShortVector &_colors, const LongVector &_canonization,
                          const ShortVector &_node_order, BoolVector _core_nodes) :
         Canonization(_colors, _canonization, _node_order),
         _core_nodes(std::move(_core_nodes)) {}
 
+    /**
+     * Returns a bool vector indicating the core atoms in canonical order.
+     *
+     * @return  Core atoms.
+     */
     const BoolVector &get_core_nodes() const {
       return _core_nodes;
     }
 
+    /**
+     * Isomorphism test.
+     *
+     * @param[in] other Other fragment canonization.
+     * @return          True, if isomorphic to other fragment canonization, false otherwise.
+     */
     const bool is_isomorphic(FragmentCanonization & other) const;
 
   };
