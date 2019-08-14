@@ -259,6 +259,4 @@ if (BUILD_TESTS)
 
 endif()
 
-# TODO python arg names
-# TODO documentation
-# TODO check if all methods (except methods with stream parameters) are exposed to python
+# TODO write README

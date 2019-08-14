@@ -74,24 +74,37 @@ bool run_mcf(Product &product, FragmentVector &fragments,
 
 }
 
-bool mogli::maximal_common_fragments(Molecule &mol1, Molecule &mol2,
+bool mogli::maximal_common_fragments(Molecule &mol1,
+                                     Molecule &mol2,
                                      FragmentVector &fragments,
-                                     MatchVector &matches_mol1, MatchVector &matches_mol2,
-                                     int shell, unsigned int min_core_size,
-                                     Product::GenerationType prod_gen, bool reduce_subgraphs, bool maximum,
-                                     int timeout_seconds) {
-  return maximal_common_fragments(mol1, mol2, fragments, matches_mol1, matches_mol2, shell, min_core_size,
-                                  std::numeric_limits<int>::max(), prod_gen, reduce_subgraphs, maximum, timeout_seconds);
-}
+                                     MatchVector &matches_mol1,
+                                     MatchVector &matches_mol2,
+                                     int shell,
+                                     int timeout_seconds,
+                                     Product::GenerationType prod_gen,
+                                     const ElementMatcher &matcher,
+                                     bool maximum,
+                                     int min_core_size,
+                                     int max_core_size,
+                                     bool reduce_subgraphs) {
 
-bool mogli::maximal_common_fragments(Molecule &mol1, Molecule &mol2,
-                                     FragmentVector &fragments,
-                                     MatchVector &matches_mol1, MatchVector &matches_mol2,
-                                     int shell, unsigned int min_core_size, unsigned int max_core_size,
-                                     Product::GenerationType prod_gen, bool reduce_subgraphs, bool maximum,
-                                     int timeout_seconds) {
+  if (shell < 0) {
+    throw std::invalid_argument("shell = " + std::to_string(shell));
+  }
+  if (timeout_seconds <= 0) {
+    throw std::invalid_argument("timeout_seconds = " + std::to_string(timeout_seconds));
+  }
+  if (min_core_size < 0) {
+    throw std::invalid_argument("min_core_size = " + std::to_string(min_core_size));
+  }
+  if (max_core_size <= 0) {
+    throw std::invalid_argument("max_core_size = " + std::to_string(max_core_size));
+  }
+  if (min_core_size >= max_core_size) {
+    throw std::invalid_argument("min_core_size >= max_core_size");
+  }
 
-  Product product(mol1, mol2, shell, prod_gen, min_core_size);
+  Product product(mol1, mol2, static_cast<int>(shell), prod_gen, min_core_size, matcher);
 
   std::chrono::high_resolution_clock::time_point start = std::chrono::high_resolution_clock::now();
   long microseconds = 1000l * timeout_seconds;
@@ -100,7 +113,8 @@ bool mogli::maximal_common_fragments(Molecule &mol1, Molecule &mol2,
   if (!reduce_subgraphs) {
     if (product.get_components() == 1) {
       timeout |= run_mcf(product, fragments, matches_mol1, matches_mol2,
-                         min_core_size, max_core_size, maximum, start, microseconds);
+                         static_cast<int>(min_core_size), static_cast<int>(max_core_size),
+                         maximum, start, microseconds);
     } else {
       std::vector<int> idx(product.get_components());
       std::iota(idx.begin(), idx.end(), 0);
@@ -115,7 +129,8 @@ bool mogli::maximal_common_fragments(Molecule &mol1, Molecule &mol2,
 
         Product component(product, c);
         timeout |= run_mcf(component, fragments, matches_mol1, matches_mol2,
-                           min_core_size, max_core_size, maximum, start, microseconds);
+                           static_cast<int>(min_core_size), static_cast<int>(max_core_size),
+                           maximum, start, microseconds);
 
         std::chrono::high_resolution_clock::time_point now = std::chrono::high_resolution_clock::now();
         long duration = std::chrono::duration_cast<std::chrono::microseconds>( now - start ).count();
@@ -136,7 +151,8 @@ bool mogli::maximal_common_fragments(Molecule &mol1, Molecule &mol2,
 
     if (product.get_components() == 1) {
       timeout |= run_mcf(product, frags, matches1, matches2,
-                         min_core_size, max_core_size, maximum, start, microseconds);
+                         static_cast<int>(min_core_size), static_cast<int>(max_core_size),
+                         maximum, start, microseconds);
     } else {
       std::vector<int> idx(product.get_components());
       std::iota(idx.begin(), idx.end(), 0);
@@ -151,7 +167,8 @@ bool mogli::maximal_common_fragments(Molecule &mol1, Molecule &mol2,
 
         Product component(product, c);
         timeout |= run_mcf(component, frags, matches1, matches2,
-                           min_core_size, max_core_size, maximum, start, microseconds);
+                           static_cast<int>(min_core_size), static_cast<int>(max_core_size),
+                           maximum, start, microseconds);
 
         std::chrono::high_resolution_clock::time_point now = std::chrono::high_resolution_clock::now();
         long duration = std::chrono::duration_cast<std::chrono::microseconds>( now - start ).count();
@@ -188,7 +205,7 @@ bool mogli::maximal_common_fragments(Molecule &mol1, Molecule &mol2,
       IntVector node_ids_current;
       node_ids_current.reserve(frags.at(current)->get_atom_count());
       Tgraph* graph_small = translate_graph(*frags.at(current), node_ids_current);
-      int n = frags.at(current)->get_atom_count();
+      int n = static_cast<int>(frags.at(current)->get_atom_count());
       int map[n];
       bool are_sub_iso = false;
 

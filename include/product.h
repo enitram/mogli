@@ -91,7 +91,8 @@ namespace mogli {
   public:
     Product(const Product& parent, int component);
 
-    Product(const Molecule& mol1, const Molecule& mol2, int shell, GenerationType gen, unsigned int min_core_size);
+    Product(const Molecule& mol1, const Molecule& mol2, int shell, GenerationType gen,
+            unsigned int min_core_size, const ElementMatcher & matcher);
 
     const Molecule& get_mol1() const {
       return _mol1;
@@ -169,11 +170,11 @@ namespace mogli {
 
     Node add_node(const Node& u, const Node& v);
 
-    int generate_nodes();
+    int generate_nodes(const ElementMatcher & matcher);
 
-    int generate_nodes_deg1();
+    int generate_nodes_deg1(const ElementMatcher & matcher);
 
-    int generate_nodes_sub();
+    int generate_nodes_sub(const ElementMatcher & matcher);
 
     int generate_edges();
 

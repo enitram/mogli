@@ -80,7 +80,8 @@ Product::Product(const mogli::Product &parent, int component)
 }
 
 Product::Product(const mogli::Molecule &mol1, const mogli::Molecule &mol2, int shell,
-                 mogli::Product::GenerationType gen, unsigned int min_core_size)
+                 mogli::Product::GenerationType gen, unsigned int min_core_size,
+                 const ElementMatcher & matcher)
     : _mol1(mol1)
     , _mol2(mol2)
     , _shell(shell)
@@ -98,11 +99,11 @@ Product::Product(const mogli::Molecule &mol1, const mogli::Molecule &mol2, int s
     , _is_complete(false) {
   int V, E;
   if ((gen == DEG_1 || gen == UNCON_DEG_1) && shell > 0) {
-    V = generate_nodes_deg1();
+    V = generate_nodes_deg1(matcher);
   } else if ((gen == SUB || gen == UNCON_SUB) && shell > 0) {
-    V = generate_nodes_sub();
+    V = generate_nodes_sub(matcher);
   } else {
-    V = generate_nodes();
+    V = generate_nodes(matcher);
   }
   if (gen == UNCON || gen == UNCON_DEG_1 || gen == UNCON_SUB) {
     E = generate_edges_connected(min_core_size);
@@ -334,7 +335,7 @@ void Product::generate_subgraph(const Molecule &mol, const Node &v, NodeToIntSet
   sizes.insert(std::make_pair(size, v));
 }
 
-int Product::generate_nodes() {
+int Product::generate_nodes(const ElementMatcher & matcher) {
   const Graph& g1 = _mol1.get_graph();
   const Graph& g2 = _mol2.get_graph();
 
@@ -352,8 +353,8 @@ int Product::generate_nodes() {
   int V = 0;
   for (NodeIt u = _mol1.get_node_iter(); u != lemon::INVALID; ++u) {
     for (NodeIt v = _mol2.get_node_iter(); v != lemon::INVALID; ++v) {
-      if (_mol1.get_color(u) == _mol2.get_color(v) &&
-          subgraph_canons1[u].is_isomorphic(subgraph_canons2[v])) {
+      if (matcher(_mol1.get_color(u), _mol2.get_color(v)) &&
+          subgraph_canons1[u].is_isomorphic(subgraph_canons2[v], matcher)) {
         const Node& uv = add_node(u, v);
         ++V;
         _node_sizes[uv] = 1;
@@ -366,7 +367,7 @@ int Product::generate_nodes() {
   return V;
 }
 
-int Product::generate_nodes_deg1() {
+int Product::generate_nodes_deg1(const ElementMatcher & matcher) {
   const Graph& g1 = _mol1.get_graph();
   const Graph& g2 = _mol2.get_graph();
 
@@ -397,13 +398,13 @@ int Product::generate_nodes_deg1() {
       if (reduced_nodes[u].count(_mol2.get_id(v)) > 0) {
         continue;
       }
-      if (_mol1.get_color(u) == _mol2.get_color(v)) {
+      if (matcher(_mol1.get_color(u), _mol2.get_color(v))) {
         if (!has_canon[v]) {
           generate_subgraph_canonization(_mol2, v, subgraph_canons);
           has_canon[v] = true;
         }
         Canonization& canon2 = subgraph_canons[v];
-        if (canon1.is_isomorphic(canon2)) {
+        if (canon1.is_isomorphic(canon2, matcher)) {
           // generate product node uv
           const Node& uv = add_node(u, v);
           ++V;
@@ -450,7 +451,7 @@ int Product::generate_nodes_deg1() {
 
 }
 
-int Product::generate_nodes_sub() {
+int Product::generate_nodes_sub(const ElementMatcher & matcher) {
   const Graph& g1 = _mol1.get_graph();
   const Graph& g2 = _mol2.get_graph();
 
@@ -486,13 +487,13 @@ int Product::generate_nodes_sub() {
       if (reduced_nodes[u].count(_mol2.get_id(v)) > 0) {
         continue;
       }
-      if (_mol1.get_color(u) == _mol2.get_color(v)) {
+      if (matcher(_mol1.get_color(u), _mol2.get_color(v))) {
         if (!has_canon[v]) {
           generate_subgraph_canonization(_mol2, v, subgraph_canons);
           has_canon[v] = true;
         }
         Canonization& canon2 = subgraph_canons[v];
-        if (canon1.is_isomorphic(canon2)) {
+        if (canon1.is_isomorphic(canon2, matcher)) {
           // generate product node uv
           const Node& uv = add_node(u, v);
           ++V;
@@ -541,7 +542,6 @@ int Product::generate_edges() {
   for (NodeIt u1v1(_g); u1v1 != lemon::INVALID; ++u1v1) {
     Node u1 = _g_to_mol1[u1v1];
     Node v1 = _g_to_mol2[u1v1];
-    assert(_mol1.get_color(u1) == _mol2.get_color(v1));
 
     for (NodeIt u2v2 = u1v1; u2v2 != lemon::INVALID; ++ u2v2) {
       if (u1v1 == u2v2)
@@ -549,8 +549,6 @@ int Product::generate_edges() {
 
       Node u2 = _g_to_mol1[u2v2];
       Node v2 = _g_to_mol2[u2v2];
-
-      assert(_mol1.get_color(u2) == _mol2.get_color(v2));
 
       if (u1 != u2 && v1 != v2) {
         bool u1u2 = arcLookUp1(u1, u2) != lemon::INVALID;
@@ -579,7 +577,6 @@ int Product::generate_edges_connected(unsigned int min_core_size) {
   for (NodeIt u1v1(_g); u1v1 != lemon::INVALID; ++u1v1) {
     Node u1 = _g_to_mol1[u1v1];
     Node v1 = _g_to_mol2[u1v1];
-    assert(_mol1.get_color(u1) == _mol2.get_color(v1));
 
     for (NodeIt u2v2 = u1v1; u2v2 != lemon::INVALID; ++ u2v2) {
       if (u1v1 == u2v2)
@@ -638,7 +635,6 @@ int Product::generate_edges_connected(unsigned int min_core_size) {
 
         Node u2 = _g_to_mol1[u2v2];
         Node v2 = _g_to_mol2[u2v2];
-        assert(_mol1.get_color(u2) == _mol2.get_color(v2));
 
         if (u1 != u2 && v1 != v2) {
           bool u1u2 = arcLookUp1(u1, u2) == lemon::INVALID;

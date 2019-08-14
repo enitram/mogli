@@ -27,7 +27,7 @@
 
 // public functions
 
-const bool mogli::Canonization::is_isomorphic(const Canonization &other) const {
+const bool mogli::Canonization::is_isomorphic(const Canonization &other, const ElementMatcher & matcher) const {
   const ShortVector& colors2 = other.get_colors();
 
   if (_colors.size() != colors2.size())
@@ -41,7 +41,7 @@ const bool mogli::Canonization::is_isomorphic(const Canonization &other) const {
   for (auto i1 = _colors.begin(), i2 = colors2.begin(),
            ie1 = _colors.end(), ie2 = colors2.end();
        i1 != ie1 && i2 != ie2; ++i1, ++i2) {
-    if (*i1 != *i2)
+    if (!matcher(*i1, *i2))
       return false;
   }
 

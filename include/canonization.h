@@ -98,12 +98,16 @@ namespace mogli {
     }
 
     /**
-     * Isomorphism test.
+     * @brief Isomorphism test.
      *
-     * @param[in] other Other canonization.
-     * @return          True, if isomorphic to other canonization, false otherwise.
+     * The element matching function determines when two atoms are matching. Usually, two atoms match if they are
+     * of the same element (and thus have the same element numbers).
+     *
+     * @param[in] other     Other canonization.
+     * @param[in] matcher   Element number matching function.
+     * @return              True, if isomorphic to other canonization, false otherwise.
      */
-    const bool is_isomorphic(const Canonization &other) const;
+    const bool is_isomorphic(const Canonization &other, const ElementMatcher & matcher = &default_matcher) const;
 
   protected:
 

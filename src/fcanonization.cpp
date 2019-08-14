@@ -20,8 +20,8 @@
 #include "fcanonization.h"
 
 
-const bool mogli::FragmentCanonization::is_isomorphic(FragmentCanonization &other) const  {
-  if (Canonization::is_isomorphic(other)) {
+const bool mogli::FragmentCanonization::is_isomorphic(FragmentCanonization &other, const ElementMatcher & matcher) const  {
+  if (Canonization::is_isomorphic(other, matcher)) {
     const BoolVector & cores2 = other.get_core_nodes();
 
     if (_core_nodes.size() != cores2.size())

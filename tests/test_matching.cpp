@@ -53,9 +53,9 @@ TEST_CASE("product_noopt", "[algo]") {
   mol1.read_lgf(ETHANE_1);
   mol2.read_lgf(ETHANE_2);
 
-  Product p0(mol1, mol2, 0, Product::GenerationType::NO_OPT, 0);
-  Product p1(mol1, mol2, 1, Product::GenerationType::NO_OPT, 0);
-  Product p2(mol1, mol2, 2, Product::GenerationType::NO_OPT, 0);
+  Product p0(mol1, mol2, 0, Product::GenerationType::NO_OPT, 0, &default_matcher);
+  Product p1(mol1, mol2, 1, Product::GenerationType::NO_OPT, 0, &default_matcher);
+  Product p2(mol1, mol2, 2, Product::GenerationType::NO_OPT, 0, &default_matcher);
 
   const auto & g0 = p0.get_graph();
   const auto & g1 = p1.get_graph();
@@ -105,7 +105,7 @@ TEST_CASE("product_deg1", "[algo]") {
   mol1.read_lgf(ETHANE_1);
   mol2.read_lgf(ETHANE_2);
 
-  Product p(mol1, mol2, 1, Product::GenerationType::DEG_1, 0);
+  Product p(mol1, mol2, 1, Product::GenerationType::DEG_1, 0, &default_matcher);
 
   const auto & g = p.get_graph();
 
@@ -129,7 +129,7 @@ TEST_CASE("product_uncon", "[algo]") {
   mol1.read_lgf(GENERIC_1, config);
   mol2.read_lgf(GENERIC_2, config);
 
-  Product p(mol1, mol2, 1, Product::GenerationType::UNCON, 1);
+  Product p(mol1, mol2, 1, Product::GenerationType::UNCON, 1, &default_matcher);
 
   const auto & g = p.get_graph();
 
@@ -174,7 +174,7 @@ TEST_CASE("product_uncon_deg1", "[algo]") {
   mol1.read_lgf(GENERIC_1, config);
   mol2.read_lgf(GENERIC_2, config);
 
-  Product p(mol1, mol2, 1, Product::GenerationType::UNCON_DEG_1, 1);
+  Product p(mol1, mol2, 1, Product::GenerationType::UNCON_DEG_1, 1, &default_matcher);
 
   const auto & g = p.get_graph();
 
@@ -208,7 +208,7 @@ TEST_CASE("bronkerbosch", "[algo]") {
   mol1.read_lgf(ETHANE_1);
   mol2.read_lgf(ETHANE_2);
 
-  Product p(mol1, mol2, 1, Product::GenerationType::DEG_1, 0);
+  Product p(mol1, mol2, 1, Product::GenerationType::DEG_1, 0, &default_matcher);
 
   BronKerbosch bk(p, 0, std::numeric_limits<int>::max(), false);
   bk.run(TIMEOUT);
@@ -232,21 +232,13 @@ TEST_CASE("mcf_isomorphic_graphs", "[algo]") {
   MatchVector matches1, matches2;
 
   auto t1 = maximal_common_fragments(
-      mol1, mol2, frag_noopt, matches1, matches2, 1, 0,
-      Product::GenerationType::NO_OPT,
-      false, false, TIMEOUT);
+      mol1, mol2, frag_noopt, matches1, matches2, 1, TIMEOUT,Product::GenerationType::NO_OPT);
   auto t2 = maximal_common_fragments(
-      mol1, mol2, frag_deg1, matches1, matches2, 1, 0,
-      Product::GenerationType::DEG_1,
-      false, false, TIMEOUT);
+      mol1, mol2, frag_deg1, matches1, matches2, 1, TIMEOUT, Product::GenerationType::DEG_1);
   auto t3 = maximal_common_fragments(
-      mol1, mol2, frag_uncon, matches1, matches2, 1, 0,
-      Product::GenerationType::UNCON,
-      false, false, TIMEOUT);
+      mol1, mol2, frag_uncon, matches1, matches2, 1, TIMEOUT, Product::GenerationType::UNCON);
   auto t4 = maximal_common_fragments(
-      mol1, mol2, frag_uncon_deg1, matches1, matches2, 1, 0,
-      Product::GenerationType::UNCON_DEG_1,
-      false, false, TIMEOUT);
+      mol1, mol2, frag_uncon_deg1, matches1, matches2, 1, TIMEOUT, Product::GenerationType::UNCON_DEG_1);;
 
   REQUIRE(t1);
   REQUIRE(t2);
@@ -285,21 +277,17 @@ TEST_CASE("mcf_isomorphic_graphs_max", "[algo]") {
   MatchVector matches1, matches2;
 
   auto t1 = maximal_common_fragments(
-      mol1, mol2, frag_noopt, matches1, matches2, 1, 0,
-      Product::GenerationType::NO_OPT,
-      false, true, TIMEOUT);
+      mol1, mol2, frag_noopt, matches1, matches2, 1, TIMEOUT,
+      Product::GenerationType::NO_OPT, &default_matcher, true);
   auto t2 = maximal_common_fragments(
-      mol1, mol2, frag_deg1, matches1, matches2, 1, 0,
-      Product::GenerationType::DEG_1,
-      false, true, TIMEOUT);
+      mol1, mol2, frag_deg1, matches1, matches2, 1, TIMEOUT,
+      Product::GenerationType::DEG_1, &default_matcher, true);
   auto t3 = maximal_common_fragments(
-      mol1, mol2, frag_uncon, matches1, matches2, 1, 0,
-      Product::GenerationType::UNCON,
-      false, true, TIMEOUT);
+      mol1, mol2, frag_uncon, matches1, matches2, 1, TIMEOUT,
+      Product::GenerationType::UNCON, &default_matcher, true);
   auto t4 = maximal_common_fragments(
-      mol1, mol2, frag_uncon_deg1, matches1, matches2, 1, 0,
-      Product::GenerationType::UNCON_DEG_1,
-      false, true, TIMEOUT);
+      mol1, mol2, frag_uncon_deg1, matches1, matches2, 1, TIMEOUT,
+      Product::GenerationType::UNCON_DEG_1, &default_matcher, true);
 
   REQUIRE(t1);
   REQUIRE(t2);
@@ -337,17 +325,11 @@ TEST_CASE("mcf_isomorphic_graphs_big", "[algo]") {
   MatchVector matches1, matches2;
 
   auto t1 = maximal_common_fragments(
-      mol1, mol2, frag_noopt, matches1, matches2, 1, 0,
-      Product::GenerationType::NO_OPT,
-      false, false, TIMEOUT_BIG);
+      mol1, mol2, frag_noopt, matches1, matches2, 1, TIMEOUT_BIG, Product::GenerationType::NO_OPT);
   auto t2 = maximal_common_fragments(
-      mol1, mol2, frag_deg1, matches1, matches2, 1, 0,
-      Product::GenerationType::DEG_1,
-      false, false, TIMEOUT_BIG);
+      mol1, mol2, frag_deg1, matches1, matches2, 1, TIMEOUT_BIG, Product::GenerationType::DEG_1);
   auto t3 = maximal_common_fragments(
-      mol1, mol2, frag_uncon_deg1, matches1, matches2, 1, 0,
-      Product::GenerationType::UNCON_DEG_1,
-      false, false, TIMEOUT_BIG);
+      mol1, mol2, frag_uncon_deg1, matches1, matches2, 1, TIMEOUT_BIG, Product::GenerationType::UNCON_DEG_1);
 
   REQUIRE(t1);
   REQUIRE(t2);
@@ -382,13 +364,10 @@ TEST_CASE("mcf_isomorphic_graphs_large", "[algo]") {
   MatchVector matches1, matches2;
 
   auto t1 = maximal_common_fragments(
-      mol1, mol2, frag_noopt, matches1, matches2, 1, 0,
-      Product::GenerationType::NO_OPT,
-      false, true, TIMEOUT);
+      mol1, mol2, frag_noopt, matches1, matches2, 1, TIMEOUT, Product::GenerationType::NO_OPT);
   auto t2 = maximal_common_fragments(
-      mol1, mol2, frag_uncon_deg1, matches1, matches2, 1, 0,
-      Product::GenerationType::UNCON_DEG_1,
-      false, true, TIMEOUT_BIG);
+      mol1, mol2, frag_uncon_deg1, matches1, matches2, 1, TIMEOUT_BIG,
+      Product::GenerationType::UNCON_DEG_1, &default_matcher, true);
 
   REQUIRE_FALSE(t1);
   REQUIRE(t2);
@@ -416,21 +395,13 @@ TEST_CASE("mcf_subisomorphic_graphs", "[algo]") {
   MatchVector matches1, matches2;
 
   auto t1 = maximal_common_fragments(
-      mol1, mol2, frag_noopt, matches1, matches2, 0, 0,
-      Product::GenerationType::NO_OPT,
-      false, false, TIMEOUT_BIG);
+      mol1, mol2, frag_noopt, matches1, matches2, 0, TIMEOUT, Product::GenerationType::NO_OPT);
   auto t2 = maximal_common_fragments(
-      mol1, mol2, frag_deg1, matches1, matches2, 0, 0,
-      Product::GenerationType::DEG_1,
-      false, false, TIMEOUT_BIG);
+      mol1, mol2, frag_deg1, matches1, matches2, 0, TIMEOUT, Product::GenerationType::DEG_1);
   auto t3 = maximal_common_fragments(
-      mol1, mol2, frag_uncon, matches1, matches2, 0, 0,
-      Product::GenerationType::UNCON,
-      false, false, TIMEOUT_BIG);
+      mol1, mol2, frag_uncon, matches1, matches2, 0, TIMEOUT, Product::GenerationType::UNCON);
   auto t4 = maximal_common_fragments(
-      mol1, mol2, frag_uncon_deg1, matches1, matches2, 0, 0,
-      Product::GenerationType::UNCON_DEG_1,
-      false, false, TIMEOUT_BIG);
+      mol1, mol2, frag_uncon_deg1, matches1, matches2, 0, TIMEOUT, Product::GenerationType::UNCON_DEG_1);
 
   REQUIRE(t1);
   REQUIRE(t2);
@@ -469,21 +440,13 @@ TEST_CASE("mcf_subisomorphic_graphs_2", "[algo]") {
   MatchVector matches1, matches2;
 
   auto t1 = maximal_common_fragments(
-      mol1, mol2, frag_noopt, matches1, matches2, 1, 0,
-      Product::GenerationType::NO_OPT,
-      false, false, TIMEOUT_BIG);
+      mol1, mol2, frag_noopt, matches1, matches2, 1, TIMEOUT, Product::GenerationType::NO_OPT);
   auto t2 = maximal_common_fragments(
-      mol1, mol2, frag_deg1, matches1, matches2, 1, 0,
-      Product::GenerationType::DEG_1,
-      false, false, TIMEOUT_BIG);
+      mol1, mol2, frag_deg1, matches1, matches2, 1, TIMEOUT, Product::GenerationType::DEG_1);
   auto t3 = maximal_common_fragments(
-      mol1, mol2, frag_uncon, matches1, matches2, 1, 0,
-      Product::GenerationType::UNCON,
-      false, false, TIMEOUT_BIG);
+      mol1, mol2, frag_uncon, matches1, matches2, 1, TIMEOUT, Product::GenerationType::UNCON);
   auto t4 = maximal_common_fragments(
-      mol1, mol2, frag_uncon_deg1, matches1, matches2, 1, 0,
-      Product::GenerationType::UNCON_DEG_1,
-      false, false, TIMEOUT_BIG);
+      mol1, mol2, frag_uncon_deg1, matches1, matches2, 1, TIMEOUT, Product::GenerationType::UNCON_DEG_1);
 
   REQUIRE(t1);
   REQUIRE(t2);
@@ -523,21 +486,13 @@ TEST_CASE("mcf_graphs_no_match", "[algo]") {
   MatchVector matches1, matches2;
 
   auto t1 = maximal_common_fragments(
-      mol1, mol2, frag_noopt, matches1, matches2, 1, 0,
-      Product::GenerationType::NO_OPT,
-      false, false, TIMEOUT);
+      mol1, mol2, frag_noopt, matches1, matches2, 1, TIMEOUT, Product::GenerationType::NO_OPT);
   auto t2 = maximal_common_fragments(
-      mol1, mol2, frag_deg1, matches1, matches2, 1, 0,
-      Product::GenerationType::DEG_1,
-      false, false, TIMEOUT);
+      mol1, mol2, frag_deg1, matches1, matches2, 1, TIMEOUT, Product::GenerationType::DEG_1);
   auto t3 = maximal_common_fragments(
-      mol1, mol2, frag_uncon, matches1, matches2, 1, 0,
-      Product::GenerationType::UNCON,
-      false, false, TIMEOUT);
+      mol1, mol2, frag_uncon, matches1, matches2, 1, TIMEOUT, Product::GenerationType::UNCON);
   auto t4 = maximal_common_fragments(
-      mol1, mol2, frag_uncon_deg1, matches1, matches2, 1, 0,
-      Product::GenerationType::UNCON_DEG_1,
-      false, false, TIMEOUT);
+      mol1, mol2, frag_uncon_deg1, matches1, matches2, 1, TIMEOUT, Product::GenerationType::UNCON_DEG_1);
 
   REQUIRE(t1);
   REQUIRE(t2);
@@ -548,6 +503,40 @@ TEST_CASE("mcf_graphs_no_match", "[algo]") {
   REQUIRE(frag_deg1.empty());
   REQUIRE(frag_uncon.empty());
   REQUIRE(frag_uncon_deg1.empty());
+
+}
+
+TEST_CASE("mcf_matcher", "[algo]") {
+
+  Molecule mol1, mol2;
+  LGFIOConfig config("label", "atomType");
+
+  mol1.read_lgf(GENERIC_1, config);
+  mol2.read_lgf(GENERIC_2, config);
+
+  FragmentVector frag_default, frag_custom;
+  MatchVector matches1, matches2;
+
+  auto custom = [](unsigned int c1, unsigned int c2) {
+    return c1 == c2 || (c1 == 4 && c2 == 7) || (c1 == 7 && c2 == 4);
+  };
+
+  auto t1 = maximal_common_fragments(
+      mol1, mol2, frag_default, matches1, matches2, 1, TIMEOUT,
+      Product::GenerationType::UNCON_DEG_1, &default_matcher, true);
+  auto t2 = maximal_common_fragments(
+      mol1, mol2, frag_custom, matches1, matches2, 1, TIMEOUT,
+      Product::GenerationType::UNCON_DEG_1, custom, true);
+
+  REQUIRE(t1);
+  REQUIRE(t2);
+
+  REQUIRE_FALSE(frag_default.empty());
+  REQUIRE_FALSE(frag_custom.empty());
+
+  REQUIRE(frag_default[0]->get_atom_count() < mol1.get_atom_count());
+// FIXME 5 == 9
+  REQUIRE(frag_custom[0]->get_atom_count() == mol1.get_atom_count());
 
 }
 

@@ -598,12 +598,16 @@ namespace mogli {
     int split(int max_size, int shell, SharedPtrVector<Molecule>::type &components);
 
     /**
-     * Test if this molecular graph is isomorphic to another molecular graph.
+     * @brief Test if this molecular graph is isomorphic to another molecular graph.
      *
-     * @param[in] other Other molecular graph.
-     * @return          True, if they are isomorphic, false otherwise.
+     * The element matching function determines when two atoms are matching. Usually, two atoms match if they are
+     * of the same element (and thus have the same element numbers).
+     *
+     * @param[in] other     Other molecular graph.
+     * @param[in] matcher   Element number matching function.
+     * @return              True, if they are isomorphic, false otherwise.
      */
-    const bool is_isomorphic(Molecule &other) const;
+    const bool is_isomorphic(Molecule &other, const ElementMatcher & matcher = &default_matcher) const;
 
     /**
      * Export molecular graph to dot (graphviz) format.

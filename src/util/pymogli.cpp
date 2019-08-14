@@ -17,6 +17,7 @@
 //    along with this program.  If not, see <https://www.gnu.org/licenses/>.                                          //
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+#include <pybind11/functional.h>
 #include <pybind11/iostream.h>
 #include <pybind11/operators.h>
 #include <pybind11/pybind11.h>
@@ -39,6 +40,7 @@ PYBIND11_MAKE_OPAQUE(mogli::FragmentVector);
 PYBIND11_MAKE_OPAQUE(mogli::MatchVector);
 PYBIND11_MAKE_OPAQUE(mogli::SharedPtrVector<mogli::Molecule>::type)
 PYBIND11_MAKE_OPAQUE(mogli::NodeVector);
+PYBIND11_MAKE_OPAQUE(mogli::IntToIntMap);
 
 inline py::object pass_through(py::object const& o) { return o; }
 
@@ -156,15 +158,19 @@ PYBIND11_MODULE(mogli, m) {
           )")
       .def("is_isomorphic",
           &mogli::Canonization::is_isomorphic,
-          "other"_a,
+          "other"_a, "matcher"_a = py::cpp_function(&mogli::default_matcher),
           R"(
           Isomorphism test.
 
           Args:
-              other (Canonization): Other canonization.
+              other (Canonization):                 Other canonization.
+              matcher (Callable[[int, int], bool]): Element number matching function.
 
           Returns:
               bool. True, if isomorphic to other canonization, false otherwise.
+
+          The element matching function determines when two atoms are matching. Usually, two atoms match if they are
+          of the same element (and thus have the same element numbers).
           )");
 
   py::class_<mogli::Edge>(m, "Edge")
@@ -198,16 +204,19 @@ PYBIND11_MODULE(mogli, m) {
       .def(
           "is_isomorphic",
           &mogli::FragmentCanonization::is_isomorphic,
-          "other"_a,
+          "other"_a, "matcher"_a = py::cpp_function(&mogli::default_matcher),
           R"(
           Isomorphism test.
 
           Args:
-              other (Canonization): Other canonization.
+              other (Canonization):                 Other canonization.
+              matcher (Callable[[int, int], bool]): Element number matching function.
 
           Returns:
               bool. True, if isomorphic to other canonization, false otherwise.
 
+          The element matching function determines when two atoms are matching. Usually, two atoms match if they are
+          of the same element (and thus have the same element numbers).
           )");
 
   py::class_<mogli::LGFIOConfig> conf(m, "LGFIOConfig");
@@ -629,15 +638,19 @@ PYBIND11_MODULE(mogli, m) {
           )")
       .def("is_isomorphic",
           &mogli::Molecule::is_isomorphic,
-          "other"_a,
+          "other"_a, "matcher"_a = py::cpp_function(&mogli::default_matcher),
           R"(
           Test if this molecular graph is isomorphic to another molecular graph.
 
           Args:
-              other (Molecule): Other molecular graph.
+              other (Molecule):                     Other molecular graph.
+              matcher (Callable[[int, int], bool]): Element number matching function.
 
           Returns:
               bool. True, if they are isomorphic, false otherwise.
+
+          The element matching function determines when two atoms are matching. Usually, two atoms match if they are
+          of the same element (and thus have the same element numbers).
           )")
       .def("print_dot",
           py::overload_cast<>(&mogli::Molecule::print_dot, py::const_),
@@ -861,18 +874,43 @@ PYBIND11_MODULE(mogli, m) {
               * matches (MatchVector):      Match objects mapping from fragments to the molecular graph.
       )");
 
+  m.attr("max_int") = py::int_(std::numeric_limits<int>::max());
+
   m.def("maximal_common_fragments",
-      [](mogli::Molecule &mol1, mogli::Molecule &mol2,
-          int shell, unsigned int min_core_size, unsigned int max_core_size,
-          mogli::Product::GenerationType prod_gen, bool maximum, int timeout_seconds){
-        mogli::FragmentVector fragments;
-        mogli::MatchVector matches_mol1, matches_mol2;
-        bool t = mogli::maximal_common_fragments(mol1, mol2, fragments, matches_mol1, matches_mol2,
-            shell, min_core_size, max_core_size, prod_gen, false, maximum, timeout_seconds);
+      [](mogli::Molecule &mol1,
+         mogli::Molecule &mol2,
+         int shell,
+         int timeout_seconds,
+         mogli::Product::GenerationType prod_gen,
+         const mogli::ElementMatcher & matcher,
+         bool maximum,
+         int min_core_size,
+         int max_core_size,
+         bool reduce_subgraphs) {
+      mogli::FragmentVector fragments;
+      mogli::MatchVector matches_mol1, matches_mol2;
+      bool t = mogli::maximal_common_fragments(mol1,
+                                               mol2,
+                                               fragments,
+                                               matches_mol1,
+                                               matches_mol2,
+                                               shell,
+                                               timeout_seconds,
+                                               prod_gen,
+                                               matcher,
+                                               maximum,
+                                               min_core_size,
+                                               max_core_size,
+                                               reduce_subgraphs);
         return py::make_tuple(t, fragments, matches_mol1, matches_mol2);
       },
-      "mol1"_a, "mol2"_a, "shell"_a, "min_core_size"_a, "max_core_size"_a,
-      "prod_gen"_a, "maximum"_a, "timeout_seconds"_a,
+      "mol1"_a, "mol2"_a, "shell"_a, "timeout_seconds"_a,
+      "prod_gen"_a = mogli::Product::GenerationType::UNCON_DEG_1,
+        "matcher"_a = py::cpp_function(&mogli::default_matcher),
+      "maximum"_a = false,
+      "min_core_size"_a = 0,
+      py::arg_v("max_core_size", std::numeric_limits<int>::max(), "mogli.max_int"),
+      "reduce_subgraphs"_a = false,
       py::return_value_policy::move,
       R"(
       Computes maximal common fragments of two molecular graphs.
@@ -881,11 +919,13 @@ PYBIND11_MODULE(mogli, m) {
           mol1 (Molecule):           First molecular graph.
           mol2 (Molecule):           Second molecular graph.
           shell (int):               Shell size. Maximal number of bonds from any core atom in the fragments.
-          min_core_size (int):       Minimal number of core atoms for each fragment.
-          max_core_size (int):       Maximal number of core atoms for each fragment.
+          timeout_seconds (int):     Timeout in seconds.
+          matcher (Callable[[int, int], bool]): Element number matching function.
           prod_gen (GenerationType): Product graph data reduction rule.
           maximum (bool):            If true, reports only the largest fragments.
-          timeout_seconds (int):     Timeout in seconds.
+          min_core_size (int):       Minimal number of core atoms for each fragment.
+          max_core_size (int):       Maximal number of core atoms for each fragment.
+          reduce_subgraphs (bool):   Merge resulting fragments, if one is a subgraph of the other.
 
       Returns:
           (bool, FragmentVector, MatchVector, MatchVector)
@@ -896,46 +936,11 @@ PYBIND11_MODULE(mogli, m) {
 
       The heart and soul of this library. See `this paper <https://doi.org/10.7287/peerj.preprints.3250v1>`_
       for more information. The data reduction rule with the most speedup is GenerationType.UNCON_DEG_1. It is
-      recommended to always use this rule, the other rules are mainly for evaluation.
+      recommended to always use this rule, the other rules are mainly for evaluation. The element matching function
+      determines when two atoms are matching. Usually, two atoms match if they are of the same element
+      (and thus have the same element numbers).
       )");
 
-  m.def("maximal_common_fragments",
-      [](mogli::Molecule &mol1, mogli::Molecule &mol2,
-         int shell, unsigned int min_core_size,
-         mogli::Product::GenerationType prod_gen, bool maximum, int timeout_seconds){
-        mogli::FragmentVector fragments;
-        mogli::MatchVector matches_mol1, matches_mol2;
-        bool t = mogli::maximal_common_fragments(mol1, mol2, fragments, matches_mol1, matches_mol2,
-                                        shell, min_core_size, prod_gen, false, maximum, timeout_seconds);
-        return py::make_tuple(t, fragments, matches_mol1, matches_mol2);
-      },
-        "mol1"_a, "mol2"_a, "shell"_a, "max_core_size"_a,
-        "prod_gen"_a, "maximum"_a, "timeout_seconds"_a,
-      py::return_value_policy::move,
-        R"(
-      Computes maximal common fragments of two molecular graphs.
-
-      Args:
-          mol1 (Molecule):           First molecular graph.
-          mol2 (Molecule):           Second molecular graph.
-          shell (int):               Shell size. Maximal number of bonds from any core atom in the fragments.
-          min_core_size (int):       Minimal number of core atoms for each fragment.
-          max_core_size (int):       Maximal number of core atoms for each fragment.
-          prod_gen (GenerationType): Product graph data reduction rule.
-          maximum (bool):            If true, reports only the largest fragments.
-          timeout_seconds (int):     Timeout in seconds.
-
-      Returns:
-          (bool, FragmentVector, MatchVector, MatchVector)
-              * success (bool):             False, if timeout occurred, true otherwise.
-              * fragments (FragmentVector): Maximal common fragments.
-              * matches_mol1 (MatchVector): Match objects mapping from fragments to the first molecular graph.
-              * matches_mol2 (MatchVector): Match objects mapping from fragments to the second molecular graph.
-
-      The heart and soul of this library. See `this paper <https://doi.org/10.7287/peerj.preprints.3250v1>`_
-      for more information. The data reduction rule with the most speedup is GenerationType.UNCON_DEG_1. It is
-      recommended to always use this rule, the other rules are mainly for evaluation.
-      )");
 
   // hashing methods
 
