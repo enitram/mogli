@@ -1103,8 +1103,6 @@ PYBIND11_MODULE(mogli, m) {
           FragmentCanonization. Canonical representation.
       )");
 
-  // TODO unpack_fragment and unpack_molecule with custom perdiodic table
-
   m.def("unpack_fragment",
       py::overload_cast<const std::string &>(&deserialize_ptr<mogli::Fragment>),
       "str"_a,
