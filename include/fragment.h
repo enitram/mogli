@@ -54,6 +54,17 @@ namespace mogli {
         _core_node_count(0) {}
 
     /**
+     * Constructor with custom periodic table.
+     *
+     * @param[in] periodic_table    Periodic table.
+     */
+    explicit Fragment(PeriodicTable & periodic_table) :
+        Molecule(periodic_table),
+        _is_core(_g, false),
+        _shell_size(0),
+        _core_node_count(0) {}
+
+    /**
      * Constructs a molecular fragment from a clique in the product graph.
      *
      * @param[in] product   Product graph of two molecules.

@@ -27,7 +27,7 @@
 
 // public functions
 
-const bool mogli::Canonization::is_isomorphic(const Canonization &other, const ElementMatcher & matcher) const {
+const bool mogli::Canonization::is_isomorphic(const Canonization &other) const {
   const ShortVector& colors2 = other.get_colors();
 
   if (_colors.size() != colors2.size())
@@ -41,7 +41,7 @@ const bool mogli::Canonization::is_isomorphic(const Canonization &other, const E
   for (auto i1 = _colors.begin(), i2 = colors2.begin(),
            ie1 = _colors.end(), ie2 = colors2.end();
        i1 != ie1 && i2 != ie2; ++i1, ++i2) {
-    if (!matcher(*i1, *i2))
+    if (*i1 != *i2)
       return false;
   }
 
@@ -88,7 +88,7 @@ void mogli::Canonization::init(const mogli::Molecule &mol, const mogli::Canoniza
 void mogli::Canonization::dfs(const Node& current, const Node& last, const Molecule& mol,
                               NodeToBoolMap& visited, ShortSet& colorSet, ShortToNodeVectorMap& colorMap) {
   visited[current] = true;
-  unsigned short color = mol.get_color(current);
+  unsigned short color = mol.get_perdiodic_table().get_equivalency_class(mol.get_color(current));
   colorSet.insert(color);
   if (colorMap.find(color) == colorMap.end()) {
     NodeVector vector;
@@ -110,7 +110,7 @@ void mogli::Canonization::dfs(const Node& current, const Node& last, const Molec
                               ShortToNodeVectorMap& colorMap, unsigned int& node_count) {
   ++node_count;
   visited[current] = true;
-  unsigned short color = mol.get_color(current);
+  unsigned short color = mol.get_perdiodic_table().get_equivalency_class(mol.get_color(current));
   colorSet.insert(color);
   if (colorMap.find(color) == colorMap.end()) {
     NodeVector vector;

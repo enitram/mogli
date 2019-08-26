@@ -19,8 +19,6 @@
 
 #include "product.h"
 
-#include <assert.h>
-
 #include <lemon/connectivity.h>
 
 using namespace mogli;
@@ -80,8 +78,7 @@ Product::Product(const mogli::Product &parent, int component)
 }
 
 Product::Product(const mogli::Molecule &mol1, const mogli::Molecule &mol2, int shell,
-                 mogli::Product::GenerationType gen, unsigned int min_core_size,
-                 const ElementMatcher & matcher)
+                 mogli::Product::GenerationType gen, unsigned int min_core_size)
     : _mol1(mol1)
     , _mol2(mol2)
     , _shell(shell)
@@ -99,11 +96,11 @@ Product::Product(const mogli::Molecule &mol1, const mogli::Molecule &mol2, int s
     , _is_complete(false) {
   int V, E;
   if ((gen == DEG_1 || gen == UNCON_DEG_1) && shell > 0) {
-    V = generate_nodes_deg1(matcher);
+    V = generate_nodes_deg1();
   } else if ((gen == SUB || gen == UNCON_SUB) && shell > 0) {
-    V = generate_nodes_sub(matcher);
+    V = generate_nodes_sub();
   } else {
-    V = generate_nodes(matcher);
+    V = generate_nodes();
   }
   if (gen == UNCON || gen == UNCON_DEG_1 || gen == UNCON_SUB) {
     E = generate_edges_connected(min_core_size);
@@ -116,19 +113,19 @@ Product::Product(const mogli::Molecule &mol1, const mogli::Molecule &mol2, int s
 
 // public methods
 
-const std::string Product::print_dot() const {
+std::string Product::print_dot() const {
   std::stringstream buffer;
   print_dot(buffer);
   return buffer.str();
 }
 
-const std::string Product::print_dot(const mogli::StringVector &properties) const {
+std::string Product::print_dot(const mogli::StringVector &properties) const {
   std::stringstream buffer;
   print_dot(buffer, properties);
   return buffer.str();
 }
 
-const void Product::print_dot(std::ostream &out) const {
+void Product::print_dot(std::ostream &out) const {
   // header
   out << "graph G {" << std::endl
       << "\toverlap=scale" << std::endl;
@@ -157,7 +154,7 @@ const void Product::print_dot(std::ostream &out) const {
   out << "}" << std::endl;
 }
 
-const void Product::print_dot(std::ostream &out, const mogli::StringVector &properties) const {
+void Product::print_dot(std::ostream &out, const mogli::StringVector &properties) const {
   // header
   out << "graph G {" << std::endl
       << "\toverlap=scale" << std::endl;
@@ -335,7 +332,7 @@ void Product::generate_subgraph(const Molecule &mol, const Node &v, NodeToIntSet
   sizes.insert(std::make_pair(size, v));
 }
 
-int Product::generate_nodes(const ElementMatcher & matcher) {
+int Product::generate_nodes() {
   const Graph& g1 = _mol1.get_graph();
   const Graph& g2 = _mol2.get_graph();
 
@@ -351,10 +348,11 @@ int Product::generate_nodes(const ElementMatcher & matcher) {
 
   // generate product nodes
   int V = 0;
+  auto table = _mol1.get_perdiodic_table();
   for (NodeIt u = _mol1.get_node_iter(); u != lemon::INVALID; ++u) {
     for (NodeIt v = _mol2.get_node_iter(); v != lemon::INVALID; ++v) {
-      if (matcher(_mol1.get_color(u), _mol2.get_color(v)) &&
-          subgraph_canons1[u].is_isomorphic(subgraph_canons2[v], matcher)) {
+      if (table.are_equivalent(_mol1.get_color(u), _mol2.get_color(v)) &&
+          subgraph_canons1[u].is_isomorphic(subgraph_canons2[v])) {
         const Node& uv = add_node(u, v);
         ++V;
         _node_sizes[uv] = 1;
@@ -367,7 +365,7 @@ int Product::generate_nodes(const ElementMatcher & matcher) {
   return V;
 }
 
-int Product::generate_nodes_deg1(const ElementMatcher & matcher) {
+int Product::generate_nodes_deg1() {
   const Graph& g1 = _mol1.get_graph();
   const Graph& g2 = _mol2.get_graph();
 
@@ -387,6 +385,7 @@ int Product::generate_nodes_deg1(const ElementMatcher & matcher) {
 
   // iterate nodes u with decreasing degree
   int V = 0;
+  auto table = _mol1.get_perdiodic_table();
   for (auto it = deg_to_node1.rbegin(), end = deg_to_node1.rend(); it != end; ++it) {
     Node u = it->second;
     NodeToBoolMap filter(g1, false);
@@ -398,13 +397,13 @@ int Product::generate_nodes_deg1(const ElementMatcher & matcher) {
       if (reduced_nodes[u].count(_mol2.get_id(v)) > 0) {
         continue;
       }
-      if (matcher(_mol1.get_color(u), _mol2.get_color(v))) {
+      if (table.are_equivalent(_mol1.get_color(u), _mol2.get_color(v))) {
         if (!has_canon[v]) {
           generate_subgraph_canonization(_mol2, v, subgraph_canons);
           has_canon[v] = true;
         }
         Canonization& canon2 = subgraph_canons[v];
-        if (canon1.is_isomorphic(canon2, matcher)) {
+        if (canon1.is_isomorphic(canon2)) {
           // generate product node uv
           const Node& uv = add_node(u, v);
           ++V;
@@ -432,8 +431,6 @@ int Product::generate_nodes_deg1(const ElementMatcher & matcher) {
             }
           }
           for (const auto & it3 : current_reductions) {
-            NodeVector foo = it3.second.first;
-            NodeVector bar = it3.second.second;
             for (int i = 0; i < it3.second.first.size(); ++i) {
               for (int j = 0; j < it3.second.second.size(); ++j) {
                 Node _u = it3.second.first[i];
@@ -451,7 +448,7 @@ int Product::generate_nodes_deg1(const ElementMatcher & matcher) {
 
 }
 
-int Product::generate_nodes_sub(const ElementMatcher & matcher) {
+int Product::generate_nodes_sub() {
   const Graph& g1 = _mol1.get_graph();
   const Graph& g2 = _mol2.get_graph();
 
@@ -476,6 +473,7 @@ int Product::generate_nodes_sub(const ElementMatcher & matcher) {
 
   // iterate nodes u with decreasing neighborhood size
   int V = 0;
+  auto table = _mol1.get_perdiodic_table();
   for (auto it = neighborhood_sizes1.rbegin(), end = neighborhood_sizes1.rend(); it != end; ++it) {
     Node u = it->second;
     NodeToBoolMap filter(g1, false);
@@ -487,13 +485,13 @@ int Product::generate_nodes_sub(const ElementMatcher & matcher) {
       if (reduced_nodes[u].count(_mol2.get_id(v)) > 0) {
         continue;
       }
-      if (matcher(_mol1.get_color(u), _mol2.get_color(v))) {
+      if (table.are_equivalent(_mol1.get_color(u), _mol2.get_color(v))) {
         if (!has_canon[v]) {
           generate_subgraph_canonization(_mol2, v, subgraph_canons);
           has_canon[v] = true;
         }
         Canonization& canon2 = subgraph_canons[v];
-        if (canon1.is_isomorphic(canon2, matcher)) {
+        if (canon1.is_isomorphic(canon2)) {
           // generate product node uv
           const Node& uv = add_node(u, v);
           ++V;
@@ -584,7 +582,6 @@ int Product::generate_edges_connected(unsigned int min_core_size) {
 
       Node u2 = _g_to_mol1[u2v2];
       Node v2 = _g_to_mol2[u2v2];
-      assert(_mol1.get_color(u2) == _mol2.get_color(v2));
 
       if (u1 != u2 && v1 != v2) {
         bool u1u2 = arcLookUp1(u1, u2) != lemon::INVALID;
@@ -628,7 +625,6 @@ int Product::generate_edges_connected(unsigned int min_core_size) {
       Node u1v1 = nodes[i];
       Node u1 = _g_to_mol1[u1v1];
       Node v1 = _g_to_mol2[u1v1];
-      assert(_mol1.get_color(u1) == _mol2.get_color(v1));
 
       for (int j = i+1; j < nodes.size(); ++j) {
         Node u2v2 = nodes[j];

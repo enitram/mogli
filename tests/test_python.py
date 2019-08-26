@@ -858,6 +858,43 @@ class TestMatching(unittest.TestCase):
         self.assertEqual(len(frag_uncon), 0)
         self.assertEqual(len(frag_uncon_deg1), 0)
 
+    def test_mcf_custom_periodic_table(self):
+        import copy
+        from mogli import Molecule, PeriodicTable, LGFIOConfig, maximal_common_fragments, GenerationType
+
+        custom_table = PeriodicTable(PeriodicTable.get_default()).make_equivalent(4, 7)
+        mol1, mol2, mol3, mol4 = Molecule(), Molecule(), Molecule(custom_table), Molecule(custom_table)
+
+        config = LGFIOConfig('label', 'atomType')
+        mol1.read_lgf(GENERIC_1, config)
+        mol2.read_lgf(GENERIC_2, config)
+        mol3.read_lgf(GENERIC_1, config)
+        mol4.read_lgf(GENERIC_2, config)
+
+        t1, frag_default, _, _ = maximal_common_fragments(mol1, mol2, 1, TIMEOUT, GenerationType.UNCON_DEG_1, True)
+        t2, frag_custom1, _, _ = maximal_common_fragments(mol3, mol4, 1, TIMEOUT, GenerationType.NO_OPT, True)
+        t3, frag_custom2, _, _ = maximal_common_fragments(mol3, mol4, 1, TIMEOUT, GenerationType.DEG_1, True)
+        t4, frag_custom3, _, _ = maximal_common_fragments(mol3, mol4, 1, TIMEOUT, GenerationType.UNCON, True)
+        t5, frag_custom4, _, _ = maximal_common_fragments(mol3, mol4, 1, TIMEOUT, GenerationType.UNCON_DEG_1, True)
+
+        self.assertTrue(t1)
+        self.assertTrue(t2)
+        self.assertTrue(t3)
+        self.assertTrue(t4)
+        self.assertTrue(t5)
+
+        self.assertTrue(len(frag_default) > 0)
+        self.assertTrue(len(frag_custom1) > 0)
+        self.assertTrue(len(frag_custom2) > 0)
+        self.assertTrue(len(frag_custom3) > 0)
+        self.assertTrue(len(frag_custom4) > 0)
+
+        self.assertEqual(frag_default[0].get_atom_count(), 5)
+        self.assertEqual(frag_custom1[0].get_atom_count(), mol1.get_atom_count())
+        self.assertEqual(frag_custom2[0].get_atom_count(), mol1.get_atom_count())
+        self.assertEqual(frag_custom3[0].get_atom_count(), mol1.get_atom_count())
+        self.assertEqual(frag_custom4[0].get_atom_count(), mol1.get_atom_count())
+
     def test_atomic_fragments(self):
         from mogli import Molecule, atomic_fragments
 
@@ -872,7 +909,6 @@ class TestMatching(unittest.TestCase):
         self.assertEqual(len(frag1), 8)
         self.assertEqual(len(frag2), 8)
 
-# TODO test_mcf_matcher
 
 class TestPacking(unittest.TestCase):
 

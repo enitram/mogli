@@ -35,9 +35,11 @@ namespace mogli {
     std::map<std::string, unsigned short> ELEMENTS;
     std::map<unsigned short, std::string> ELEMENT_NUMBERS;
     std::map<unsigned short, std::string> COLORS;
+    std::map<unsigned short, unsigned short> EQ_CLASS;
     std::string UNKNOWN;
     std::string UNKNOWN_COLOR;
     unsigned short UNKNOWN_NUMBER;
+    unsigned short LAST_EQ;
 
   public:
 
@@ -47,18 +49,21 @@ namespace mogli {
         COLORS(),
         UNKNOWN("*"),
         UNKNOWN_COLOR("pink"),
-        UNKNOWN_NUMBER(std::numeric_limits<unsigned short>::max()) {}
+        UNKNOWN_NUMBER(std::numeric_limits<unsigned short>::max()),
+        LAST_EQ(0) {}
 
     /**
      * Add a new element.
      *
      * @param[in] num   Element number.
      * @param[in] name  Element type.
-     * @return          Update periodic table.
+     * @return          Updated periodic table.
      */
-    PeriodicTable &add_uncolored(unsigned short num, std::string name) {
+    PeriodicTable &add_uncolored(unsigned short num, const std::string& name) {
       ELEMENTS[name] = num;
       ELEMENT_NUMBERS[num] = name;
+      EQ_CLASS[num] = LAST_EQ;
+      ++LAST_EQ;
       return *this;
     }
 
@@ -68,12 +73,14 @@ namespace mogli {
      * @param[in] num   Element number.
      * @param[in] name  Element type.
      * @param[in] color Color string for dot (graphviz) export.
-     * @return          Update periodic table.
+     * @return          Updated periodic table.
      */
-    PeriodicTable &add(unsigned short num, std::string name, std::string color) {
+    PeriodicTable &add(unsigned short num, const std::string& name, std::string color) {
       ELEMENTS[name] = num;
       ELEMENT_NUMBERS[num] = name;
-      COLORS[num] = color;
+      COLORS[num] = std::move(color);
+      EQ_CLASS[num] = LAST_EQ;
+      ++LAST_EQ;
       return *this;
     }
 
@@ -83,7 +90,7 @@ namespace mogli {
      * @param[in] num   Element number.
      * @return          Element type.
      */
-    const std::string get_element(unsigned short num) {
+    std::string get_element(unsigned short num) {
       auto it = ELEMENT_NUMBERS.find(num);
       if (it != ELEMENT_NUMBERS.end())
         return (*it).second;
@@ -96,7 +103,7 @@ namespace mogli {
      * @param[in] num   Element number.
      * @return          Element color.
      */
-    const std::string get_color(unsigned short num) {
+    std::string get_color(unsigned short num) {
       auto it = COLORS.find(num);
       if (it != COLORS.end())
         return (*it).second;
@@ -109,11 +116,62 @@ namespace mogli {
      * @param[in] element   Element type.
      * @return              Element number.
      */
-    const unsigned short get_number(std::string element) {
+    unsigned short get_number(const std::string& element) {
       auto it = ELEMENTS.find(element);
       if (it != ELEMENTS.end())
         return static_cast<unsigned short>((*it).second);
       else return UNKNOWN_NUMBER;
+    }
+
+    /**
+     * @brief Make elements equivalent.
+     *
+     * All elements in this equivalency class are considered equal. Each element can
+     * be in only one equivalency class.
+     *
+     * @param[in] eq_class  Element numbers in this equivalency class.
+     * @return              Updated perdiodic table.
+     */
+    PeriodicTable &make_equivalent(const std::initializer_list<unsigned short>& eq_class) {
+      for (const auto element : eq_class) {
+        EQ_CLASS[element] = LAST_EQ;
+      }
+      ++LAST_EQ;
+      return *this;
+    }
+
+    /**
+     * @brief Make elements equivalent.
+     *
+     * All elements in this equivalency class are considered equal. Each element can
+     * be in only one equivalency class.
+     *
+     * @param[in] eq_class  Element numbers in this equivalency class.
+     * @return              Updated perdiodic table.
+     */
+    PeriodicTable &make_equivalent(const std::vector<unsigned short>& eq_class) {
+      for (const auto element : eq_class) {
+        EQ_CLASS[element] = LAST_EQ;
+      }
+      ++LAST_EQ;
+      return *this;
+    }
+
+    unsigned short get_equivalency_class(unsigned short num) {
+      auto it = EQ_CLASS.find(num);
+      if (it != EQ_CLASS.end())
+        return static_cast<unsigned short>((*it).second);
+      else return UNKNOWN_NUMBER;
+    }
+
+    bool are_equivalent(unsigned short num1, unsigned short num2) {
+      auto it1 = EQ_CLASS.find(num1);
+      auto it2 = EQ_CLASS.find(num2);
+      if (it1 != EQ_CLASS.end() && it2 != EQ_CLASS.end()) {
+        return (*it1).second == (*it2).second;
+      } else {
+        return false;
+      }
     }
 
     /**

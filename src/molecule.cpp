@@ -259,12 +259,12 @@ void Molecule::write_gml_stream(const std::string& label, std::ostream &out, boo
   }
 }
 
-const bool Molecule::is_isomorphic(Molecule &other, const ElementMatcher & matcher) const {
+const bool Molecule::is_isomorphic(Molecule &other) const {
   if (_atom_count != other.get_atom_count())
         return false;
       Canonization c1(*this);
       Canonization c2(other);
-      return c1.is_isomorphic(c2, matcher);
+      return c1.is_isomorphic(c2);
 }
 
 void Molecule::get_connected_components(mogli::SharedPtrVector<mogli::Molecule>::type &components)  {

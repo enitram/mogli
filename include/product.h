@@ -92,7 +92,7 @@ namespace mogli {
     Product(const Product& parent, int component);
 
     Product(const Molecule& mol1, const Molecule& mol2, int shell, GenerationType gen,
-            unsigned int min_core_size, const ElementMatcher & matcher);
+            unsigned int min_core_size);
 
     const Molecule& get_mol1() const {
       return _mol1;
@@ -158,29 +158,29 @@ namespace mogli {
       return _connectivity[e];
     }
 
-    const std::string print_dot() const;
+    std::string print_dot() const;
 
-    const std::string print_dot(const StringVector &properties) const;
+    std::string print_dot(const StringVector &properties) const;
 
-    const void print_dot(std::ostream& out) const;
+    void print_dot(std::ostream& out) const;
 
-    const void print_dot(std::ostream &out, const StringVector &properties) const;
+    void print_dot(std::ostream &out, const StringVector &properties) const;
     
   private:
 
     Node add_node(const Node& u, const Node& v);
 
-    int generate_nodes(const ElementMatcher & matcher);
+    int generate_nodes();
 
-    int generate_nodes_deg1(const ElementMatcher & matcher);
+    int generate_nodes_deg1();
 
-    int generate_nodes_sub(const ElementMatcher & matcher);
+    int generate_nodes_sub();
 
     int generate_edges();
 
     int generate_edges_connected(unsigned int min_core_size);
 
-    void determine_degrees(const Graph& g, IntToNodeMap& deg_to_node, NodeToIntMap& deg);
+    static void determine_degrees(const Graph& g, IntToNodeMap& deg_to_node, NodeToIntMap& deg);
 
     void generate_subgraph_canonization(const Molecule &mol, const Node &v, NodeToCanonizationMap &map);
 

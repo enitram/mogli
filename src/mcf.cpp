@@ -82,7 +82,6 @@ bool mogli::maximal_common_fragments(Molecule &mol1,
                                      int shell,
                                      int timeout_seconds,
                                      Product::GenerationType prod_gen,
-                                     const ElementMatcher &matcher,
                                      bool maximum,
                                      int min_core_size,
                                      int max_core_size,
@@ -104,7 +103,7 @@ bool mogli::maximal_common_fragments(Molecule &mol1,
     throw std::invalid_argument("min_core_size >= max_core_size");
   }
 
-  Product product(mol1, mol2, static_cast<int>(shell), prod_gen, min_core_size, matcher);
+  Product product(mol1, mol2, static_cast<int>(shell), prod_gen, min_core_size);
 
   std::chrono::high_resolution_clock::time_point start = std::chrono::high_resolution_clock::now();
   long microseconds = 1000l * timeout_seconds;

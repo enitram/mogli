@@ -57,6 +57,13 @@ static std::shared_ptr<T> deserialize_ptr(const std::string & str) {
 }
 
 template <typename T>
+static std::shared_ptr<T> deserialize_ptr(const std::string & str, mogli::PeriodicTable & table) {
+  auto obj = std::make_shared<T>(table);
+  mogli::unpack_object(str, *obj);
+  return obj;
+}
+
+template <typename T>
 static T deserialize(const std::string & str) {
   T obj;
   mogli::unpack_object(str, obj);
@@ -158,19 +165,15 @@ PYBIND11_MODULE(mogli, m) {
           )")
       .def("is_isomorphic",
           &mogli::Canonization::is_isomorphic,
-          "other"_a, "matcher"_a = py::cpp_function(&mogli::default_matcher),
+          "other"_a,
           R"(
           Isomorphism test.
 
           Args:
               other (Canonization):                 Other canonization.
-              matcher (Callable[[int, int], bool]): Element number matching function.
 
           Returns:
               bool. True, if isomorphic to other canonization, false otherwise.
-
-          The element matching function determines when two atoms are matching. Usually, two atoms match if they are
-          of the same element (and thus have the same element numbers).
           )");
 
   py::class_<mogli::Edge>(m, "Edge")
@@ -204,19 +207,15 @@ PYBIND11_MODULE(mogli, m) {
       .def(
           "is_isomorphic",
           &mogli::FragmentCanonization::is_isomorphic,
-          "other"_a, "matcher"_a = py::cpp_function(&mogli::default_matcher),
+          "other"_a,
           R"(
           Isomorphism test.
 
           Args:
               other (Canonization):                 Other canonization.
-              matcher (Callable[[int, int], bool]): Element number matching function.
 
           Returns:
               bool. True, if isomorphic to other canonization, false otherwise.
-
-          The element matching function determines when two atoms are matching. Usually, two atoms match if they are
-          of the same element (and thus have the same element numbers).
           )");
 
   py::class_<mogli::LGFIOConfig> conf(m, "LGFIOConfig");
@@ -638,19 +637,15 @@ PYBIND11_MODULE(mogli, m) {
           )")
       .def("is_isomorphic",
           &mogli::Molecule::is_isomorphic,
-          "other"_a, "matcher"_a = py::cpp_function(&mogli::default_matcher),
+          "other"_a,
           R"(
           Test if this molecular graph is isomorphic to another molecular graph.
 
           Args:
               other (Molecule):                     Other molecular graph.
-              matcher (Callable[[int, int], bool]): Element number matching function.
 
           Returns:
               bool. True, if they are isomorphic, false otherwise.
-
-          The element matching function determines when two atoms are matching. Usually, two atoms match if they are
-          of the same element (and thus have the same element numbers).
           )")
       .def("print_dot",
           py::overload_cast<>(&mogli::Molecule::print_dot, py::const_),
@@ -794,6 +789,11 @@ PYBIND11_MODULE(mogli, m) {
           Empty constructor.
           )")
       .def(
+          py::init<mogli::PeriodicTable>(),
+          R"(
+          Copy constructor.
+          )")
+      .def(
           "add",
           &mogli::PeriodicTable::add,
           "num"_a, "name"_a, "color"_a,
@@ -811,9 +811,9 @@ PYBIND11_MODULE(mogli, m) {
           )")
       .def("add_uncolored",
           &mogli::PeriodicTable::add_uncolored,
-           "num"_a, "name"_a,
+          "num"_a, "name"_a,
           py::return_value_policy::reference_internal,
-           R"(
+          R"(
           Add a new element.
 
           Args:
@@ -822,6 +822,37 @@ PYBIND11_MODULE(mogli, m) {
 
           Returns:
               PeriodicTable. Update periodic table.
+          )")
+      .def("get_default",
+          &mogli::PeriodicTable::get_default,
+          py::return_value_policy::reference,
+          R"(
+          Returns the default periodic table of IACM elements.
+
+          Returns:
+              PeriodicTable. Default periodic table.
+          )")
+      .def("make_equivalent",
+          [](mogli::PeriodicTable &self, const py::args& args) {
+            std::vector<unsigned short> _args;
+            for (py::size_t i = 0; i < args.size(); ++i) {
+              auto val = args[i].cast<py::int_>();
+              _args.push_back(val);
+            }
+            return self.make_equivalent(_args);
+          },
+          py::return_value_policy::reference_internal,
+          R"(
+          Make elements equivalent.
+
+          Args:
+              *args (int): Element numbers in this equivalency class.
+
+          Returns:
+              Periodic table. Updated perdiodic table.
+
+          All elements in this equivalency class are considered equal. Each element can
+          be in only one equivalency class.
           )");
 
   py::class_<mogli::Node>(m, "Node")
@@ -882,7 +913,6 @@ PYBIND11_MODULE(mogli, m) {
          int shell,
          int timeout_seconds,
          mogli::Product::GenerationType prod_gen,
-         const mogli::ElementMatcher & matcher,
          bool maximum,
          int min_core_size,
          int max_core_size,
@@ -897,7 +927,6 @@ PYBIND11_MODULE(mogli, m) {
                                                shell,
                                                timeout_seconds,
                                                prod_gen,
-                                               matcher,
                                                maximum,
                                                min_core_size,
                                                max_core_size,
@@ -906,7 +935,6 @@ PYBIND11_MODULE(mogli, m) {
       },
       "mol1"_a, "mol2"_a, "shell"_a, "timeout_seconds"_a,
       "prod_gen"_a = mogli::Product::GenerationType::UNCON_DEG_1,
-        "matcher"_a = py::cpp_function(&mogli::default_matcher),
       "maximum"_a = false,
       "min_core_size"_a = 0,
       py::arg_v("max_core_size", std::numeric_limits<int>::max(), "mogli.max_int"),
@@ -920,7 +948,6 @@ PYBIND11_MODULE(mogli, m) {
           mol2 (Molecule):           Second molecular graph.
           shell (int):               Shell size. Maximal number of bonds from any core atom in the fragments.
           timeout_seconds (int):     Timeout in seconds.
-          matcher (Callable[[int, int], bool]): Element number matching function.
           prod_gen (GenerationType): Product graph data reduction rule.
           maximum (bool):            If true, reports only the largest fragments.
           min_core_size (int):       Minimal number of core atoms for each fragment.
@@ -936,9 +963,7 @@ PYBIND11_MODULE(mogli, m) {
 
       The heart and soul of this library. See `this paper <https://doi.org/10.7287/peerj.preprints.3250v1>`_
       for more information. The data reduction rule with the most speedup is GenerationType.UNCON_DEG_1. It is
-      recommended to always use this rule, the other rules are mainly for evaluation. The element matching function
-      determines when two atoms are matching. Usually, two atoms match if they are of the same element
-      (and thus have the same element numbers).
+      recommended to always use this rule, the other rules are mainly for evaluation.
       )");
 
 
@@ -1078,8 +1103,10 @@ PYBIND11_MODULE(mogli, m) {
           FragmentCanonization. Canonical representation.
       )");
 
+  // TODO unpack_fragment and unpack_molecule with custom perdiodic table
+
   m.def("unpack_fragment",
-      &deserialize_ptr<mogli::Fragment>,
+      py::overload_cast<const std::string &>(&deserialize_ptr<mogli::Fragment>),
       "str"_a,
       py::return_value_policy::reference_internal,
       R"(
@@ -1087,6 +1114,21 @@ PYBIND11_MODULE(mogli, m) {
 
       Args:
           str (str): Serialized object.
+
+      Returns:
+          Fragment. Molecular fragment.
+      )");
+
+  m.def("unpack_fragment",
+      py::overload_cast<const std::string &, mogli::PeriodicTable &>(&deserialize_ptr<mogli::Fragment>),
+      "str"_a, "table"_a,
+      py::return_value_policy::reference_internal,
+      R"(
+      Deserialize a fragment.
+
+      Args:
+          str (str):             Serialized object.
+          table (PeriodicTable): Periodic table.
 
       Returns:
           Fragment. Molecular fragment.
@@ -1107,7 +1149,7 @@ PYBIND11_MODULE(mogli, m) {
       )");
 
   m.def("unpack_molecule",
-      &deserialize_ptr<mogli::Molecule>,
+      py::overload_cast<const std::string &>(&deserialize_ptr<mogli::Molecule>),
       "str"_a,
       py::return_value_policy::reference_internal,
       R"(
@@ -1115,6 +1157,21 @@ PYBIND11_MODULE(mogli, m) {
 
       Args:
           str (str): Serialized object.
+
+      Returns:
+          Molecule. Molecular graph.
+      )");
+
+  m.def("unpack_molecule",
+      py::overload_cast<const std::string &, mogli::PeriodicTable &>(&deserialize_ptr<mogli::Molecule>),
+      "str"_a, "table"_a,
+      py::return_value_policy::reference_internal,
+      R"(
+      Deserialize a molecular graph.
+
+      Args:
+          str (str):             Serialized object.
+          table (PeriodicTable): Periodic table.
 
       Returns:
           Molecule. Molecular graph.

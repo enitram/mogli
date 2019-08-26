@@ -98,16 +98,12 @@ namespace mogli {
     }
 
     /**
-     * @brief Isomorphism test.
-     *
-     * The element matching function determines when two atoms are matching. Usually, two atoms match if they are
-     * of the same element (and thus have the same element numbers).
+     * Isomorphism test.
      *
      * @param[in] other     Other canonization.
-     * @param[in] matcher   Element number matching function.
      * @return              True, if isomorphic to other canonization, false otherwise.
      */
-    const bool is_isomorphic(const Canonization &other, const ElementMatcher & matcher = &default_matcher) const;
+    const bool is_isomorphic(const Canonization &other) const;
 
   protected:
 
@@ -129,10 +125,10 @@ namespace mogli {
 
     void init(const Molecule& mol, const NodeToBoolMap& filter, const Node& root);
 
-    void dfs(const Node& current, const Node& last, const Molecule& mol,
+    static void dfs(const Node& current, const Node& last, const Molecule& mol,
              NodeToBoolMap& visited, ShortSet& colorSet, ShortToNodeVectorMap& colorMap);
 
-    void dfs(const Node& current, const Node& last, const Molecule& mol,
+    static void dfs(const Node& current, const Node& last, const Molecule& mol,
              const FilterNodes& subgraph, NodeToBoolMap& visited, ShortSet& colorSet,
              ShortToNodeVectorMap& colorMap, unsigned int& node_count);
 

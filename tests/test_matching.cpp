@@ -53,9 +53,9 @@ TEST_CASE("product_noopt", "[algo]") {
   mol1.read_lgf(ETHANE_1);
   mol2.read_lgf(ETHANE_2);
 
-  Product p0(mol1, mol2, 0, Product::GenerationType::NO_OPT, 0, &default_matcher);
-  Product p1(mol1, mol2, 1, Product::GenerationType::NO_OPT, 0, &default_matcher);
-  Product p2(mol1, mol2, 2, Product::GenerationType::NO_OPT, 0, &default_matcher);
+  Product p0(mol1, mol2, 0, Product::GenerationType::NO_OPT, 0);
+  Product p1(mol1, mol2, 1, Product::GenerationType::NO_OPT, 0);
+  Product p2(mol1, mol2, 2, Product::GenerationType::NO_OPT, 0);
 
   const auto & g0 = p0.get_graph();
   const auto & g1 = p1.get_graph();
@@ -105,7 +105,7 @@ TEST_CASE("product_deg1", "[algo]") {
   mol1.read_lgf(ETHANE_1);
   mol2.read_lgf(ETHANE_2);
 
-  Product p(mol1, mol2, 1, Product::GenerationType::DEG_1, 0, &default_matcher);
+  Product p(mol1, mol2, 1, Product::GenerationType::DEG_1, 0);
 
   const auto & g = p.get_graph();
 
@@ -129,7 +129,7 @@ TEST_CASE("product_uncon", "[algo]") {
   mol1.read_lgf(GENERIC_1, config);
   mol2.read_lgf(GENERIC_2, config);
 
-  Product p(mol1, mol2, 1, Product::GenerationType::UNCON, 1, &default_matcher);
+  Product p(mol1, mol2, 1, Product::GenerationType::UNCON, 1);
 
   const auto & g = p.get_graph();
 
@@ -174,7 +174,7 @@ TEST_CASE("product_uncon_deg1", "[algo]") {
   mol1.read_lgf(GENERIC_1, config);
   mol2.read_lgf(GENERIC_2, config);
 
-  Product p(mol1, mol2, 1, Product::GenerationType::UNCON_DEG_1, 1, &default_matcher);
+  Product p(mol1, mol2, 1, Product::GenerationType::UNCON_DEG_1, 1);
 
   const auto & g = p.get_graph();
 
@@ -208,7 +208,7 @@ TEST_CASE("bronkerbosch", "[algo]") {
   mol1.read_lgf(ETHANE_1);
   mol2.read_lgf(ETHANE_2);
 
-  Product p(mol1, mol2, 1, Product::GenerationType::DEG_1, 0, &default_matcher);
+  Product p(mol1, mol2, 1, Product::GenerationType::DEG_1, 0);
 
   BronKerbosch bk(p, 0, std::numeric_limits<int>::max(), false);
   bk.run(TIMEOUT);
@@ -278,16 +278,16 @@ TEST_CASE("mcf_isomorphic_graphs_max", "[algo]") {
 
   auto t1 = maximal_common_fragments(
       mol1, mol2, frag_noopt, matches1, matches2, 1, TIMEOUT,
-      Product::GenerationType::NO_OPT, &default_matcher, true);
+      Product::GenerationType::NO_OPT, true);
   auto t2 = maximal_common_fragments(
       mol1, mol2, frag_deg1, matches1, matches2, 1, TIMEOUT,
-      Product::GenerationType::DEG_1, &default_matcher, true);
+      Product::GenerationType::DEG_1, true);
   auto t3 = maximal_common_fragments(
       mol1, mol2, frag_uncon, matches1, matches2, 1, TIMEOUT,
-      Product::GenerationType::UNCON, &default_matcher, true);
+      Product::GenerationType::UNCON, true);
   auto t4 = maximal_common_fragments(
       mol1, mol2, frag_uncon_deg1, matches1, matches2, 1, TIMEOUT,
-      Product::GenerationType::UNCON_DEG_1, &default_matcher, true);
+      Product::GenerationType::UNCON_DEG_1, true);
 
   REQUIRE(t1);
   REQUIRE(t2);
@@ -367,7 +367,7 @@ TEST_CASE("mcf_isomorphic_graphs_large", "[algo]") {
       mol1, mol2, frag_noopt, matches1, matches2, 1, TIMEOUT, Product::GenerationType::NO_OPT);
   auto t2 = maximal_common_fragments(
       mol1, mol2, frag_uncon_deg1, matches1, matches2, 1, TIMEOUT_BIG,
-      Product::GenerationType::UNCON_DEG_1, &default_matcher, true);
+      Product::GenerationType::UNCON_DEG_1, true);
 
   REQUIRE_FALSE(t1);
   REQUIRE(t2);
@@ -506,37 +506,53 @@ TEST_CASE("mcf_graphs_no_match", "[algo]") {
 
 }
 
-TEST_CASE("mcf_matcher", "[algo]") {
+TEST_CASE("mcf_custom_periodic_table", "[algo]") {
 
-  Molecule mol1, mol2;
+  auto custom_table = PeriodicTable(PeriodicTable::get_default()).make_equivalent({4, 7});
+  Molecule mol1, mol2, mol3(custom_table), mol4(custom_table);
+
   LGFIOConfig config("label", "atomType");
-
   mol1.read_lgf(GENERIC_1, config);
   mol2.read_lgf(GENERIC_2, config);
+  mol3.read_lgf(GENERIC_1, config);
+  mol4.read_lgf(GENERIC_2, config);
 
-  FragmentVector frag_default, frag_custom;
+  FragmentVector frag_default, frag_custom1, frag_custom2, frag_custom3, frag_custom4;
   MatchVector matches1, matches2;
-
-  auto custom = [](unsigned int c1, unsigned int c2) {
-    return c1 == c2 || (c1 == 4 && c2 == 7) || (c1 == 7 && c2 == 4);
-  };
 
   auto t1 = maximal_common_fragments(
       mol1, mol2, frag_default, matches1, matches2, 1, TIMEOUT,
-      Product::GenerationType::UNCON_DEG_1, &default_matcher, true);
+      Product::GenerationType::UNCON_DEG_1, true);
   auto t2 = maximal_common_fragments(
-      mol1, mol2, frag_custom, matches1, matches2, 1, TIMEOUT,
-      Product::GenerationType::UNCON_DEG_1, custom, true);
+      mol3, mol4, frag_custom1, matches1, matches2, 1, TIMEOUT,
+      Product::GenerationType::NO_OPT, true);
+  auto t3 = maximal_common_fragments(
+      mol3, mol4, frag_custom2, matches1, matches2, 1, TIMEOUT,
+      Product::GenerationType::DEG_1, true);
+  auto t4 = maximal_common_fragments(
+      mol3, mol4, frag_custom3, matches1, matches2, 1, TIMEOUT,
+      Product::GenerationType::UNCON, true);
+  auto t5 = maximal_common_fragments(
+      mol3, mol4, frag_custom4, matches1, matches2, 1, TIMEOUT,
+      Product::GenerationType::UNCON_DEG_1, true);
 
   REQUIRE(t1);
   REQUIRE(t2);
+  REQUIRE(t3);
+  REQUIRE(t4);
+  REQUIRE(t5);
 
   REQUIRE_FALSE(frag_default.empty());
-  REQUIRE_FALSE(frag_custom.empty());
+  REQUIRE_FALSE(frag_custom1.empty());
+  REQUIRE_FALSE(frag_custom2.empty());
+  REQUIRE_FALSE(frag_custom3.empty());
+  REQUIRE_FALSE(frag_custom4.empty());
 
-  REQUIRE(frag_default[0]->get_atom_count() < mol1.get_atom_count());
-// FIXME 5 == 9
-  REQUIRE(frag_custom[0]->get_atom_count() == mol1.get_atom_count());
+  REQUIRE(frag_default[0]->get_atom_count() == 5);
+  REQUIRE(frag_custom1[0]->get_atom_count() == mol1.get_atom_count());
+  REQUIRE(frag_custom2[0]->get_atom_count() == mol1.get_atom_count());
+  REQUIRE(frag_custom3[0]->get_atom_count() == mol1.get_atom_count());
+  REQUIRE(frag_custom4[0]->get_atom_count() == mol1.get_atom_count());
 
 }
 

@@ -34,9 +34,7 @@ namespace mogli {
    *
    * The heart and soul of this library. See <a href="https://doi.org/10.7287/peerj.preprints.3250v1">this paper</a>
    * for more information. The data reduction rule with the most speedup is Product::GenerationType::UNCON_DEG_1. It is
-   * recommended to always use this rule, the other rules are mainly for evaluation. The element matching function
-   * determines when two atoms are matching. Usually, two atoms match if they are of the same element (and thus
-   * have the same element number).
+   * recommended to always use this rule, the other rules are mainly for evaluation.
    *
    * @param[in]  mol1               First molecular graph.
    * @param[in]  mol2               Second molecular graph.
@@ -46,7 +44,6 @@ namespace mogli {
    * @param[in]  shell              Shell size. Maximal number of bonds from any core atom in the fragments.
    * @param[in]  timeout_seconds    Timeout in seconds.
    * @param[in]  prod_gen           Product graph data reduction rule.
-   * @param[in]  matcher            Element number matching function.
    * @param[in]  maximum            If true, reports only the largest fragments.
    * @param[in]  min_core_size      Minimal number of core atoms for each fragment.
    * @param[in]  max_core_size      Maximal number of core atoms for each fragment.
@@ -61,7 +58,6 @@ namespace mogli {
                                 int shell,
                                 int timeout_seconds,
                                 Product::GenerationType prod_gen = Product::GenerationType::UNCON_DEG_1,
-                                const ElementMatcher &matcher = &default_matcher,
                                 bool maximum = false,
                                 int min_core_size = 0,
                                 int max_core_size = std::numeric_limits<int>::max(),

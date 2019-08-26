@@ -63,8 +63,6 @@ namespace mogli {
     typedef std::vector<std::shared_ptr<T>> type;
   };
 
-  typedef std::function<bool(unsigned short color1, unsigned short color2)> ElementMatcher;
-
   static bool default_matcher(unsigned short color1, unsigned short color2) {
     return color1 == color2;
   }

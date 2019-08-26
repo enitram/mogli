@@ -63,9 +63,10 @@ Tgraph* mogli::translate_graph(const Molecule &mol, IntVector &node_ids) {
   }
   assert(node_ids.size() == mol.get_atom_count());
 
+  auto table = mol.get_perdiodic_table();
   for (NodeIt u = mol.get_node_iter(); u != lemon::INVALID; ++u) {
     const int _u = reverse_node_ids[mol.get_id(u)];
-    graph->vertexLabel[_u] = mol.get_color(u);
+    graph->vertexLabel[_u] = table.get_equivalency_class(mol.get_color(u));
     int degree = 0;
     graph->isLoop[_u] = c_false;
     for (IncEdgeIt e = mol.get_inc_edge_iter(u); e != lemon::INVALID; ++e) {
