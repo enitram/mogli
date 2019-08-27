@@ -15,6 +15,7 @@ mogli provides both a C++ and a Python API and is using the following awesome th
 * [boost::dynamic_bitset](https://www.boost.org/doc/libs/1_71_0/libs/dynamic_bitset/dynamic_bitset.html)
 * [msgpack-c](https://github.com/msgpack/msgpack-c)
 * [pybind11](https://github.com/pybind/pybind11)
+* [Catch2](https://github.com/catchorg/Catch2)
 
 ## Installation
 
