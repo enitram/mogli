@@ -258,5 +258,3 @@ if (BUILD_TESTS)
     endif()
 
 endif()
-
-# TODO write README
