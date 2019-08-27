@@ -79,16 +79,16 @@ class CMakeBuild(build_ext):
 
 setup(
     name='mogli',
-    version='0.0.1',
+    version='1.0',
     author='Martin S. Engler',
     author_email='martin.engler@hhu.de',
-    description='moluecular graph library',
+    description='The molecular graph library.',
     license='GNU Lesser General Public License v3 or later (LGPLv3+)',
     ext_modules=[CMakeExtension('mogli')],
     cmdclass=dict(build_ext=CMakeBuild),
     zip_safe=False,
     classifiers = [
-        'Development Status :: 3 - Alpha',
+        'Development Status :: 5 - Production/Stable',
         'License :: OSI Approved :: GNU Lesser General Public License v3 or later (LGPLv3+)',
         'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6'],
