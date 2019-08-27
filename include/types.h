@@ -1,9 +1,33 @@
-//
-// Created by M. Engler on 07/12/16.
-//
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//    mogli - molecular graph library                                                                                 //
+//                                                                                                                    //
+//    Copyright (C) 2016-2019  Martin S. Engler                                                                       //
+//                                                                                                                    //
+//    This program is free software: you can redistribute it and/or modify                                            //
+//    it under the terms of the GNU Lesser General Public License as published                                        //
+//    by the Free Software Foundation, either version 3 of the License, or                                            //
+//    (at your option) any later version.                                                                             //
+//                                                                                                                    //
+//    This program is distributed in the hope that it will be useful,                                                 //
+//    but WITHOUT ANY WARRANTY; without even the implied warranty of                                                  //
+//    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the                                                    //
+//    GNU General Public License for more details.                                                                    //
+//                                                                                                                    //
+//    You should have received a copy of the GNU Lesser General Public License                                        //
+//    along with this program.  If not, see <https://www.gnu.org/licenses/>.                                          //
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #ifndef MOGLI_TYPES_H
 #define MOGLI_TYPES_H
+
+#include <map>
+#include <memory>
+#include <set>
+#include <variant>
+#include <vector>
+
+#include <lemon/core.h>
+#include <lemon/list_graph.h>
 
 namespace mogli {
 
@@ -26,6 +50,22 @@ namespace mogli {
   typedef std::vector<unsigned short> ShortVector;
   typedef std::vector<int> IntVector;
   typedef std::vector<unsigned long> LongVector;
+
+  typedef std::variant<bool, int, double, std::string> Any;
+
+  template <typename K, typename V>
+  struct UniquePtrMap {
+    typedef std::map<K, std::unique_ptr<V>> type;
+  };
+
+  template <typename T>
+  struct SharedPtrVector {
+    typedef std::vector<std::shared_ptr<T>> type;
+  };
+
+  static bool default_matcher(unsigned short color1, unsigned short color2) {
+    return color1 == color2;
+  }
 
 }
 

@@ -1,10 +1,28 @@
-//
-// Created by M. Engler on 10/01/17.
-//
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//    mogli - molecular graph library                                                                                 //
+//                                                                                                                    //
+//    Copyright (C) 2016-2019  Martin S. Engler                                                                       //
+//                                                                                                                    //
+//    This program is free software: you can redistribute it and/or modify                                            //
+//    it under the terms of the GNU Lesser General Public License as published                                        //
+//    by the Free Software Foundation, either version 3 of the License, or                                            //
+//    (at your option) any later version.                                                                             //
+//                                                                                                                    //
+//    This program is distributed in the hope that it will be useful,                                                 //
+//    but WITHOUT ANY WARRANTY; without even the implied warranty of                                                  //
+//    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the                                                    //
+//    GNU General Public License for more details.                                                                    //
+//                                                                                                                    //
+//    You should have received a copy of the GNU Lesser General Public License                                        //
+//    along with this program.  If not, see <https://www.gnu.org/licenses/>.                                          //
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+#include "mcf.h"
+
+#include <numeric>
 
 #include <sublad.h>
-#include <numeric>
-#include "../include/mcf.h"
+
 
 bool less(const std::pair<int, int>& a, const std::pair<int, int>& b) {
   return a.second < b.second;
@@ -14,9 +32,9 @@ using namespace mogli;
 
 void append_fragments(Product &product, NodeVectorVector& cliques, FragmentVector &fragments,
                       MatchVector &matches_mol1, MatchVector &matches_mol2) {
-  for (NodeVectorVector::const_iterator it = cliques.begin(), end = cliques.end(); it != end; ++it) {
+  for (auto & it : cliques) {
     IntToIntMap g_to_mol1, g_to_mol2;
-    boost::shared_ptr<Fragment> fragment = boost::make_shared<Fragment>(product, *it, g_to_mol1, g_to_mol2);
+    auto fragment = std::make_shared<Fragment>(product, it, g_to_mol1, g_to_mol2);
 
     Match match1(g_to_mol1);
     Match match2(g_to_mol2);
@@ -27,21 +45,21 @@ void append_fragments(Product &product, NodeVectorVector& cliques, FragmentVecto
   }
 }
 
-void run_mcf(Product &product, FragmentVector &fragments,
+bool run_mcf(Product &product, FragmentVector &fragments,
              MatchVector &matches_mol1, MatchVector &matches_mol2,
              int min_core_size, int max_core_size, bool maximum,
              std::chrono::high_resolution_clock::time_point start, long microseconds) {
 
   BronKerbosch bk(product, min_core_size, max_core_size, maximum);
-  bk.run(start, microseconds);
+  bool timeout = bk.run(start, microseconds);
 
   NodeVectorVector cliques = bk.getMaxCliques();
 
   if (!maximum) {
     append_fragments(product, cliques, fragments, matches_mol1, matches_mol2);
   } else {
-    int current_max = fragments.size() > 0 ? fragments[0]->get_core_atom_count() : 0;
-    int cliques_size = cliques.size() > 0 ? product.get_clique_size(cliques[0]) : 0;
+    int current_max = !fragments.empty() ? fragments[0]->get_core_atom_count() : 0;
+    int cliques_size = !cliques.empty() ? product.get_clique_size(cliques[0]) : 0;
 
     if (cliques_size > current_max) {
       fragments.clear();
@@ -52,34 +70,50 @@ void run_mcf(Product &product, FragmentVector &fragments,
       append_fragments(product, cliques, fragments, matches_mol1, matches_mol2);
     }
   }
+  return timeout;
+
 }
 
-void mogli::maximal_common_fragments(Molecule &mol1, Molecule &mol2,
+bool mogli::maximal_common_fragments(Molecule &mol1,
+                                     Molecule &mol2,
                                      FragmentVector &fragments,
-                                     MatchVector &matches_mol1, MatchVector &matches_mol2,
-                                     int shell, unsigned int min_core_size,
-                                     Product::GenerationType prod_gen, bool reduce_subgraphs, bool maximum,
-                                     int timeout_seconds) {
-  maximal_common_fragments(mol1, mol2, fragments, matches_mol1, matches_mol2, shell, min_core_size,
-                           std::numeric_limits<int>::max(), prod_gen, reduce_subgraphs, maximum, timeout_seconds);
-}
+                                     MatchVector &matches_mol1,
+                                     MatchVector &matches_mol2,
+                                     int shell,
+                                     int timeout_seconds,
+                                     Product::GenerationType prod_gen,
+                                     bool maximum,
+                                     int min_core_size,
+                                     int max_core_size,
+                                     bool reduce_subgraphs) {
 
-void mogli::maximal_common_fragments(Molecule &mol1, Molecule &mol2,
-                                     FragmentVector &fragments,
-                                     MatchVector &matches_mol1, MatchVector &matches_mol2,
-                                     int shell, unsigned int min_core_size, unsigned int max_core_size,
-                                     Product::GenerationType prod_gen, bool reduce_subgraphs, bool maximum,
-                                     int timeout_seconds) {
+  if (shell < 0) {
+    throw std::invalid_argument("shell = " + std::to_string(shell));
+  }
+  if (timeout_seconds <= 0) {
+    throw std::invalid_argument("timeout_seconds = " + std::to_string(timeout_seconds));
+  }
+  if (min_core_size < 0) {
+    throw std::invalid_argument("min_core_size = " + std::to_string(min_core_size));
+  }
+  if (max_core_size <= 0) {
+    throw std::invalid_argument("max_core_size = " + std::to_string(max_core_size));
+  }
+  if (min_core_size >= max_core_size) {
+    throw std::invalid_argument("min_core_size >= max_core_size");
+  }
 
-  Product product(mol1, mol2, shell, prod_gen, min_core_size, max_core_size);
+  Product product(mol1, mol2, static_cast<int>(shell), prod_gen, min_core_size);
 
   std::chrono::high_resolution_clock::time_point start = std::chrono::high_resolution_clock::now();
   long microseconds = 1000l * timeout_seconds;
+  bool timeout = false;
 
   if (!reduce_subgraphs) {
     if (product.get_components() == 1) {
-      run_mcf(product, fragments, matches_mol1, matches_mol2,
-              min_core_size, max_core_size, maximum, start, microseconds);
+      timeout |= run_mcf(product, fragments, matches_mol1, matches_mol2,
+                         static_cast<int>(min_core_size), static_cast<int>(max_core_size),
+                         maximum, start, microseconds);
     } else {
       std::vector<int> idx(product.get_components());
       std::iota(idx.begin(), idx.end(), 0);
@@ -87,18 +121,20 @@ void mogli::maximal_common_fragments(Molecule &mol1, Molecule &mol2,
                                                                       > product.get_component_size(i2);});
       for (int c : idx) {
         // break if component smaller than current max fragment
-        int current_max = fragments.size() > 0 ? fragments[0]->get_core_atom_count() : 0;
+        int current_max = !fragments.empty() ? fragments[0]->get_core_atom_count() : 0;
         if (maximum && product.get_component_size(c) < current_max) {
           break;
         }
 
         Product component(product, c);
-        run_mcf(component, fragments, matches_mol1, matches_mol2,
-                min_core_size, max_core_size, maximum, start, microseconds);
+        timeout |= run_mcf(component, fragments, matches_mol1, matches_mol2,
+                           static_cast<int>(min_core_size), static_cast<int>(max_core_size),
+                           maximum, start, microseconds);
 
         std::chrono::high_resolution_clock::time_point now = std::chrono::high_resolution_clock::now();
         long duration = std::chrono::duration_cast<std::chrono::microseconds>( now - start ).count();
         if (microseconds > 0 && duration > microseconds) {
+          timeout = true;
           break;
         }
 
@@ -113,8 +149,9 @@ void mogli::maximal_common_fragments(Molecule &mol1, Molecule &mol2,
     MatchVector matches2;
 
     if (product.get_components() == 1) {
-      run_mcf(product, frags, matches1, matches2,
-              min_core_size, max_core_size, maximum, start, microseconds);
+      timeout |= run_mcf(product, frags, matches1, matches2,
+                         static_cast<int>(min_core_size), static_cast<int>(max_core_size),
+                         maximum, start, microseconds);
     } else {
       std::vector<int> idx(product.get_components());
       std::iota(idx.begin(), idx.end(), 0);
@@ -122,26 +159,28 @@ void mogli::maximal_common_fragments(Molecule &mol1, Molecule &mol2,
                                                                       > product.get_component_size(i2);});
       for (int c : idx) {
         // break if component smaller than current max fragment
-        int current_max = frags.size() > 0 ? frags[0]->get_core_atom_count() : 0;
+        int current_max = !frags.empty() ? frags[0]->get_core_atom_count() : 0;
         if (maximum && product.get_component_size(c) < current_max) {
           break;
         }
 
         Product component(product, c);
-        run_mcf(component, frags, matches1, matches2,
-                min_core_size, max_core_size, maximum, start, microseconds);
+        timeout |= run_mcf(component, frags, matches1, matches2,
+                           static_cast<int>(min_core_size), static_cast<int>(max_core_size),
+                           maximum, start, microseconds);
 
         std::chrono::high_resolution_clock::time_point now = std::chrono::high_resolution_clock::now();
         long duration = std::chrono::duration_cast<std::chrono::microseconds>( now - start ).count();
         if (microseconds > 0 && duration > microseconds) {
+          timeout = true;
           break;
         }
       }
     }
 
     int k = 0;
-    for (auto fragment : frags) {
-      deque.push_back(std::make_pair(k, (int) fragment->get_atom_count()));
+    for (auto & fragment : frags) {
+      deque.emplace_back(k, (int) fragment->get_atom_count());
       ++k;
     }
 
@@ -153,7 +192,7 @@ void mogli::maximal_common_fragments(Molecule &mol1, Molecule &mol2,
     matches_mol1.reserve(deque.size());
     matches_mol2.reserve(deque.size());
 
-    while (deque.size() > 0) {
+    while (!deque.empty()) {
 
       int current = deque.begin()->first;
 
@@ -165,11 +204,11 @@ void mogli::maximal_common_fragments(Molecule &mol1, Molecule &mol2,
       IntVector node_ids_current;
       node_ids_current.reserve(frags.at(current)->get_atom_count());
       Tgraph* graph_small = translate_graph(*frags.at(current), node_ids_current);
-      int n = frags.at(current)->get_atom_count();
+      int n = static_cast<int>(frags.at(current)->get_atom_count());
       int map[n];
       bool are_sub_iso = false;
 
-      for (std::deque<std::pair<int, int> >::reverse_iterator it = deque.rbegin(), end = deque.rend(); it < end-1; ++it) {
+      for (auto it = deque.rbegin(), end = deque.rend(); it < end-1; ++it) {
 
         int other = it->first;
 
@@ -213,6 +252,8 @@ void mogli::maximal_common_fragments(Molecule &mol1, Molecule &mol2,
     }
   }
 
+  return !timeout;
+
 }
 
 void mogli::atomic_fragments(Molecule &mol, FragmentVector &fragments, MatchVector &matches, int shell) {
@@ -226,13 +267,13 @@ void mogli::atomic_fragments(Molecule &mol, FragmentVector &fragments, MatchVect
     NodeToBoolMap visited(mol.get_graph(), false);
     NodeToIntMap depth(mol.get_graph(), 0);
     NodeDeque queue;
-    boost::shared_ptr<Fragment> fragment = boost::make_shared<Fragment>();
+    auto fragment = std::make_shared<Fragment>();
     Match match;
 
     queue.push_back(v);
     visited[v] = true;
     Node root;
-    while (queue.size() > 0) {
+    while (!queue.empty()) {
       Node &current = queue.front();
 
       Node copy = fragment->add_atom(mol.get_color(current));

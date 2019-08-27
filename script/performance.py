@@ -23,7 +23,7 @@ def run(ms, molid1, in_dir, gen_int, min_core, runs, timeout):
             3: 'UC_DEG1'
         }[gen_int]
 
-    for run in xrange(runs):
+    for run in range(runs):
 	try:
             timings = subprocess.check_output(['/usr/bin/timeout', str(timeout)] +
                                               ['../build/report',
@@ -95,7 +95,7 @@ def main():
                  '\tDEGEN\tCOMPS\tCOMPL\tBC-COMPS\tBC-COMPL\n')
 
     pool = Pool() if proc < 1 else Pool(proc)
-    for i in xrange(min(args.f, len(molids)-2), len(molids)-1):
+    for i in range(min(args.f, len(molids)-2), len(molids)-1):
         print('%d/%d' % (i+1,len(molids)-1))
         lines = pool.map(functools.partial(run,
                                            molid1=molids[i],
@@ -104,7 +104,7 @@ def main():
                                            min_core=args.m,
                                            runs=args.r,
                                            timeout=args.t),
-                         itertools.product(molids[i+1:], xrange(min_shell, args.s+1)))
+                         itertools.product(molids[i+1:], range(min_shell, args.s+1)))
         lines = filter(lambda x: x, lines)
         if len(lines) > 0:
             with open(os.path.join(out_dir, 'results'+ext), 'a') as fi:

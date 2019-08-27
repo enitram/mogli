@@ -1,6 +1,21 @@
-//
-// Created by M. Engler on 30/01/17.
-//
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//    mogli - molecular graph library                                                                                 //
+//                                                                                                                    //
+//    Copyright (C) 2016-2019  Martin S. Engler                                                                       //
+//                                                                                                                    //
+//    This program is free software: you can redistribute it and/or modify                                            //
+//    it under the terms of the GNU Lesser General Public License as published                                        //
+//    by the Free Software Foundation, either version 3 of the License, or                                            //
+//    (at your option) any later version.                                                                             //
+//                                                                                                                    //
+//    This program is distributed in the hope that it will be useful,                                                 //
+//    but WITHOUT ANY WARRANTY; without even the implied warranty of                                                  //
+//    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the                                                    //
+//    GNU General Public License for more details.                                                                    //
+//                                                                                                                    //
+//    You should have received a copy of the GNU Lesser General Public License                                        //
+//    along with this program.  If not, see <https://www.gnu.org/licenses/>.                                          //
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #ifndef MOGLI_FCANONIZATION_H
 #define MOGLI_FCANONIZATION_H
@@ -10,6 +25,9 @@
 
 namespace mogli {
 
+  /**
+   * Canonical representation of a molecular fragment.
+   */
   class FragmentCanonization : public Canonization {
   private:
 
@@ -17,41 +35,51 @@ namespace mogli {
 
   public:
 
+    /**
+     * Initialize an empty fragment canonization.
+     */
     FragmentCanonization() : Canonization() {}
 
-    FragmentCanonization(const Fragment &fragment) : Canonization(fragment) {
-      for (ShortVector::const_iterator it = _node_order.begin(), end = _node_order.end(); it != end; ++it) {
-        _core_nodes.push_back(fragment.is_core(fragment.get_node_by_id(*it)));
+    /**
+     * Create a canonical representation of a molecular fragment.
+     *
+     * @param[in] fragment   Molecular fragment.
+     */
+    explicit FragmentCanonization(const Fragment &fragment) : Canonization(fragment) {
+      for (auto & it : _node_order) {
+        _core_nodes.push_back(fragment.is_core(fragment.get_node_by_id(it)));
       }
     }
 
+    /**
+     * Move constructor.
+     *
+     * @param[in] _colors           Element numbers.
+     * @param[in] _canonization     Canonical representations.
+     * @param[in] _node_order       Atom IDs.
+     * @param[in] _core_nodes       Core atoms.
+     */
     FragmentCanonization(const ShortVector &_colors, const LongVector &_canonization,
-                         const ShortVector &_node_order, const BoolVector &_core_nodes) :
+                         const ShortVector &_node_order, BoolVector _core_nodes) :
         Canonization(_colors, _canonization, _node_order),
-        _core_nodes(_core_nodes) {}
+        _core_nodes(std::move(_core_nodes)) {}
 
+    /**
+     * Returns a bool vector indicating the core atoms in canonical order.
+     *
+     * @return  Core atoms.
+     */
     const BoolVector &get_core_nodes() const {
       return _core_nodes;
     }
 
-    const bool is_isomorphic(FragmentCanonization & other) const {
-      if (Canonization::is_isomorphic(other)) {
-        BoolVector cores2 = other.get_core_nodes();
-
-        if (_core_nodes.size() != cores2.size())
-          return false;
-
-        for (BoolVector::const_iterator i1 = _core_nodes.begin(), i2 = cores2.begin(),
-                 ie1 = _core_nodes.end(), ie2 = cores2.end(); i1 != ie1 && i2 != ie2; ++i1, ++i2) {
-          if (*i1 != *i2)
-            return false;
-        }
-
-        return true;
-      } else {
-        return false;
-      }
-    }
+    /**
+     * Isomorphism test.
+     *
+     * @param[in] other     Other fragment canonization.
+     * @return              True, if isomorphic to other fragment canonization, false otherwise.
+     */
+    const bool is_isomorphic(FragmentCanonization & other) const;
 
   };
 

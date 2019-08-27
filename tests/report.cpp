@@ -1,16 +1,31 @@
-//
-// Created by M. Engler on 26/10/16.
-//
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//    mogli - molecular graph library                                                                                 //
+//                                                                                                                    //
+//    Copyright (C) 2016-2019  Martin S. Engler                                                                       //
+//                                                                                                                    //
+//    This program is free software: you can redistribute it and/or modify                                            //
+//    it under the terms of the GNU Lesser General Public License as published                                        //
+//    by the Free Software Foundation, either version 3 of the License, or                                            //
+//    (at your option) any later version.                                                                             //
+//                                                                                                                    //
+//    This program is distributed in the hope that it will be useful,                                                 //
+//    but WITHOUT ANY WARRANTY; without even the implied warranty of                                                  //
+//    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the                                                    //
+//    GNU General Public License for more details.                                                                    //
+//                                                                                                                    //
+//    You should have received a copy of the GNU Lesser General Public License                                        //
+//    along with this program.  If not, see <https://www.gnu.org/licenses/>.                                          //
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-#include "../include/bronkerbosch.h"
 #include <chrono>
 #include <dirent.h>
+#include <fstream>
+
 #include <lemon/arg_parser.h>
-#include <boost/format.hpp>
-#include <boost/algorithm/string/replace.hpp>
-#include <boost/ptr_container/ptr_vector.hpp>
-#include "../include/fragment.h"
-#include "../include/mcf.h"
+#include <lemon/connectivity.h>
+#include "bronkerbosch.h"
+#include "fragment.h"
+#include "mcf.h"
 
 
 using namespace mogli;
@@ -30,7 +45,7 @@ std::tuple<float, float, bool, int> run(Product& product, int min_core, int max_
   bool c = cliques.size() == 1 && cliques[0].size() == lemon::countNodes(product.get_graph());
   for (NodeVectorVector::const_iterator it = cliques.begin(), end = cliques.end(); it != end; ++it) {
     IntToIntMap g_to_mol1, g_to_mol2;
-    boost::shared_ptr<Fragment> fragment = boost::make_shared<Fragment>(product, *it, g_to_mol1, g_to_mol2);
+    auto fragment = std::make_shared<Fragment>(product, *it, g_to_mol1, g_to_mol2);
 
     if (fragment->get_core_atom_count() > 1) {
       fragments.push_back(fragment);
@@ -95,7 +110,7 @@ int main(int argc, char** argv) {
 
   std::chrono::high_resolution_clock::time_point t1 = std::chrono::high_resolution_clock::now();
 
-  Product product(mol1, mol2, shell, gen_type, min_core, max_core);
+  Product product(mol1, mol2, shell, gen_type, min_core);
 
   std::chrono::high_resolution_clock::time_point t2 = std::chrono::high_resolution_clock::now();
   std::chrono::duration<float> pg_duration = t2 - t1;
@@ -153,7 +168,10 @@ int main(int argc, char** argv) {
     bk_time = std::get<0>(timing);
     gen_time = std::get<1>(timing);
     degeneracy.push_back(std::get<3>(timing));
-    assert(product.is_complete() == std::get<2> && boost::format("%d: %dx%d") % gen_int % molid1 % molid2);
+    assert(product.is_complete() == std::get<2>(timing) && [](int gen_int, int molid1, int molid2){
+      std::cout << std::to_string(gen_int) << ": " << std::to_string(molid1) << "x" << std::to_string(molid2) << std::endl;
+      return true;
+    });
   } else {
     for (int c = 0; c < product.get_components(); ++c) {
       Product component(product, c);
@@ -197,11 +215,14 @@ int main(int argc, char** argv) {
       bk_time += std::get<0>(timing);
       gen_time += std::get<1>(timing);
       degeneracy.push_back(std::get<3>(timing));
-      assert(component.is_complete() == std::get<2> && boost::format("%d: %dx%d") % gen_int % molid1 % molid2);
+      assert(component.is_complete() == std::get<2>(timing) && [](int gen_int, int molid1, int molid2){
+        std::cout << std::to_string(gen_int) << ": " << std::to_string(molid1) << "x" << std::to_string(molid2) << std::endl;
+        return true;
+      });
     }
   }
 
-  if (fragments.size() == 0)
+  if (fragments.empty())
     return 0;
 
   float pg_time = pg_duration.count();

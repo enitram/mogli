@@ -1,9 +1,61 @@
-//
-// Created by M. Engler on 10/20/16.
-//
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//    mogli - molecular graph library                                                                                 //
+//                                                                                                                    //
+//    Copyright (C) 2016-2019  Martin S. Engler                                                                       //
+//                                                                                                                    //
+//    This program is free software: you can redistribute it and/or modify                                            //
+//    it under the terms of the GNU Lesser General Public License as published                                        //
+//    by the Free Software Foundation, either version 3 of the License, or                                            //
+//    (at your option) any later version.                                                                             //
+//                                                                                                                    //
+//    This program is distributed in the hope that it will be useful,                                                 //
+//    but WITHOUT ANY WARRANTY; without even the implied warranty of                                                  //
+//    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the                                                    //
+//    GNU General Public License for more details.                                                                    //
+//                                                                                                                    //
+//    You should have received a copy of the GNU Lesser General Public License                                        //
+//    along with this program.  If not, see <https://www.gnu.org/licenses/>.                                          //
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-#include <bitset>
-#include "../include/canonization.h"
+#include "canonization.h"
+
+#include <assert.h>
+#include <malloc.h>
+
+#include <nauty.h>
+
+
+// public functions
+
+const bool mogli::Canonization::is_isomorphic(const Canonization &other) const {
+  const ShortVector& colors2 = other.get_colors();
+
+  if (_colors.size() != colors2.size())
+    return false;
+
+  const LongVector& canonization2 = other.get_canonization();
+
+  if (_canonization.size() != canonization2.size())
+    return false;
+
+  for (auto i1 = _colors.begin(), i2 = colors2.begin(),
+           ie1 = _colors.end(), ie2 = colors2.end();
+       i1 != ie1 && i2 != ie2; ++i1, ++i2) {
+    if (*i1 != *i2)
+      return false;
+  }
+
+  for (auto i1 = _canonization.begin(), i2 = canonization2.begin(),
+           ie1 = _canonization.end(), ie2 = canonization2.end();
+       i1 != ie1 && i2 != ie2; ++i1, ++i2) {
+    if (*i1 != *i2)
+      return false;
+  }
+
+  return true;
+}
+
+// protected functions
 
 void mogli::Canonization::init(const Molecule &mol) {
 
@@ -13,16 +65,9 @@ void mogli::Canonization::init(const Molecule &mol) {
   NodeToBoolMap visited(mol.get_graph(), false);
   ShortToNodeVectorMap colorMap;
   ShortSet colorSet;
-  bool is_tree = true;
 
-  dfs(v, v, mol, visited, colorSet, colorMap, is_tree);
-
-  if (!is_tree) {
-    //canonTree(g, colorMap);
-    canonNauty(mol, colorSet, colorMap, mol.get_atom_count());
-  } else {
-    canonNauty(mol, colorSet, colorMap, mol.get_atom_count());
-  }
+  dfs(v, v, mol, visited, colorSet, colorMap);
+  canonNauty(mol, colorSet, colorMap, mol.get_atom_count());
 }
 
 void mogli::Canonization::init(const mogli::Molecule &mol, const mogli::Canonization::NodeToBoolMap &filter, const Node& root) {
@@ -34,24 +79,16 @@ void mogli::Canonization::init(const mogli::Molecule &mol, const mogli::Canoniza
   FilteredNodeToBoolMap visited(subgraph, false);
   ShortToNodeVectorMap colorMap;
   ShortSet colorSet;
-  bool is_tree = true;
   unsigned int node_count = 0;
 
-  dfs(v, v, mol, subgraph, visited, colorSet, colorMap, is_tree, node_count);
-
-  if (is_tree) {
-    //canonTree(g, colorMap);
-    canonNauty(mol, subgraph, colorSet, colorMap, root, node_count);
-  } else {
-    canonNauty(mol, subgraph, colorSet, colorMap, root, node_count);
-  }
+  dfs(v, v, mol, subgraph, visited, colorSet, colorMap, node_count);
+  canonNauty(mol, subgraph, colorSet, colorMap, root, node_count);
 }
 
 void mogli::Canonization::dfs(const Node& current, const Node& last, const Molecule& mol,
-                              NodeToBoolMap& visited, ShortSet& colorSet, ShortToNodeVectorMap& colorMap,
-                              bool& is_tree) {
+                              NodeToBoolMap& visited, ShortSet& colorSet, ShortToNodeVectorMap& colorMap) {
   visited[current] = true;
-  unsigned short color = mol.get_color(current);
+  unsigned short color = mol.get_perdiodic_table().get_equivalency_class(mol.get_color(current));
   colorSet.insert(color);
   if (colorMap.find(color) == colorMap.end()) {
     NodeVector vector;
@@ -62,9 +99,7 @@ void mogli::Canonization::dfs(const Node& current, const Node& last, const Molec
   for (IncEdgeIt e = mol.get_inc_edge_iter(current); e != lemon::INVALID; ++e) {
     Node w = mol.get_opposite_node(current, e);
     if (!visited[w]) {
-      dfs(w, current, mol, visited, colorSet, colorMap, is_tree);
-    } else if (w != last) {
-      is_tree = false;
+      dfs(w, current, mol, visited, colorSet, colorMap);
     }
   }
 
@@ -72,10 +107,10 @@ void mogli::Canonization::dfs(const Node& current, const Node& last, const Molec
 
 void mogli::Canonization::dfs(const Node& current, const Node& last, const Molecule& mol,
                               const FilterNodes& subgraph, NodeToBoolMap& visited, ShortSet& colorSet,
-                              ShortToNodeVectorMap& colorMap, bool& is_tree, unsigned int& node_count) {
+                              ShortToNodeVectorMap& colorMap, unsigned int& node_count) {
   ++node_count;
   visited[current] = true;
-  unsigned short color = mol.get_color(current);
+  unsigned short color = mol.get_perdiodic_table().get_equivalency_class(mol.get_color(current));
   colorSet.insert(color);
   if (colorMap.find(color) == colorMap.end()) {
     NodeVector vector;
@@ -86,9 +121,7 @@ void mogli::Canonization::dfs(const Node& current, const Node& last, const Molec
   for (FilteredIncEdgeIt e = FilteredIncEdgeIt(subgraph, current); e != lemon::INVALID; ++e) {
     Node w = subgraph.oppositeNode(current, e);
     if (!visited[w]) {
-      dfs(w, current, mol, subgraph, visited, colorSet, colorMap, is_tree, node_count);
-    } else if (w != last) {
-      is_tree = false;
+      dfs(w, current, mol, subgraph, visited, colorSet, colorMap, node_count);
     }
   }
 
@@ -97,7 +130,7 @@ void mogli::Canonization::dfs(const Node& current, const Node& last, const Molec
 void mogli::Canonization::canonNauty(const Molecule& mol,
                                      const ShortSet &colorSet,
                                      const ShortToNodeVectorMap &colorMap,
-                                     const unsigned int atom_count) {
+                                     unsigned int atom_count) {
 
   DYNALLSTAT(int,lab,lab_sz);
   DYNALLSTAT(int,ptn,ptn_sz);
@@ -125,12 +158,12 @@ void mogli::Canonization::canonNauty(const Molecule& mol,
   NodeToIntMap nodes(mol.get_graph());
   NodeVector first_order;
 
-  for (ShortSet::iterator it=colorSet.begin(), end = colorSet.end(); it != end; ++it) {
-    NodeVector vector = colorMap.at(*it);
-    for (NodeVector::iterator it2 = vector.begin(), end2 = vector.end(); it2 != end2; ++it2) {
-      _colors.push_back(*it);
-      first_order.push_back(*it2);
-      nodes[*it2] = i;
+  for (const auto & it : colorSet) {
+    NodeVector vector = colorMap.at(it);
+    for (const auto & it2 : vector) {
+      _colors.push_back(it);
+      first_order.push_back(it2);
+      nodes[it2] = i;
       lab[i] = i;
       ptn[i] = 1;
       ++i;
@@ -162,7 +195,7 @@ void mogli::Canonization::canonNauty(const Molecule& mol,
                                      const ShortSet &colorSet,
                                      const ShortToNodeVectorMap &colorMap,
                                      const Node& root,
-                                     const unsigned int atom_count) {
+                                     unsigned int atom_count) {
   DYNALLSTAT(int,lab,lab_sz);
   DYNALLSTAT(int,ptn,ptn_sz);
   DYNALLSTAT(int,orbits,orbits_sz);
@@ -196,14 +229,14 @@ void mogli::Canonization::canonNauty(const Molecule& mol,
   ptn[0] = 0;
 
   int i = 1;
-  for (ShortSet::iterator it=colorSet.begin(), end = colorSet.end(); it != end; ++it) {
-    NodeVector vector = colorMap.at(*it);
-    for (NodeVector::iterator it2 = vector.begin(), end2 = vector.end(); it2 != end2; ++it2) {
-      if (*it2 == root)
+  for (const auto & it : colorSet) {
+    NodeVector vector = colorMap.at(it);
+    for (const auto & it2 : vector) {
+      if (it2 == root)
         continue;
-      _colors.push_back(*it);
-      first_order.push_back(*it2);
-      nodes[*it2] = i;
+      _colors.push_back(it);
+      first_order.push_back(it2);
+      nodes[it2] = i;
       lab[i] = i;
       ptn[i] = 1;
       ++i;
@@ -211,7 +244,7 @@ void mogli::Canonization::canonNauty(const Molecule& mol,
     ptn[i-1] = 0;
   }
 
-  for(FilteredEdgeIt e = FilteredEdgeIt(subgraph); e!=lemon::INVALID; ++e) {
+  for(auto e = FilteredEdgeIt(subgraph); e!=lemon::INVALID; ++e) {
     int u = nodes[subgraph.u(e)];
     int v = nodes[subgraph.v(e)];
     ADDONEEDGE(ng,u,v,m);
@@ -228,14 +261,3 @@ void mogli::Canonization::canonNauty(const Molecule& mol,
     _canonization.push_back(static_cast<unsigned long>(cg[i]));
   }
 }
-
-void mogli::Canonization::canonTree(const Molecule &mol, const ShortToNodeVectorMap &colorMap) {
-  // TODO write tree canonization method
-  // TODO in which order does nauty return the canonical graphs, if our tree alg has a different order, could we accidentally return the same canonization?
-  // TODO compare tree, nauty, saucy & bliss
-}
-
-void mogli::Canonization::canonTree(const FilterNodes &subgraph, const ShortToNodeVectorMap &colorMap) {
- 
-}
-

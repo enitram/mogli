@@ -1,8 +1,29 @@
-//
-// Created by M. Engler on 02/12/16.
-//
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//    mogli - molecular graph library                                                                                 //
+//                                                                                                                    //
+//    Copyright (C) 2016-2019  Martin S. Engler                                                                       //
+//                                                                                                                    //
+//    This program is free software: you can redistribute it and/or modify                                            //
+//    it under the terms of the GNU Lesser General Public License as published                                        //
+//    by the Free Software Foundation, either version 3 of the License, or                                            //
+//    (at your option) any later version.                                                                             //
+//                                                                                                                    //
+//    This program is distributed in the hope that it will be useful,                                                 //
+//    but WITHOUT ANY WARRANTY; without even the implied warranty of                                                  //
+//    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the                                                    //
+//    GNU General Public License for more details.                                                                    //
+//                                                                                                                    //
+//    You should have received a copy of the GNU Lesser General Public License                                        //
+//    along with this program.  If not, see <https://www.gnu.org/licenses/>.                                          //
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-#include "../include/orbits.h"
+#include "orbits.h"
+
+#include <assert.h>
+#include <malloc.h>
+
+#include <nauty.h>
+
 
 using namespace mogli;
 
@@ -67,11 +88,11 @@ void Orbits::orbitsNauty(const Molecule &mol, const ShortSet &colorSet, const Sh
   NodeToIntMap nodes(mol.get_graph());
   NodeVector first_order;
 
-  for (ShortSet::iterator it=colorSet.begin(), end = colorSet.end(); it != end; ++it) {
-    NodeVector vector = colorMap.at(*it);
-    for (NodeVector::iterator it2 = vector.begin(), end2 = vector.end(); it2 != end2; ++it2) {
-      first_order.push_back(*it2);
-      nodes[*it2] = i;
+  for (const auto & it : colorSet) {
+    NodeVector vector = colorMap.at(it);
+    for (const auto & it2 : vector) {
+      first_order.push_back(it2);
+      nodes[it2] = i;
       lab[i] = i;
       ptn[i] = 1;
       ++i;

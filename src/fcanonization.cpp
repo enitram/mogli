@@ -17,35 +17,24 @@
 //    along with this program.  If not, see <https://www.gnu.org/licenses/>.                                          //
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-#ifndef MOGLI_SUBGRAPH_ISOMORPHISM_H
-#define MOGLI_SUBGRAPH_ISOMORPHISM_H
-
-#include <sublad.h>
-#include "molecule.h"
+#include "fcanonization.h"
 
 
-namespace mogli {
+const bool mogli::FragmentCanonization::is_isomorphic(FragmentCanonization &other) const  {
+  if (Canonization::is_isomorphic(other)) {
+    const BoolVector & cores2 = other.get_core_nodes();
 
-  Tgraph* translate_graph(const Molecule &mol, IntVector &node_ids);
-  
-  void free_graph(Tgraph* graph);
+    if (_core_nodes.size() != cores2.size())
+      return false;
 
-  void translate_maps(const IntVector &node_ids_small, const IntVector &node_ids_large,
-                      const int in_iso_map[], IntToIntMap &out_iso_map);
+    for (auto i1 = _core_nodes.begin(), i2 = cores2.begin(),
+             ie1 = _core_nodes.end(), ie2 = cores2.end(); i1 != ie1 && i2 != ie2; ++i1, ++i2) {
+      if (*i1 != *i2)
+        return false;
+    }
 
-  /**
-   * Test for subgraph isomorphism of two molecular graphs.
-   *
-   * @param[in]  mol_small          Smaller molecular graph.
-   * @param[in]  mol_large          Larger molecular graph.
-   * @param[out] isomorphism_map    Mapping from the smaller graph to the larger graph.
-   * @return                        True, if the smaller graph is a subgraph of the larger graph, false otherwise.
-   */
-  bool are_subgraph_isomorphic(const Molecule &mol_small, const Molecule &mol_large,
-                               IntToIntMap isomorphism_map);
-
-  bool are_subgraph_isomorphic(Tgraph* graph_small, Tgraph* graph_large, int isomorphism_map[]);
-
+    return true;
+  } else {
+    return false;
+  }
 }
-
-#endif //MOGLI_SUBGRAPH_ISOMORPHISM_H

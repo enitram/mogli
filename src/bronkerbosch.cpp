@@ -1,10 +1,67 @@
-//
-// Created by M. Engler on 02/11/16.
-//
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//    mogli - molecular graph library                                                                                 //
+//                                                                                                                    //
+//    Copyright (C) 2016-2019  Martin S. Engler                                                                       //
+//                                                                                                                    //
+//    This program is free software: you can redistribute it and/or modify                                            //
+//    it under the terms of the GNU Lesser General Public License as published                                        //
+//    by the Free Software Foundation, either version 3 of the License, or                                            //
+//    (at your option) any later version.                                                                             //
+//                                                                                                                    //
+//    This program is distributed in the hope that it will be useful,                                                 //
+//    but WITHOUT ANY WARRANTY; without even the implied warranty of                                                  //
+//    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the                                                    //
+//    GNU General Public License for more details.                                                                    //
+//                                                                                                                    //
+//    You should have received a copy of the GNU Lesser General Public License                                        //
+//    along with this program.  If not, see <https://www.gnu.org/licenses/>.                                          //
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-#include "../include/bronkerbosch.h"
+#include "bronkerbosch.h"
+
 
 using namespace mogli;
+
+BronKerbosch::BronKerbosch(const mogli::Product &product, unsigned int min_core_size, unsigned int max_core_size, bool maximum) :
+    _g(product.get_graph())
+    , _product(product)
+    , _n(static_cast<size_t>(lemon::countNodes(_g)))
+    , _cliques()
+    , _bitToNode()
+    , _nodeToBit(_g, std::numeric_limits<size_t>::max())
+    , _bitNeighborhood(_g, BitSet(_n))
+    , _restrictedBitNeighborhood(_g, BitSet(_n))
+    , _min_core_size(min_core_size)
+    , _max_core_size(max_core_size)
+    , _maximum(maximum)
+    , _current_max(0) {
+  // initialize mappings
+  _bitToNode.reserve(_n);
+  size_t i = 0;
+  for (NodeIt v(_g); v != lemon::INVALID; ++v, ++i) {
+    _bitToNode.push_back(v);
+    _nodeToBit[v] = i;
+  }
+
+  // initialize neighborhoods
+  for (NodeIt v(_g); v != lemon::INVALID; ++v, ++i) {
+    BitSet& neighborhood = _bitNeighborhood[v];
+    for (IncEdgeIt e(_g, v); e != lemon::INVALID; ++e) {
+      Node w = _g.oppositeNode(v, e);
+      neighborhood[_nodeToBit[w]] = true;
+    }
+  }
+
+  // initialize restricted neighborhood mapping
+  for (EdgeIt e(_g); e != lemon::INVALID; ++e) {
+    if (product.is_connectivity_edge(e)) {
+      Node u = _g.u(e);
+      Node v = _g.v(e);
+      _restrictedBitNeighborhood[u][_nodeToBit[v]] = true;
+      _restrictedBitNeighborhood[v][_nodeToBit[u]] = true;
+    }
+  }
+}
 
 void BronKerbosch::run(int seconds) {
   std::chrono::high_resolution_clock::time_point start = std::chrono::high_resolution_clock::now();
@@ -12,7 +69,7 @@ void BronKerbosch::run(int seconds) {
   run(start, microseconds);
 }
 
-void BronKerbosch::run(std::chrono::high_resolution_clock::time_point start, long microseconds) {
+bool BronKerbosch::run(std::chrono::high_resolution_clock::time_point start, long microseconds) {
 
   // the productgraph is a complete graph with a spanning tree of c-edges, we don't actually need to run BK!
   if ((_product.get_gen_type() == Product::GenerationType::UNCON ||
@@ -27,7 +84,7 @@ void BronKerbosch::run(std::chrono::high_resolution_clock::time_point start, lon
     if (_min_core_size <= size && size <= _max_core_size) {
       _cliques.push_back(clique);
     }
-    return;
+    return false;
   }
 
   NodeVector order;
@@ -35,8 +92,8 @@ void BronKerbosch::run(std::chrono::high_resolution_clock::time_point start, lon
 
   BitSet mask(_n);
 
-  for (typename NodeVector::const_iterator it = order.begin(); it != order.end(); ++it) {
-    Node v = *it;
+  bool timeout = false;
+  for (auto & v : order) {
     const BitSet& N_v = _bitNeighborhood[v];
     const BitSet& Nc_v = _restrictedBitNeighborhood[v];
     const BitSet Nd_v = N_v - Nc_v;
@@ -50,9 +107,15 @@ void BronKerbosch::run(std::chrono::high_resolution_clock::time_point start, lon
     BitSet R(_n);
     R.set(_nodeToBit[v]);
 
-    bkPivot(P, D, R, X, S, start, microseconds);
+    timeout |= bkPivot(P, D, R, X, S, start, microseconds);
     mask.set(_nodeToBit[v]);
+
+    if (timeout) {
+      break;
+    }
   }
+
+  return timeout;
 
 }
 
@@ -96,7 +159,7 @@ size_t BronKerbosch::computeDegeneracy(NodeVector& order) {
   size_t i = 0;
   while (i < n) {
     NodeList& l = T[i];
-    if (T[i].size() > 0) {
+    if (!T[i].empty()) {
       Node v = l.front();
       l.pop_front();
       order.push_back(v);
@@ -125,9 +188,9 @@ size_t BronKerbosch::computeDegeneracy(NodeVector& order) {
   return degeneracy;
 }
 
-void BronKerbosch::bkPivot(BitSet P, BitSet D,
-                           BitSet R,
-                           BitSet X, BitSet S,
+bool BronKerbosch::bkPivot(BitSet P, const BitSet & D,
+                           const BitSet & R,
+                           BitSet X, const BitSet & S,
                            std::chrono::high_resolution_clock::time_point start,
                            long microseconds) {
   // all sets are pairwise disjoint
@@ -149,8 +212,10 @@ void BronKerbosch::bkPivot(BitSet P, BitSet D,
   BitSet P_cup_X = P | X;
   if (P_cup_X.none()) {
     report(R);
+    return false;
   } else {
     if (microseconds > 0 && duration < microseconds) {
+      bool timeout = false;
       // choose a pivot u from (P | X) s.t |P & N(u)| is maximum, Tomita et al. (2006)
       size_t maxBitCount = 0;
       Node max_u = lemon::INVALID;
@@ -178,23 +243,26 @@ void BronKerbosch::bkPivot(BitSet P, BitSet D,
           BitSet D_ = D - Nc_v;
 
           BitSet R_ = R;
-          R_[_nodeToBit[v]] = 1;
+          R_[_nodeToBit[v]] = true;
 
           BitSet X_ = X | (S & Nc_v);
           BitSet S_ = S - Nc_v;
 
           // report all maximal cliques in ( (P | N[v]) & R) \ (X & N[v]) )
-          bkPivot(P_ & N_v,
-                  D_ & N_v,
-                  R_,
-                  X_ & N_v,
-                  S_ & N_v,
-                  start,
-                  microseconds);
-          P[i] = 0;
-          X[i] = 1;
+          timeout |= bkPivot(P_ & N_v,
+                             D_ & N_v,
+                             R_,
+                             X_ & N_v,
+                             S_ & N_v,
+                             start,
+                             microseconds);
+          P[i] = false;
+          X[i] = true;
         }
       }
+      return timeout;
+    } else {
+      return true;
     }
   }
 
