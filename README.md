@@ -24,7 +24,7 @@ mogli provides both a C++ and a Python API and is using the following awesome th
 Build shared library `libcmogli.so`:
 
 ```bash
-make build
+mkdir build
 cd build
 cmake .. -DBUILD_PYTHON=OFF
 cmake --build cmogli
